@@ -1,1 +1,1 @@
-##### Nothing to see here
+My semi-public repo for my discord bot 
