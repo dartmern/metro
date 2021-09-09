@@ -147,7 +147,7 @@ class NormalMenuPages(RoboPages):
     async def show_bot_help(self, payload):
         """Shows how to use the bot"""
 
-        embed = Embed(title="Argument Help Menu")
+        embed = discord.Embed(title="Argument Help Menu")
 
         entries = (
             ("<argument>", "This means the argument is __**required**__."),
