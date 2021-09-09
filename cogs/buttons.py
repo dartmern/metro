@@ -21,7 +21,7 @@ import argparse, shlex
 from typing import Optional
 
 import datetime
-from utils.remind_utils import format_relative
+from utils.remind_utils import ShortTime, format_relative
 from dateutil.relativedelta import relativedelta
 class plural:
     def __init__(self, value):
@@ -233,6 +233,7 @@ class buttons(commands.Cog, description='Button related stuff. (and some secret 
         {member.name} - Returns your name (abcd)
         `
         """
+
         
         message = message.replace('{member.mention}', "$MENTION").replace('{member.id}','$ID').replace('{member}','$MEMBER').replace('{member.discriminator}','$DISCRIM').replace('{member.name}','$NAME')
         message = substitute_args(message, ctx.author)

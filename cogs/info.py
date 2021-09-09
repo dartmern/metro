@@ -42,8 +42,12 @@ class info(commands.Cog, description="Information about members, guilds, or role
     async def say_permissions(self, ctx, member, channel):
         permissions = channel.permissions_for(member)
         e = discord.Embed(colour=member.colour)
-        avatar = member.avatar.with_static_format('png')
-        e.set_author(name=str(member), url=avatar)
+        avatar = member.avatar.url
+
+        if avatar is None:
+            e.set_author(name=str(member))
+        else:
+            e.set_author(name=str(member), url=avatar)
         allowed, denied = [], []
         for name, value in permissions:
             name = name.replace('_', ' ').replace('guild', 'server').title()
