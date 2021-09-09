@@ -180,25 +180,7 @@ class info(commands.Cog, description="Information about members, guilds, or role
         await ctx.send('Set the prefix for **{}** to `{}`'.format(ctx.guild.name, prefix))
 
         
-    @commands.command()
-    @commands.max_concurrency(number=1, per=BucketType.user, wait=True)
-    async def ping(self, ctx):
-
-        start = time.perf_counter()
-        m = await ctx.send('Pinging...')
-        end = time.perf_counter()
-
-        typing_ping = (end - start) * 1000
-
-        start = time.perf_counter()
-        
-        end = time.perf_counter()
-
-        database_ping = (end - start) * 1000
-
-        
-        await m.edit(content=f'Typing: `{round(typing_ping, 1)} ms`\nWebsocket: `{round(self.bot.latency*1000)} ms`\nDatabase: `unknown`')
-
+    
 
     @commands.command()
     @commands.is_owner()    
