@@ -246,12 +246,12 @@ class MetroHelp(commands.HelpCommand):
         if command.signature == "":
             em = Embed(
                 title=f"`{command.name}`",
-                description=self.get_doc(command).replace('[p]',ctx.prefix)
+                description=self.get_doc(command)
             )
         else:
             em = Embed(
                 title=f"`{command.name}` `{command.signature}`",
-                description=self.get_doc(command).replace('[p]',ctx.prefix)
+                description=self.get_doc(command)
             )
 
         # Cooldowns

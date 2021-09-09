@@ -221,9 +221,10 @@ class buttons(commands.Cog, description='Button related stuff. (and some secret 
 
 
     @commands.command()
+    @commands.is_owner()
     async def saya(self, ctx, *, message : str):
         """
-        A more advanced echo/say command with variables. Run `[p]help sayd` for more info.
+        A more advanced echo/say command with variables.
 
         `
         {member.mention} - Returns your mentions

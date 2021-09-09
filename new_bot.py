@@ -62,4 +62,4 @@ async def on_command_error(ctx, error):
 
     
 
-bot.run('Nzg4NTQzMTg0MDgyNjk4MjUy.X9lCEQ.NK9Gbv_OsW9bZwyWIuvYLN7xjI0')
+bot.run('kek')
