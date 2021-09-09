@@ -199,6 +199,21 @@ class MenuSource(menus.ListPageSource):
         embed.set_footer(text=f'Page [{menu.current_page + 1}/{maximum}]')
         return embed
 
+from string import Template
+
+def substitute_args(message : str, member : Union[discord.Member, discord.User]) -> str:
+
+	return Template(message).safe_substitute(
+        {
+            "MENTION": member.mention,
+			"ID": member.id,
+            "MEMBER" : member,
+            "DISCRIM" : member.discriminator,
+            "NAME" : member.name
+			
+        }
+        )
+
 class buttons(commands.Cog, description='Button related stuff. (and some secret testing...)'):
     def __init__(self, bot):
         self.bot = bot
@@ -206,13 +221,24 @@ class buttons(commands.Cog, description='Button related stuff. (and some secret 
 
 
     @commands.command()
-    async def saydd(self, ctx, *, message : str):
+    async def saya(self, ctx, *, message : str):
         """
         A more advanced echo/say command with variables. Run `[p]help sayd` for more info.
+
+        `
+        {member.mention} - Returns your mentions
+        {member.id} - Returns your id
+        {member} - Returns your username+discrim (abcd#1234)
+        {member.discriminator} - Returns your discriminator (1234)
+        {member.name} - Returns your name (abcd)
+        `
         """
         
-        pass
-    
+        message = message.replace('{member.mention}', "$MENTION").replace('{member.id}','$ID').replace('{member}','$MEMBER').replace('{member.discriminator}','$DISCRIM').replace('{member.name}','$NAME')
+        message = substitute_args(message, ctx.author)
+
+        await ctx.send(str(message))
+
 
 
 
