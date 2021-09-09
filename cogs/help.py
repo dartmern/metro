@@ -1,4 +1,6 @@
+from cogs.channel import MySource
 from sys import prefix
+from utils.pages import ExtraPages
 import discord
 from discord.ext.commands import BucketType
 import discord.ext
@@ -44,6 +46,29 @@ class View(discord.ui.View):
         self = cls(ctx.author)
         self.message = await ctx.channel.send(embed=embed, view=self)
         return self
+
+
+class HelpSource(menus.ListPageSource):
+    def __init__(self, data, *, prefix):
+        super().__init__(data, per_page=10)
+        self.prefix = prefix
+
+    async def format_page(self, menu, commands):
+
+        maximum = self.get_max_pages()
+
+        embed = Embed(description=f'All commands: [{len(commands)}]')
+        
+        desc = ""
+
+        for command in commands:
+            desc += f"`{command.name}` {command.short_doc or 'No help provided...'}\n"
+
+        embed.description = desc
+        embed.set_footer(text=f'Type "{self.prefix}help [Command | Category]" for more information | [{menu.current_page + 1}/{maximum}]')
+
+
+        return embed
 
 
 
@@ -380,12 +405,15 @@ class MetroHelp(commands.HelpCommand):
     # Error handlers
     async def command_not_found(self, command):
         if command.lower() == "all":
-            commands = [f"`{command.name}`" for command in await self.filter_commands(self.context.bot.commands)]
-            em = Embed(description=" ".join(commands))
-            em.set_author(name=f"All commands: [{len(commands)}]")
-            channel = self.get_destination()
-            await channel.send(embed=em)
-            return None
+
+            
+            commands = await self.filter_commands(self.context.bot.commands)
+            
+            menu = ExtraPages(source=HelpSource(tuple(commands), prefix=self.context.prefix),)
+            await menu.start(self.context)
+            return
+
+            
 
         return f"No command/category called `{command}` found."
 
