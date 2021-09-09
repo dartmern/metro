@@ -9,7 +9,7 @@ from pathlib import Path
 import os
 import asyncpg
 import aiohttp
-import motor.motor_asyncio
+import time
 
 #for eval cmd since i don't want to do it in a cog
 import io
@@ -18,7 +18,7 @@ import textwrap
 from utils.useful import clean_code, Pag, Cooldown, ts_now
 from traceback import format_exception
 
-from utils.json_loader import read_json, write_json
+from utils.json_loader import read_json
 
 info_file = read_json('info')
 
@@ -228,15 +228,30 @@ async def on_ready():
         f"-----\nLogged in as: {bot.user.name} : {bot.user.id}\n-----\nMy current default prefix is: m.\n-----")
 
         
-       
+
+@bot.command(slash_command=True, message_command=False, slash_commands_guilds=[812143286457729055])
+async def pong(ctx):
+
+    start = time.perf_counter()
+    m = await ctx.send('Pinging...')
+    end = time.perf_counter()
+
+    typing_ping = (end - start) * 1000
 
 
+    await m.edit(content=f'Typing: `{round(typing_ping, 1)} ms`\nWebsocket: `{round(bot.latency*1000)} ms`\nDatabase: `unknown`')
 
 
 
 @bot.command(name="eval", aliases=["exec","e"])
 @commands.is_owner()
 async def _eval(ctx, *, code):
+    """
+    Eval python code. 
+    
+    This can be inside of a regular codeblock or a python codeblock.
+    :warning: **This command will be depreciated soon** :warning:
+    """
     code = clean_code(code)
 
     local_variables = {
@@ -272,6 +287,8 @@ async def _eval(ctx, *, code):
     )
 
     await pager.start(ctx)
+
+
 
 
 
