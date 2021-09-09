@@ -210,7 +210,9 @@ class buttons(commands.Cog, description='Button related stuff. (and some secret 
         """
         A more advanced echo/say command with variables. Run `[p]help sayd` for more info.
         """
+        
         pass
+    
 
 
 
