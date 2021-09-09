@@ -1,4 +1,4 @@
-A semi-public repository for my discord bot, [Metro](https://discord.com/oauth2/authorize?client_id=788543184082698252&scope=bot)
+A semi-public repository for my discord bot, Metro
 
 
 
