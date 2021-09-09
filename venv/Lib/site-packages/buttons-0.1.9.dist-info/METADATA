@@ -1,0 +1,93 @@
+Metadata-Version: 2.1
+Name: buttons
+Version: 0.1.9
+Summary: A simple to use, interactive session and paginator with custom buttons for discord.py.
+Home-page: https://github.com/EvieePy/buttons
+Author: EvieePy
+Author-email: UNKNOWN
+License: MIT
+Platform: UNKNOWN
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Intended Audience :: Developers
+Classifier: Natural Language :: English
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Topic :: Internet
+Classifier: Topic :: Software Development :: Libraries
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Utilities
+Requires-Dist: discord.py (>=1.0)
+
+A simple to use, highly customizable, Interactive Session and Paginator for discord.py.
+Still in early stages and undergoing rapid production. Feel free to suggest something via Discord.
+
+Support
+---------------------------
+For support using Buttons, please join the official `support server
+<http://discord.gg/RAKc3HF>`_ on `Discord <https://discordapp.com/>`_.
+
+|Discord|
+
+.. |Discord| image:: https://img.shields.io/discord/490948346773635102?color=%237289DA&label=Pythonista&logo=discord&logoColor=white
+   :target: https://discord.gg/RAKc3HF
+
+Installation
+---------------------------
+**Buttons requires Python 3.6 or higher.**
+
+**Windows**
+
+.. code:: sh
+
+    py -version -m pip install buttons
+
+**Linux**
+
+.. code:: sh
+
+    python3 -m pip install buttons
+
+Getting Started
+----------------------------
+A quick and easy paginator example:
+
+.. code:: py3
+
+    from discord.ext import commands
+    from discord.ext import buttons
+
+
+    class MyPaginator(buttons.Paginator):
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
+        @buttons.button(emoji='\u23FA')
+        async def record_button(self, ctx, member):
+            await ctx.send('This button sends a silly message! But could be programmed to do much more.')
+
+        @buttons.button(emoji='my_custom_emoji:1234567890')
+        async def silly_button(self, ctx, member):
+            await ctx.send('Beep boop...')
+
+
+    bot = commands.Bot(command_prefix='??')
+
+
+    @bot.command()
+    async def test(ctx):
+        pagey = MyPaginator(title='Silly Paginator', colour=0xc67862, embed=True, timeout=90, use_defaults=True,
+                            entries=[1, 2, 3], length=1, format='**')
+
+        await pagey.start(ctx)
+
+
+    @bot.event
+    async def on_ready():
+        print('Ready!')
+
+
+    bot.run('TOKEN')
+
+

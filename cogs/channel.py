@@ -79,8 +79,6 @@ class channelstats(commands.Cog, description="Channel information."):
         case_insensitive=True,
         invoke_without_command=True
     )
-    @commands.has_guild_permissions(manage_channels=True)
-    @commands.bot_has_guild_permissions(manage_channels=True)
     async def channel_info(self, ctx : MyContext):
         """
         Information about channels.
@@ -134,28 +132,25 @@ class channelstats(commands.Cog, description="Channel information."):
         """
 
         channel = channel or ctx.channel
-        
-        view = ChannelConfirm(ctx.author)
-        message = await ctx.send(f'Are you sure you want to delete {channel.mention}',view=view)
 
-        await view.wait()
+        confirm = await ctx.confirm(f'Are you sure you want to delete {channel.mention}',delete_after=True, timeout=30)
 
-        if view.value is None:
-            await message.delete()
-            return await ctx.send('Timed out. Run the command again to delete the channel.')
+        if confirm is None:
+            return await ctx.send(f'Timed out.')
 
-        elif view.value:
+        if confirm is False:
+            return await ctx.send(f'Canceled.')
+
+
+        else:
 
             if channel == ctx.channel:
                 return await channel.delete(reason=f'Channel deleted by {ctx.author} (ID {ctx.author.id})')
 
-            await message.delete()
             await channel.delete(reason=f'Channel deleted by {ctx.author} (ID {ctx.author.id})')
             await ctx.send(f"Deleted #{channel.name}")
             
-        else:
-            await message.delete()
-            return await ctx.send('Command canceled.')
+        
 
     @channel_info.group(name='create',case_insensitive=True, invoke_without_command=True)
     @commands.has_guild_permissions(manage_channels=True)
@@ -195,6 +190,9 @@ class channelstats(commands.Cog, description="Channel information."):
 
             await message.delete()
             return await ctx.send("Command canceled.")
+
+    
+    
         
 
 

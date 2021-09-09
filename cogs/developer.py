@@ -14,8 +14,11 @@ import os
 import sys
 from collections import Counter
 import argparse, shlex
+import io
+import tabulate
 
 from utils.useful import Embed, fuzzy, BaseMenu, pages, clean_code, ts_now, Pag
+from utils.json_loader import write_json
 
 @pages()
 async def show_result(self, menu, entry):
@@ -255,22 +258,6 @@ class developer(commands.Cog, description="Developer commands."):
     
 
 
-    @developer_cmds.command(name='restartbot',aliases=['restart'])
-    @commands.is_owner()
-    async def restart_bot(self, ctx):
-
-        
-        await ctx.message.delete()
-        
-
-        message = await ctx.send("Restarting bot. Allow up to 20 seconds.")
-
-        data = {"_id" : ctx.bot.user.id, "message" : message.id, "channel" : message.channel.id, "author" : ctx.author.id}
-        await self.bot.info.upsert(data)
-
-
-        restart_program()
-
     
     @commands.command(aliases=['save'])
     async def archive(self, ctx, *, message : Optional[discord.Message]):
@@ -295,7 +282,28 @@ class developer(commands.Cog, description="Developer commands."):
             await ctx.send(f"Archived the message in your DMs!\n{msg.jump_url}")
         except discord.Forbidden:
             await ctx.send("Oops! I couldn't send you a message. Are you sure your DMs are on?")
-            
+
+
+    @commands.command(name='delete',aliases=['d'])
+    async def delete_message(self, ctx, *, message : Optional[discord.Message]):
+
+        if not message:
+            message = getattr(ctx.message.reference, "resolved", None)
+        
+        if message.author != ctx.me:
+            return await ctx.send('I can only delete **my** messages.')
+
+        else:
+
+            try:
+                await message.delete()
+            except:
+                return await ctx.send('Failed to delete that message, try again later.')
+
+    
+
+
+
 
 
         

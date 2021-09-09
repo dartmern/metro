@@ -1,3 +1,5 @@
+import datetime
+from typing import Optional
 import discord
 from discord.ext import commands
 
@@ -16,18 +18,76 @@ import textwrap
 from utils.useful import clean_code, Pag, Cooldown, ts_now
 from traceback import format_exception
 
+from utils.json_loader import read_json, write_json
+
+info_file = read_json('info')
 
 
-from utils.mongo import Document
+p_database = info_file['postgres_database']
+p_user = info_file['postgres_user']
+p_password = info_file['postgres_password']
+token = info_file['bot_token']
 
-def get_prefix(bot, message):
+async def create_db_pool(database, user, password):
+    bot.db = await asyncpg.create_pool(database=database,user=user,password=password)
+    print('Connected to database.')
 
-    if message.author.id == 525843819850104842:
-        return ["m.", ""]
+async def get_prefix(bot, message):
+
+
+    if not message.guild:
+        return commands.when_mentioned_or('?','m.')(bot, message)
+
+    prefix = await bot.db.fetch('SELECT prefix FROM prefixes WHERE "guild_id" = $1', message.guild.id)
+    if len(prefix) == 0:
+        await bot.db.execute('INSERT into prefixes ("guild_id", prefix) VALUES ($1, $2)', message.guild.id, 'm.')
+        prefix = ['m.']
 
     else:
-        return ["m."]
+        prefix = prefix[0].get('prefix')
 
+    if message.author.id == 525843819850104842:
+        
+        return commands.when_mentioned_or(prefix, '')(bot, message)
+    return commands.when_mentioned_or(prefix)(bot, message)
+
+class ConfirmationView(discord.ui.View):
+    def __init__(self, *, timeout: float, author_id: int, ctx, delete_after: bool) -> None:
+        super().__init__(timeout=timeout)
+        self.value: Optional[bool] = None
+        self.delete_after: bool = delete_after
+        self.author_id: int = author_id
+        self.ctx = ctx
+        self.message: Optional[discord.Message] = None
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user and interaction.user.id == self.author_id:
+            return True
+        else:
+            await interaction.response.send_message('This confirmation dialog is not for you.', ephemeral=True)
+            return False
+
+    async def on_timeout(self) -> None:
+        self.confirm.disabled = True
+        self.cancel.disabled = True
+        self.value = None
+        await self.message.edit(view=self)
+
+    @discord.ui.button(label='Confirm', style=discord.ButtonStyle.green)
+    async def confirm(self, button: discord.ui.Button, interaction: discord.Interaction):
+        self.value = True
+        await interaction.response.defer()
+        if self.delete_after:
+            await interaction.delete_original_message()
+        self.stop()
+
+    @discord.ui.button(label='Cancel', style=discord.ButtonStyle.red)
+    async def cancel(self, button: discord.ui.Button, interaction: discord.Interaction):
+        self.value = False
+        await interaction.response.defer()
+        if self.delete_after:
+            await interaction.delete_original_message()
+        self.stop()
 
 class MyContext(commands.Context):
 
@@ -46,6 +106,38 @@ class MyContext(commands.Context):
             await self.message.add_reaction(emoji)
         except discord.HTTPException:
             pass
+
+    async def confirm(
+        self,
+        message : str,
+        *,
+        timeout : float = 60.0,
+        delete_after : bool = True,
+        author_id : Optional[int] = None
+
+    ) -> Optional[bool]:
+
+        author_id = author_id or self.author.id
+
+        view = ConfirmationView(
+            timeout=timeout,
+            delete_after=delete_after,
+            ctx=self,
+            author_id=author_id
+
+        )
+        view.message = await self.send(message, view=view)
+        await view.wait()
+        return view.value
+
+        
+
+        
+
+
+
+
+
 
 
 
@@ -83,7 +175,7 @@ class MetroBot(commands.Bot):
             await self.invoke(ctx)
             return
 
-        if self.maintenance and ctx.valid:
+        if bot.maintenance and ctx.valid:
             await message.channel.send(f"The bot is currently in maintenance. Please try again later.")
             return
 
@@ -91,9 +183,8 @@ class MetroBot(commands.Bot):
 
 
 
-intents = discord.Intents.default()
-intents.members = True
-intents.reactions = True
+intents = discord.Intents.all()
+
 
 mentions = discord.AllowedMentions(
     roles=False, users=True, everyone=False, replied_user=False
@@ -107,17 +198,20 @@ print(f"{cwd}\n-----")
 
 bot_data = {
     "intents" : intents,
-    "case_insensitive" :True,
+    "case_insensitive" : True,
     "allowed_mentions" : mentions,
     "help_command" : None,
     "owner_id" : 525843819850104842,
-    "command_prefix" : get_prefix
+    "command_prefix" : get_prefix,
+    "slash_commands" : False
 }
 
 bot = MetroBot(**bot_data)
+bot.maintenance = False
 
-bot.connection_url = 'mongodb+srv://dartmern:huV443naj@metro.zusoh.mongodb.net/metro?retryWrites=true&w=majority'
-token = "Nzg4NTQzMTg0MDgyNjk4MjUy.X9lCEQ.-3IJ3mOcpgAI_OCSj_bDGE7brbs"
+
+
+
 
 
 bot.check = "<:mCheck:819254444197019669>"
@@ -125,18 +219,7 @@ bot.cross = "<:mCross:819254444217860116>"
 
 
 
-def read_json(filename):
-    """
-    A function to read a json file and return the data.
-    Params:
-     - filename (string) : The name of the file to open
-    Returns:
-     - data (dict) : A dict of the data in the file
-    """
-    cwd = get_path()
-    with open(cwd+'/bot_config/'+filename+'.json', 'r') as file:
-        data = json.load(file)
-    return data
+
 
 
 @bot.event
@@ -144,33 +227,8 @@ async def on_ready():
     print(
         f"-----\nLogged in as: {bot.user.name} : {bot.user.id}\n-----\nMy current default prefix is: m.\n-----")
 
-    bot.mongo = motor.motor_asyncio.AsyncIOMotorClient(str(bot.connection_url))
-    bot.db = bot.mongo["bot_config"]
-
-    bot.info = Document(bot.db, 'info')
-
-    data = await bot.info.find_by_id(bot.user.id)
-
-    if not data is None:
-        message = data['message']
-        channel = data['channel']
-        author = data['author']
-
-        channel = bot.get_channel(int(channel))
         
-
-        msg = channel.get_partial_message(message)
-        author = msg.guild.get_member(author)
-
-        await msg.edit(content=f"Restart successful.")
-
-        print('Restarted by {}'.format(author))
-
-        await bot.info.delete(bot.user.id)
-
-
-
-
+       
 
 
 
@@ -228,6 +286,7 @@ if __name__ == "__main__":
             bot.load_extension(f"cogs.{file[:-3]}")
 
     bot.load_extension('jishaku')
+    bot.loop.run_until_complete(create_db_pool(p_database, p_user, p_password))
     bot.run(token)
 
 

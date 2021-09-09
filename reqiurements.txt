@@ -1,0 +1,5 @@
+discord.py
+jishaku
+discord.ext.menus
+discord
+aiohttp

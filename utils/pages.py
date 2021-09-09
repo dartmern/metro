@@ -1,10 +1,11 @@
 import asyncio
 import discord
-from discord.ext.commands import Paginator as CommandPaginator
 from discord.ext import menus
 
+from utils.useful import Embed
 
-class RoboPages(menus.MenuPages):
+
+class ExtraPages(menus.MenuPages):
     def __init__(self, source):
         super().__init__(source=source, check_embeds=True)
         self.input_lock = asyncio.Lock()
@@ -36,7 +37,7 @@ class RoboPages(menus.MenuPages):
 
         self.bot.loop.create_task(go_back_to_current_page())
 
-    @menus.button('\N{INPUT SYMBOL FOR NUMBERS}', position=menus.Last(1.5), lock=False)
+    @menus.button('\N{INPUT SYMBOL FOR NUMBERS}', position=menus.Last(2), lock=False)
     async def numbered_page(self, payload):
         """lets you type a page number to go to"""
         if self.input_lock.locked():
@@ -67,3 +68,52 @@ class RoboPages(menus.MenuPages):
                 await channel.delete_messages(to_delete)
             except Exception:
                 pass
+
+
+    @menus.button("\N{WHITE QUESTION MARK ORNAMENT}", position=menus.Last(5))
+    async def show_bot_help(self, payload):
+        """Shows how to use the bot"""
+
+        embed = Embed(title="Argument Help Menu")
+
+        entries = (
+            ("<argument>", "This means the argument is __**required**__."),
+            ("[argument]", "This means the argument is __**optional**__."),
+            ("[A|B]", "This means that it can be __**either A or B**__."),
+            (
+                "[argument...]",
+                "This means you can have multiple arguments.\n"
+                "Now that you know the basics, it should be noted that...\n"
+                "__**You do not type in the brackets!**__",
+            ),
+        )
+
+        embed.add_field(
+            name="How do I use this bot?",
+            value="Reading the bot signature is pretty simple.",
+        )
+
+        for name, value in entries:
+            embed.add_field(name=name, value=value, inline=False)
+
+        embed.set_footer(
+            text=f"We were on page {self.current_page + 1} before this message."
+        )
+
+        await self.message.edit(embed=embed)
+
+        async def go_back_to_current_page():
+            await asyncio.sleep(30.0)
+            await self.show_page(self.current_page)
+
+        self.bot.loop.create_task(go_back_to_current_page())
+
+
+
+class MySource(menus.ListPageSource):
+    def __init__(self, data):
+        super().__init__(data, per_page=20)
+
+    async def format_page(self, menu, entries):
+        offset = menu.current_page * self.per_page
+        return '\n'.join(f'{i}. {v}' for i, v in enumerate(entries, start=offset))

@@ -20,55 +20,101 @@ import asyncio
 import argparse, shlex
 from typing import Optional
 
+import datetime
+from utils.remind_utils import format_relative
+from dateutil.relativedelta import relativedelta
+class plural:
+    def __init__(self, value):
+        self.value = value
+
+    def __format__(self, format_spec):
+        v = self.value
+        singular, sep, plural = format_spec.partition("|")
+        plural = plural or f"{singular}s"
+        if abs(v) != 1:
+            return f"{v} {plural}"
+        return f"{v} {singular}"
+
+def human_timedelta(dt, *, source=None, accuracy=3, brief=False, suffix=True):
+    now = source or discord.utils.utcnow()
+    # Microsecond free zone
+    now = now.replace(microsecond=0, tzinfo=datetime.timezone.utc)
+    dt = dt.replace(microsecond=0, tzinfo=datetime.timezone.utc)
+
+    # This implementation uses relativedelta instead of the much more obvious
+    # divmod approach with seconds because the seconds approach is not entirely
+    # accurate once you go over 1 week in terms of accuracy since you have to
+    # hardcode a month as 30 or 31 days.
+    # A query like "11 months" can be interpreted as "!1 months and 6 days"
+    if dt > now:
+        delta = relativedelta(dt, now)
+        suffix = ""
+    else:
+        delta = relativedelta(now, dt)
+        suffix = " ago" if suffix else ""
+
+    attrs = [
+        ("year", "y"),
+        ("month", "mo"),
+        ("day", "d"),
+        ("hour", "h"),
+        ("minute", "m"),
+        ("second", "s"),
+    ]
+
+    output = []
+    for attr, brief_attr in attrs:
+        elem = getattr(delta, attr + "s")
+        if not elem:
+            continue
+
+        if attr == "day":
+            weeks = delta.weeks
+            if weeks:
+                elem -= weeks * 7
+                if not brief:
+                    output.append(format(plural(weeks), "week"))
+                else:
+                    output.append(f"{weeks}w")
+
+        if elem <= 0:
+            continue
+
+        if brief:
+            output.append(f"{elem}{brief_attr}")
+        else:
+            output.append(format(plural(elem), attr))
+
+    if accuracy is not None:
+        output = output[:accuracy]
+
+    if len(output) == 0:
+        return "now"
+    else:
+        if not brief:
+            return human_join(output, final="and") + suffix
+        else:
+            return " ".join(output) + suffix
+
+
+def human_join(seq, delim=", ", final="or"):
+    size = len(seq)
+    if size == 0:
+        return ""
+
+    if size == 1:
+        return seq[0]
+
+    if size == 2:
+        return f"{seq[0]} {final} {seq[1]}"
+
+    return delim.join(seq[:-1]) + f" {final} {seq[-1]}"
 
 class Arguments(argparse.ArgumentParser):
     def error(self, message):
         raise RuntimeError(message)
 
-class View(discord.ui.View):
-    def __init__(self, author):
-        super().__init__(timeout=60)
-        self.user = author
 
-
-    async def on_timeout(self) -> None:
-        self.foo.disabled = True
-        self.boo.disabled = True
-        await self.message.edit(view=self)
-
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if self.user == interaction.user:
-            return True
-        await interaction.response.send_message(f"Only {self.user} can use this menu. AKA stop pressing other people's buttons",
-                                                ephemeral=True)
-        return False
-
-    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.green)
-    async def foo(self, _, interaction: discord.Interaction) -> None:
-        await interaction.response.edit_message(content='Task confirmed.')
-
-        for item in self.children:
-            item.disabled = True
-
-        await interaction.message.edit(view=self)
-
-
-    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.gray)
-    async def boo(self, _, interaction: discord.Interaction) -> None:
-        await interaction.response.edit_message(content="Task canceled.")
-
-        for item in self.children:
-            item.disabled = True
-
-        await interaction.message.edit(view=self)
-
-
-
-    @classmethod
-    async def start(cls, ctx):
-        self = cls(ctx.author)
-        self.message = await ctx.channel.send('Are you sure you would like to continue?', view=self)
-        return self
 
 
 
@@ -90,13 +136,7 @@ class TimeConverter(commands.Converter):
         return time
 
 
-class ButtonMenuSource(menus.ListPageSource):
-    def __init__(self, data):
-        super().__init__(data, per_page=4)
 
-    async def format_page(self, menu, entries):
-        offset = menu.current_page * self.per_page
-        return '\n'.join(f'{i}. {v}' for i, v in enumerate(entries, start=offset))
 
 
 class NormalMenuPages(RoboPages):
@@ -141,78 +181,50 @@ class NormalMenuPages(RoboPages):
 
         self.bot.loop.create_task(go_back_to_current_page())
 
+from utils.pages import ExtraPages
+from discord.ext import menus
 
+class MenuSource(menus.ListPageSource):
+    def __init__(self, entries, *, per_page : int = 10):
+        super().__init__(entries=entries, per_page=per_page)
 
-class buttons(commands.Cog):
+    async def format_page(self, menu, entries):
+        maximum = self.get_max_pages()
+
+        new_e = []
+        for x in entries:
+            new_e.append(str(x))
+
+        embed = discord.Embed(description="\n".join(new_e))
+        embed.set_footer(text=f'Page [{menu.current_page + 1}/{maximum}]')
+        return embed
+
+class buttons(commands.Cog, description='Button related stuff. (and some secret testing...)'):
     def __init__(self, bot):
         self.bot = bot
 
 
 
     @commands.command()
-    async def login(self, ctx):
+    async def saydd(self, ctx, *, message : str):
         """
-        Simple confirmations with buttons
+        A more advanced echo/say command with variables. Run `[p]help sayd` for more info.
         """
-        await View.start(ctx)
+        pass
 
 
-    @commands.command(name='gstart')
-    async def giveaway_start(self, ctx, time : TimeConverter, *, prize : str):
-        """
-        Start a new giveaway.
 
-        :warning: This is a new command in beta. Issues will arise.
-        """
-
-        delta = datetime.timedelta(seconds=time)
-        timeconverter = precisedelta(
-            delta, minimum_unit="seconds", suppress=["microseconds"]
-        )
-
-        embed = Embed(
-            title="Giveaway!",
-            description=f"**Time Left:** {timeconverter}\n**Prize:** {prize}",
-            
-        )
-
-        item = discord.ui.Button(
-            style=discord.ButtonStyle.green,
-            label='Enter Giveaway',
-            emoji='\U0001f389'
-        )
-
-        view = discord.ui.View()
-        view.add_item(item=item)
-
-        await ctx.send(embed=embed, view=view)
+    
 
 
-    @commands.command()
-    @commands.max_concurrency(number=1, per=BucketType.user, wait=True)
-    async def ping(self, ctx):
-
-        start = time.perf_counter()
-        m = await ctx.send('Pinging...')
-        end = time.perf_counter()
-
-        typing_ping = (end - start) * 1000
-
-        start = time.perf_counter()
-        await self.bot.info.upsert({"_id" : ctx.author.id, "info" : f"Ping command issued by {ctx.author}"})
-        end = time.perf_counter()
-
-        database_ping = (end - start) * 1000
-
-        await self.bot.info.delete(ctx.author.id)
-
-        await m.edit(content=f'Typing: {round(typing_ping, 1)} ms\nWebsocket: {round(self.bot.latency*1000)} ms\nDatabase: {round(database_ping, 1)} ms')
+    
 
 
-    @commands.command()
-    async def menu(self, ctx):
-        pages = ViewMenuPages(source=ButtonMenuSource(range(1, 100)), clear_reactions_after=True)
-        await pages.start(ctx)
+
+
+
+
+
 
 
 

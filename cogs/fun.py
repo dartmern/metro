@@ -49,14 +49,6 @@ class fun(commands.Cog, description="Fun commands!"):
         await channel.send(message)
         await ctx.check()
 
-    @commands.command(aliases=["echod"])
-    @commands.has_guild_permissions(manage_messages=True)
-    async def sayd(self, ctx, channel: Optional[discord.TextChannel], *, message):
-        """Send a message to a channel as the bot then deletes your message"""
-
-        channel = channel or ctx.channel
-        await channel.send(message)
-        await ctx.message.delete()
 
 
     @commands.command()

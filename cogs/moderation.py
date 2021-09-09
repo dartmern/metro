@@ -39,6 +39,7 @@ class moderation(commands.Cog, description="Moderation commands."):
     async def kick_cmd(self,
                        ctx,
                        member : MemberConverter,
+                       *,
                        reason=None
                        ):
         """
@@ -163,7 +164,7 @@ class moderation(commands.Cog, description="Moderation commands."):
 
 
     @commands.command()
-    async def cleanup(self, ctx, amount: int=25):
+    async def cleanup(self, ctx, amount: int=5):
         """
         Cleans up the bot's messages. 
         Defaults to 25 messages. If you or the bot doesn't have `manage_messages` permission, the search will be limited to 25 messages.
@@ -216,63 +217,6 @@ class moderation(commands.Cog, description="Moderation commands."):
         else:
             await ctx.channel.edit(slowmode_delay=0)
             await ctx.send(f"Removed the slowmode for this channel")
-
-
-    def strip_accs(self, text):
-        try:
-            text = unicodedata.normalize("NFKC", text)
-            text = unicodedata.normalize("NFD", text)
-            text = unidecode.unidecode(text)
-            text = text.encode("ascii", "ignore")
-            text = text.decode("utf-8")
-        except Exception as e:
-            raise e
-        return str(text)
-
-    def is_cancerous(self, text: str) -> bool:
-        for segment in text.split():
-            for char in segment:
-                if not (char.isascii() and char.isalnum()):
-                    return True
-        return False
-
-
-    @commands.command(aliases=['dc'])
-    async def decancer(self, ctx, member : discord.Member):
-        """
-        Decancers the member's nickname.
-        This removes all all _cancerous_ characters such as Zalgo.
-        """
-
-        if self.is_cancerous(target.display_name) == True:
-            display = target.display_name
-            nick = await self.nick_maker(ctx.guild, target.display_name)
-            await target.edit(nick=nick)
-            await ctx.send(
-                f"**{display}** was now changed to **{nick}**",
-                allowed_mentions=discord.AllowedMentions.none(),
-            )
-
-        else:
-            await ctx.send("Member is already decancered")
-
-
-
-    async def nick_maker(self, guild: discord.Guild, old_shit_nick):
-        old_shit_nick = self.strip_accs(old_shit_nick)
-        new_cool_nick = re.sub("[^a-zA-Z0-9 \n.]", "", old_shit_nick)
-        new_cool_nick = " ".join(new_cool_nick.split())
-        new_cool_nick = stringcase.lowercase(new_cool_nick)
-        new_cool_nick = stringcase.titlecase(new_cool_nick)
-        default_name = "Moderated Nickname " + "".join(
-            random.choices(string.ascii_uppercase + string.digits, k=6)
-        )
-        if len(new_cool_nick.replace(" ", "")) <= 1 or len(new_cool_nick) > 32:
-            if default_name:
-                new_cool_nick = default_name
-            else:
-                new_cool_nick = "simp name"
-        return new_cool_nick
 
 
 

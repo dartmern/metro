@@ -1,11 +1,39 @@
 import discord
+from discord.enums import T
 from discord.ext import commands
 
 from typing import Optional
 import unicodedata
 
 from utils.useful import Embed
+from discord.ext.commands.cooldowns import BucketType
+import time
+import json
+from pathlib import Path
 
+
+
+def get_path():
+    """
+    A function to get the current path to bot.py
+    Returns:
+     - cwd (string) : Path to bot.py directory
+    """
+    cwd = Path(__file__).parents[1]
+    cwd = str(cwd)
+    return cwd
+
+
+def chunkIt(seq, num):
+    avg = len(seq) / float(num)
+    out = []
+    last = 0.0
+
+    while last < len(seq):
+        out.append(seq[int(last):int(last + avg)])
+        last += avg
+
+    return out
 
 class info(commands.Cog, description="Information about members, guilds, or roles."):
     def __init__(self, bot):
@@ -123,6 +151,87 @@ class info(commands.Cog, description="Information about members, guilds, or role
             description="".join(f"\n{role.mention} - {role.id}" for role in ctx.guild.roles)
         )
         await ctx.send(embed=embed)
+
+
+    @commands.command(name='prefix')
+    async def set_prefix(self, ctx, prefix : Optional[str]):
+        """
+        Set the prefix for this guild.
+        (Needs `manage_guild` permission to work)
+        """
+
+        if prefix is None:
+            prefix = 'm.'
+
+
+        data = await self.bot.db.fetch('SELECT prefix FROM prefixes WHERE "guild_id" = $1', ctx.guild.id)
+        if len(data) == 0:
+            print("Prefix is gone.")
+            await self.bot.db.execute('INSERT into prefixes ("guild_id", prefix) VALUES ($1, $2)', ctx.guild.id, prefix)
+
+        else:
+            print("Prefix is updated.")
+            await self.bot.db.execute('UPDATE prefixes SET prefix = $1 WHERE "guild_id" = $2', prefix, ctx.guild.id)
+        
+        await ctx.send('Set the prefix for **{}** to `{}`'.format(ctx.guild.name, prefix))
+
+        
+    @commands.command()
+    @commands.max_concurrency(number=1, per=BucketType.user, wait=True)
+    async def ping(self, ctx):
+
+        start = time.perf_counter()
+        m = await ctx.send('Pinging...')
+        end = time.perf_counter()
+
+        typing_ping = (end - start) * 1000
+
+        start = time.perf_counter()
+        
+        end = time.perf_counter()
+
+        database_ping = (end - start) * 1000
+
+        
+        await m.edit(content=f'Typing: `{round(typing_ping, 1)} ms`\nWebsocket: `{round(self.bot.latency*1000)} ms`\nDatabase: `unknown`')
+
+
+    @commands.command()
+    @commands.is_owner()    
+    async def tags(self, ctx):
+        await ctx.send('Loading up tags... This could take up to 2 minutes in ideal conditions. All other commands have paused.',delete_after=3)
+
+        DPY_GUILD = ctx.bot.get_guild(336642139381301249)
+
+        tags = []
+
+        cwd = get_path()
+        with open(cwd+'/config/'+'tags.txt', 'r', encoding='utf8') as file:
+            for line in file.read().split("\n"):
+                id = line[-51:]
+                id = id[:18]
+
+                try:
+                    id = DPY_GUILD.get_member(int(id))
+                except:
+                    continue
+
+                if id not in DPY_GUILD.members:
+                    tag = line[10:112]
+                    tag = tag.strip()
+                    tags.append(f'{tag}')
+
+        
+        
+        m = chunkIt(tags, 5)
+        
+
+
+        for i in m:
+            await ctx.author.send(str(i))
+        await ctx.send('{} Finished! Check your DMs!.'.format(ctx.author.mention),delete_after=.1)
+
+
 
 
 
