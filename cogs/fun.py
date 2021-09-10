@@ -69,7 +69,6 @@ class fun(commands.Cog, description="Fun commands!"):
             "It is certain.",
             "It is decidedly so.",
             "Without a doubt.",
-            "Is Trump's skin orange?",
             "Definitely",
             "Why don't you go ask your mom smh.",
             "What? No!",
