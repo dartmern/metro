@@ -28,7 +28,10 @@ class View(discord.ui.View):
 
     async def on_timeout(self) -> None:
         self.foo.disabled = True
-        await self.message.edit(view=self)
+        try:
+            await self.message.edit(view=self)
+        except:
+            pass
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if self.user == interaction.user:
