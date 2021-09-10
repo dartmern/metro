@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-from utils.converters import MemberConverter
+from utils.converters import ActionReason, MemberConverter, MemberID
 
 from typing import Optional
 from collections import Counter
@@ -120,6 +120,41 @@ class moderation(commands.Cog, description="Moderation commands."):
         raise commands.BadArgument(
             "**" + member.name + "** was not a previously banned member."
         )
+
+    @commands.command(name='multiban',usage="[users]... [reason]")
+    @commands.has_permissions(ban_members=True)
+    @commands.bot_has_permissions(send_messages=True, ban_members=True)
+    async def _multiban(self, ctx, members : commands.Greedy[MemberID], *, reason : ActionReason = None):
+        """
+        Ban multiple people from the server.
+        
+        For this to work you need to input user ids and user ids only.
+        """
+
+        if reason is None:
+            reason = f"Action requested by {ctx.author} (ID: {ctx.author.id})\nReason: No reason provided."
+
+        total_members = len(members)
+        if total_members == 0:
+            return await ctx.send('Please input member ids.')
+
+        confirm = await ctx.confirm(f'This will ban **{len(total_members)}** members. Are you sure about that?',timeout=30)
+
+        if confirm is None:
+            return await ctx.send('Timed out.')
+
+        if confirm is False:
+            return await ctx.send('Canceled.')
+
+        fails = 0
+        for member in members:
+            try:
+                await ctx.guild.ban(member, reason=reason)
+            except:
+                fails += 1
+
+        await ctx.send(f'Banned {total_members-fails}/{total_members} members.')
+
 
 
     @commands.command(
