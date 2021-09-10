@@ -272,6 +272,51 @@ class info(commands.Cog, description="Information about members, guilds, or role
         await ctx.send(embed=embed)
 
 
+    @commands.command()
+    @commands.bot_has_permissions(send_messages=True, embed_links=True)
+    async def convert(self, ctx, id : int):
+
+        try:
+            member = self.bot.get_member(id)
+
+            return await ctx.send(f'{member.mention} `{member}` (ID: {member.id})',allowed_mentions=discord.AllowedMentions.none())
+
+        except:
+            try:
+                user = self.bot.get_user(id)
+
+                return await ctx.send(f'{user.mention} `{user}` (ID: {user.id})',allowed_mentions=discord.AllowedMentions.none())
+
+            except:
+                try:
+                    channel = self.bot.get_channel(id)
+
+                    return await ctx.send(f'{channel.mention} (ID: {member.id})')
+
+                except:
+
+                    try:
+                        role = ctx.guild.get_role(id)
+
+                        return await ctx.send(f"{role.mention} (ID: {role.id})",allowed_mentions=discord.AllowedMentions.none())
+                    
+                    except:
+                        try:
+                            guild = self.bot.get_guild(id)
+
+                            return await ctx.send(f"{guild.name} (ID: {guild.id})",allowed_mentions=discord.AllowedMentions.none())
+
+                        except:
+                            return await ctx.send(f"This id either is a message or I cannot convert it into anything.")
+
+
+
+
+
+
+
+
+
 
 
 
