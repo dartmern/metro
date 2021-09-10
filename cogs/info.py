@@ -1,5 +1,4 @@
 import discord
-from discord.enums import T
 from discord.ext import commands
 
 from typing import Optional
@@ -7,9 +6,15 @@ import unicodedata
 
 from utils.useful import Embed
 from discord.ext.commands.cooldowns import BucketType
+
 import time
 import json
 from pathlib import Path
+import inspect
+import os
+
+
+from utils.useful import Embed
 
 
 
@@ -216,6 +221,48 @@ class info(commands.Cog, description="Information about members, guilds, or role
         for i in m:
             await ctx.author.send(str(i))
         await ctx.send('{} Finished! Check your DMs!.'.format(ctx.author.mention),delete_after=.1)
+
+
+    @commands.command(aliases=['sourcecode', 'code'],
+                      )
+    async def source(self, ctx, *, command: str = None):
+        """
+        Links to the bot's source code, or a specific command's
+        """
+        source_url = 'https://github.com/dartmern/metro'
+        branch = 'master'
+
+        if command is None:
+            embed = Embed(description=f"take the [entire repo]({source_url})")
+            return await ctx.send(embed=embed)
+
+        if command == 'help':
+            src = type(self.bot.help_command)
+            module = src.__module__
+            filename = inspect.getsourcefile(src)
+        else:
+            obj = self.bot.get_command(command.replace('.', ' '))
+            if obj is None:
+                embed = Embed(description=f"take the [**entire repo**]({source_url})")
+                return await ctx.send(embed=embed)
+
+            src = obj.callback.__code__
+            module = obj.callback.__module__
+            filename = src.co_filename
+
+        lines, firstlineno = inspect.getsourcelines(src)
+        if not module.startswith('discord'):
+            # not a built-in command
+            location = os.path.relpath(filename).replace('\\', '/')
+        else:
+            location = module.replace('.', '/') + '.py'
+            source_url = 'https://github.com/Rapptz/discord.py'
+            branch = 'master'
+
+        final_url = f'<{source_url}/blob/{branch}/{location}#L{firstlineno}-L{firstlineno + len(lines) - 1}>'
+        embed = Embed(color=ctx.me.color,
+                              description=f"source code for [`{command}`]({final_url})")
+        await ctx.send(embed=embed)
 
 
 
