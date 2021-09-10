@@ -60,6 +60,7 @@ class developer(commands.Cog, description="Developer commands."):
         hidden=True
     )
     @commands.is_owner()
+    @commands.bot_has_permissions(send_messages=True)
     async def developer_cmds(self, ctx):
         """
         Commands reserved for bot developers.
@@ -71,6 +72,7 @@ class developer(commands.Cog, description="Developer commands."):
         aliases=['inviteme']
     )
     @commands.is_owner()
+    @commands.bot_has_permissions(send_messages=True)
     async def invite_to_guild(self, ctx, guild_id : int, **flags : Optional[str]):
         """
         Get a invite with a guild id.
@@ -99,10 +101,10 @@ class developer(commands.Cog, description="Developer commands."):
 
     @developer_cmds.command(
         name='guilds',
-        aliases=['servers'],
-
+        aliases=['servers']
     )
     @commands.is_owner()
+    @commands.bot_has_permissions(send_messages=True,embed_links=True)
     async def servers(self, ctx, search=None):
         """
         Get all the guilds the bot is in.
@@ -140,6 +142,7 @@ class developer(commands.Cog, description="Developer commands."):
 
     @developer_cmds.command(name="reload")
     @commands.is_owner()
+    @commands.bot_has_permissions(send_messages=True)
     async def reload_a_cog(self, ctx, cog):
         """
         Reload a cog.
@@ -162,6 +165,7 @@ class developer(commands.Cog, description="Developer commands."):
 
     @developer_cmds.command(name="load")
     @commands.is_owner()
+    @commands.bot_has_permissions(send_messages=True)
     async def load_cog(self, ctx, cog):
         """
         Load a unloaded cog.
@@ -181,6 +185,7 @@ class developer(commands.Cog, description="Developer commands."):
 
     @developer_cmds.command(name="unload")
     @commands.is_owner()
+    @commands.bot_has_permissions(send_messages=True)
     async def unload_cog(self, ctx, cog):
         """
         Unload a loaded cog.
@@ -202,6 +207,7 @@ class developer(commands.Cog, description="Developer commands."):
 
     @developer_cmds.command(name='cleanup',brief='Cleanup my messages with no limit')
     @commands.is_owner()
+    @commands.bot_has_permissions(send_messages=True)
     async def dev_cleanup(self, ctx, amount : int = 25, *, flags : str = None):
         """
         Cleanup my messages with no limit and no permission checks
@@ -260,6 +266,7 @@ class developer(commands.Cog, description="Developer commands."):
 
     
     @commands.command(aliases=['save'])
+    @commands.bot_has_permissions(send_messages=True, read_message_history=True)
     async def archive(self, ctx, *, message : Optional[discord.Message]):
         """
         Archive a message by replying or passing in a message link / message id.
@@ -285,6 +292,7 @@ class developer(commands.Cog, description="Developer commands."):
 
 
     @commands.command(name='delete',aliases=['d'])
+    @commands.bot_has_permissions(send_messages=True)
     async def delete_message(self, ctx, *, message : Optional[discord.Message]):
 
         if not message:

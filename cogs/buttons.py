@@ -222,6 +222,7 @@ class buttons(commands.Cog, description='Button related stuff. (and some secret 
 
     @commands.command()
     @commands.is_owner()
+    @commands.bot_has_permissions(send_messages=True)
     async def saya(self, ctx, *, message : str):
         """
         A more advanced echo/say command with variables.

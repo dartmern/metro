@@ -24,6 +24,7 @@ class fun(commands.Cog, description="Fun commands!"):
 
 
     @commands.command()
+    @commands.bot_has_permissions(send_messages=True)
     async def rickroll(self, ctx, *, link):
         """
         Detects if a link is a rickroll
@@ -40,18 +41,9 @@ class fun(commands.Cog, description="Fun commands!"):
             await ctx.send(link + " is not a valid URL...")
 
 
-    @commands.command(aliases=["echo"])
-    @commands.has_guild_permissions(manage_messages=True)
-    async def say(self, ctx, channel : Optional[discord.TextChannel], * , message):
-        """Send a message to a channel as the bot"""
-
-        channel = channel or ctx.channel
-        await channel.send(message)
-        await ctx.check()
-
-
 
     @commands.command()
+    @commands.bot_has_permissions(send_messages=True)
     async def random(self, ctx, minimum = 0, maximum = 100):
         """Displays a random number within an optional range.
 
@@ -67,6 +59,7 @@ class fun(commands.Cog, description="Fun commands!"):
 
 
     @commands.command(name="8ball",aliases=['8'])
+    @commands.bot_has_permissions(send_messages=True, embed_links=True)
     async def _8ball(self, ctx, *, question):
         """
         Ask the 8-ball a question!

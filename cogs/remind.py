@@ -289,6 +289,7 @@ class reminder(commands.Cog, description="Reminder utilities."):
         usage="<when>",
         invoke_without_command=True
     )
+    @commands.bot_has_permissions(send_messages=True)
     async def reminder(self, ctx, *, when : UserFriendlyTime(commands.clean_content, default='\u2026')):
         """Reminds you of something after a certain amount of time.
 

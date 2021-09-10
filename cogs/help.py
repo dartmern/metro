@@ -436,6 +436,7 @@ class meta(commands.Cog):
 
 
     @commands.command(name='invite')
+    @commands.bot_has_permissions(send_messages=True)
     async def _invite(self, ctx):
 
         basic = discord.Permissions.none()
@@ -490,6 +491,7 @@ class meta(commands.Cog):
 
 
     @commands.command()
+    @commands.bot_has_permissions(send_messages=True, embed_links=True)
     async def support(self, ctx):
 
         await ctx.reply(embed=Embed

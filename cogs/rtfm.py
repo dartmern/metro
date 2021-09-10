@@ -163,6 +163,7 @@ class docs(commands.Cog, description="Read docs about discord.py or python"):
 
 
     @commands.group(name="rtfm", aliases=["readthefuckingdocs","rtfd"],invoke_without_command=True, case_insensitive=True)
+    @commands.bot_has_permissions(send_messages=True)
     async def read_the_fucking_manual(self, ctx, *, obj : str = None):
         """Gives you a documentation link for a discord.py entity.
         Events, objects, and functions are all supported through a
@@ -174,12 +175,14 @@ class docs(commands.Cog, description="Read docs about discord.py or python"):
 
 
     @read_the_fucking_manual.command(name="python",aliases=["py"])
+    @commands.bot_has_permissions(send_messages=True)
     async def rtfm_py(self, ctx, *, obj : str = None):
         """Gives you a documentation link for a Python entity."""
 
         await self.do_rtfm(ctx, "python", obj)
 
     @read_the_fucking_manual.command(name="master",aliases=["2.0"])
+    @commands.bot_has_permissions(send_messages=True)
     async def rtfm_master(self, ctx, *, obj : str = None):
         """Gives you a documentation link for a discord.py entity. (master branch)"""
 

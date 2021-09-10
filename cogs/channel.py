@@ -1,5 +1,6 @@
 import discord
 from discord.channel import _channel_factory
+from discord.enums import try_enum
 from discord.ext import commands, menus
 from discord.ext.menus.views import ViewMenuPages
 
@@ -79,6 +80,7 @@ class channelstats(commands.Cog, description="Channel information."):
         case_insensitive=True,
         invoke_without_command=True
     )
+    @commands.bot_has_permissions(send_messages=True)
     async def channel_info(self, ctx : MyContext):
         """
         Information about channels.
@@ -89,6 +91,7 @@ class channelstats(commands.Cog, description="Channel information."):
         await ctx.send_help('channel')
 
     @channel_info.command(name='list')
+    @commands.bot_has_permissions(send_messages=True)
     async def channel_list(self, ctx, *, flags : str = None):
         """
         List all the channel in the server.
@@ -123,7 +126,7 @@ class channelstats(commands.Cog, description="Channel information."):
 
     @channel_info.command()
     @commands.has_guild_permissions(manage_channels=True)
-    @commands.bot_has_guild_permissions(manage_channels=True)
+    @commands.bot_has_guild_permissions(manage_channels=True, send_messages=True)
     async def delete(self, ctx : MyContext, channel : Union[discord.TextChannel, discord.VoiceChannel, discord.StageChannel, None]):
         """
         Delete a channel.
@@ -154,7 +157,7 @@ class channelstats(commands.Cog, description="Channel information."):
 
     @channel_info.group(name='create',case_insensitive=True, invoke_without_command=True)
     @commands.has_guild_permissions(manage_channels=True)
-    @commands.bot_has_guild_permissions(manage_channels=True)
+    @commands.bot_has_guild_permissions(manage_channels=True, send_messages=True)
     async def channel_create(self, ctx : MyContext):
         """
         Create a channel.
@@ -163,7 +166,7 @@ class channelstats(commands.Cog, description="Channel information."):
 
     @channel_create.command(name='text')
     @commands.has_guild_permissions(manage_channels=True)
-    @commands.bot_has_guild_permissions(manage_channels=True)
+    @commands.bot_has_guild_permissions(manage_channels=True, send_messages=True)
     async def channel_create_text(self, ctx : MyContext, name : str, category : Union[discord.CategoryChannel, None]):
         """
         Create a Text Channel

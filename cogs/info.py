@@ -67,6 +67,7 @@ class info(commands.Cog, description="Information about members, guilds, or role
 
     @commands.command(name='permissions',brief="Shows a member's permissions in a specific channel.")
     @commands.guild_only()
+    @commands.bot_has_permissions(send_messages=True)
     async def member_perms(self, ctx, member : Optional[discord.Member], channel : Optional[discord.TextChannel]):
         """Shows a member's permissions in a specific channel.
 
@@ -83,6 +84,7 @@ class info(commands.Cog, description="Information about members, guilds, or role
         await self.say_permissions(ctx, member, channel)
 
     @commands.command()
+    @commands.bot_has_permissions(send_messages=True)
     async def charinfo(self, ctx, *, characters: str):
         """Shows you information about a number of characters.
         Only up to 25 characters at a time.
@@ -100,6 +102,7 @@ class info(commands.Cog, description="Information about members, guilds, or role
 
 
     @commands.command(aliases=['ui','whois'])
+    @commands.bot_has_permissions(send_messages=True)
     async def userinfo(self, ctx, member : Optional[discord.Member]):
         """
         Shows all the information about the specified user.
@@ -147,6 +150,7 @@ class info(commands.Cog, description="Information about members, guilds, or role
 
     @commands.command()
     @commands.has_guild_permissions(manage_roles=True)
+    @commands.bot_has_permissions(send_messages=True)
     async def roles(self, ctx):
         """
         View all the roles in the guild.
@@ -163,6 +167,7 @@ class info(commands.Cog, description="Information about members, guilds, or role
 
 
     @commands.command(name='prefix')
+    @commands.bot_has_permissions(send_messages=True)
     async def set_prefix(self, ctx, prefix : Optional[str]):
         """
         Set the prefix for this guild.
@@ -188,7 +193,8 @@ class info(commands.Cog, description="Information about members, guilds, or role
     
 
     @commands.command(hidden=True)
-    @commands.is_owner()    
+    @commands.is_owner()  
+    @commands.bot_has_permissions(send_messages=True)  
     async def tags(self, ctx):
         await ctx.send('Loading up tags... This could take up to 2 minutes in ideal conditions. All other commands have paused.',delete_after=3)
 
@@ -225,6 +231,7 @@ class info(commands.Cog, description="Information about members, guilds, or role
 
     @commands.command(aliases=['sourcecode', 'code'],
                       )
+    @commands.bot_has_permissions(send_messages=True, embed_links=True)
     async def source(self, ctx, *, command: str = None):
         """
         Links to the bot's source code, or a specific command's

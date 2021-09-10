@@ -36,6 +36,7 @@ class moderation(commands.Cog, description="Moderation commands."):
 
     @commands.command(name="kick", brief="Kick a member from the server.")
     @commands.has_guild_permissions(kick_members=True)
+    @commands.bot_has_permissions(send_messages=True, kick_members=True)
     async def kick_cmd(self,
                        ctx,
                        member : MemberConverter,
@@ -61,6 +62,7 @@ class moderation(commands.Cog, description="Moderation commands."):
         usage="<member> [reason]"
     )
     @commands.has_guild_permissions(ban_members=True)
+    @commands.bot_has_permissions(send_messages=True, ban_members=True)
     async def ban_cmd(
             self,
             ctx,
@@ -97,6 +99,7 @@ class moderation(commands.Cog, description="Moderation commands."):
                       brief="Unban a previously banned member.",
                       usage="<member>")
     @commands.has_guild_permissions(ban_members=True)
+    @commands.bot_has_permissions(send_messages=True, ban_members=True)
     async def unban_cmd(
             self,
             ctx,
@@ -126,6 +129,7 @@ class moderation(commands.Cog, description="Moderation commands."):
         aliases=["lock"]
     )
     @commands.has_permissions(manage_channels=True)
+    @commands.bot_has_permissions(send_messages=True, manage_channels=True)
     async def lockdown_cmd(self,
                            ctx,
                            channel : discord.TextChannel = None):
@@ -148,6 +152,7 @@ class moderation(commands.Cog, description="Moderation commands."):
         aliases=["unlock"]
     )
     @commands.has_permissions(manage_channels=True)
+    @commands.bot_has_permissions(send_messages=True, manage_channels=True)
     async def unlockdown_cmd(self,
                            ctx,
                            channel: discord.TextChannel = None):
@@ -164,6 +169,7 @@ class moderation(commands.Cog, description="Moderation commands."):
 
 
     @commands.command()
+    @commands.bot_has_permissions(send_messages=True)
     async def cleanup(self, ctx, amount: int=5):
         """
         Cleans up the bot's messages. 
@@ -201,6 +207,7 @@ class moderation(commands.Cog, description="Moderation commands."):
 
     @commands.command(aliases=['sm'])
     @commands.has_guild_permissions(manage_channels=True)
+    @commands.bot_has_permissions(send_messages=True, manage_channels=True)
     async def slowmode(self, ctx, time : TimeConverter=None):
 
         if time:
