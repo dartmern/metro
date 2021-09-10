@@ -182,7 +182,7 @@ class info(commands.Cog, description="Information about members, guilds, or role
         
     
 
-    @commands.command()
+    @commands.command(hidden=True)
     @commands.is_owner()    
     async def tags(self, ctx):
         await ctx.send('Loading up tags... This could take up to 2 minutes in ideal conditions. All other commands have paused.',delete_after=3)
