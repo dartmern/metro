@@ -138,7 +138,7 @@ class moderation(commands.Cog, description="Moderation commands."):
         if total_members == 0:
             return await ctx.send('Please input member ids.')
 
-        confirm = await ctx.confirm(f'This will ban **{len(total_members)}** members. Are you sure about that?',timeout=30)
+        confirm = await ctx.confirm(f'This will ban **{total_members}** members. Are you sure about that?',timeout=30)
 
         if confirm is None:
             return await ctx.send('Timed out.')
