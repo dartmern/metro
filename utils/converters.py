@@ -47,12 +47,36 @@ class MemberConverter(commands.Converter):
 
 
 
+#for multiban (only takes ids and turns into all members)
+class MemberID(commands.Converter):
+    async def convert(self, ctx, argument):
+        try:
+            m = await commands.MemberConverter().convert(ctx, argument)
+        except commands.BadArgument:
+            try:
+                member_id = int(argument, base=10)
+            except ValueError:
+                raise commands.BadArgument(f"{argument} is not a valid member or member ID.") from None
+            else:
+                m = await ctx.bot.get_or_fetch_member(ctx.guild, member_id)
+                if m is None:
+                    # hackban case
+                    return type('_Hackban', (), {'id': member_id, '__str__': lambda s: f'Member ID {s.id}'})()
+
+        if not can_execute_action(ctx, ctx.author, m):
+            raise commands.BadArgument('You cannot do this action on this user due to role hierarchy.')
+        return m
 
 
 
+class ActionReason(commands.Converter):
+    async def convert(self, ctx, argument):
+        ret = f'Action requested by {ctx.author} (ID: {ctx.author.id})\nReason: {argument}'
 
-
-
+        if len(ret) > 512:
+            reason_max = 512 - len(ret) + len(argument)
+            raise commands.BadArgument(f'Reason is too long ({len(argument)}/{reason_max})')
+        return ret
 
 
 
