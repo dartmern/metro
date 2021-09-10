@@ -243,6 +243,43 @@ class buttons(commands.Cog, description='Button related stuff. (and some secret 
         await ctx.send(str(message))
 
 
+    @commands.command(hidden=True)
+    @commands.bot_has_permissions(send_messages=True, read_message_history=True)
+    async def tag(self, ctx, *, tag : str):
+
+        if ctx.guild.id != 812143286457729055:
+            return await ctx.send('The tag command is only available in my support server for helpers.')
+
+        role = ctx.guild.get_role(814018291353124895)
+        if role not in ctx.author.roles:
+            return await ctx.send(f"This command is only available to helpers.")
+
+        if ctx.message.reference:
+            message = getattr(ctx.message.reference, "resolved", None)
+
+        else:
+            message = ctx.message
+
+        if tag.lower() == 'offline':
+            return await message.reply(f'**Bot offline/not responding in your server?**\n\n'
+                                        'Please send us your server id for us to help you.\n' 
+                                        '> If you need help finding your server id: <https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID->'
+                                        )
+
+        if tag.lower() == 'id':
+            return await message.reply(f"**Need help finding a Server/User/Message id?**\n\n"
+                                        "<https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID->"
+                                        )
+
+        
+        if tag.lower() == 'help':
+            return await message.reply(f"""Please state your problem/issue. Saying "it doesn't work" doesn't help us at all.""")
+
+        if tag.lower() == 'tags':
+            return await message.reply(f"As of now, tags are not anywhere close to release and are only in this server for helpers.")
+
+
+
 
 
     
