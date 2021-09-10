@@ -280,6 +280,16 @@ class buttons(commands.Cog, description='Button related stuff. (and some secret 
 
 
 
+    @commands.command(hidden=True)
+    @commands.bot_has_permissions(send_messages=True)
+    async def taglist(self, ctx):
+
+        await ctx.send("offline, id, help, tags"
+        
+        )
+
+
+
 
 
     
