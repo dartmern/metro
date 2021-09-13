@@ -1,10 +1,7 @@
 import discord
 from discord.ext import commands, menus
-from discord.ext.commands import Paginator
-from discord.ext.commands.core import is_owner
 
-from utils.useful import PaginatorInterface
-from utils.converters import MemberConverter
+
 from typing import Optional
 import typing
 
@@ -14,11 +11,9 @@ import os
 import sys
 from collections import Counter
 import argparse, shlex
-import io
-import tabulate
 
-from utils.useful import Embed, fuzzy, BaseMenu, pages, clean_code, ts_now, Pag
-from utils.json_loader import write_json
+
+from utils.useful import Embed, fuzzy, BaseMenu, pages, clean_code, ts_now, Pag, get_bot_uptime
 
 @pages()
 async def show_result(self, menu, entry):
@@ -33,6 +28,8 @@ def restart_program():
         python = sys.executable
         os.execl(python, python, * sys.argv)
 
+
+
 class Arguments(argparse.ArgumentParser):
     def error(self, message):
         raise RuntimeError(message)
@@ -42,6 +39,8 @@ class Arguments(argparse.ArgumentParser):
 class developer(commands.Cog, description="Developer commands."):
     def __init__(self, bot):
         self.bot = bot
+
+
 
 
     @commands.Cog.listener()
@@ -262,6 +261,60 @@ class developer(commands.Cog, description="Developer commands."):
                 return await ctx.send("That is not a vaild flag.")
 
     
+    @developer_cmds.command()
+    @commands.bot_has_permissions(send_messages=True)
+    async def info(self, ctx):
+        """
+        Display some developer stats/info.
+        """
+        check = ':white_check_mark:'
+        cross = ':x:'
+
+        if self.bot.maintenance:
+            m=check
+        else:
+            m=cross
+
+        if round(self.bot.latency*1000) > 200:
+            l=check
+        else:
+            l=cross
+        
+        embed = Embed(
+            title='Bot Stats for nerds',
+            description=
+            f'Maintenance: {m}\n'
+            f'High Latency: {l}'
+        )
+
+        guilds = 0
+        text = 0
+        voice = 0
+        t_m = 0
+
+        for guild in self.bot.guilds:
+            guilds += 1
+            if guild.unavailable:
+                continue
+
+            t_m += guild.member_count
+
+            for channel in guild.channels:
+                if isinstance(channel, discord.TextChannel):
+                    text += 1
+                if isinstance(channel, discord.VoiceChannel):
+                    voice += 1
+
+                
+        
+        embed.add_field(name='Guilds',value=len(self.bot.guilds),inline=True)
+        embed.add_field(name='Uptime',value=get_bot_uptime(self.bot,brief=True),inline=True)
+
+        embed.add_field(name='Members',value=f'Total: {t_m}\nUnique: {len(self.bot.users)}',inline=False)
+        embed.add_field(name='Channels',value=f'Total: {text+voice}\nText: {text}\nVoice: {voice}',inline=True)
+        
+
+        await ctx.send(embed=embed)
 
 
     
