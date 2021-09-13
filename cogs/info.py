@@ -14,7 +14,7 @@ import inspect
 import os
 
 
-from utils.useful import Embed
+from utils.useful import Embed, get_bot_uptime
 
 
 
@@ -179,12 +179,10 @@ class info(commands.Cog, description="Information about members, guilds, or role
 
 
         data = await self.bot.db.fetch('SELECT prefix FROM prefixes WHERE "guild_id" = $1', ctx.guild.id)
-        if len(data) == 0:
-            print("Prefix is gone.")
+        if len(data) == 0: 
             await self.bot.db.execute('INSERT into prefixes ("guild_id", prefix) VALUES ($1, $2)', ctx.guild.id, prefix)
 
         else:
-            print("Prefix is updated.")
             await self.bot.db.execute('UPDATE prefixes SET prefix = $1 WHERE "guild_id" = $2', prefix, ctx.guild.id)
         
         await ctx.send('Set the prefix for **{}** to `{}`'.format(ctx.guild.name, prefix))
@@ -308,6 +306,13 @@ class info(commands.Cog, description="Information about members, guilds, or role
 
                         except:
                             return await ctx.send(f"This id either is a message or I cannot convert it into anything.")
+
+
+    @commands.command()
+    @commands.bot_has_permissions(send_messages=True)
+    async def uptime(self, ctx):
+
+        await ctx.send(f'I have an uptime of: **{get_bot_uptime(self.bot, brief=True)}**')
 
 
 
