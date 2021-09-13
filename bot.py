@@ -224,6 +224,9 @@ bot.cross = "<:mCross:819254444217860116>"
 
 @bot.event
 async def on_ready():
+
+    bot.uptime = discord.utils.utcnow()
+    
     print(
         f"-----\nLogged in as: {bot.user.name} : {bot.user.id}\n-----\nMy current default prefix is: m.\n-----")
 

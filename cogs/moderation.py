@@ -41,7 +41,7 @@ class moderation(commands.Cog, description="Moderation commands."):
                        ctx,
                        member : MemberConverter,
                        *,
-                       reason=None
+                       reason=None  
                        ):
         """
         Kicks a member from the server.\n

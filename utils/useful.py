@@ -11,6 +11,8 @@ from utils.checks import can_execute_action
 
 from discord.ext.buttons import Paginator
 
+from utils.remind_utils import human_timedelta
+
 PAGE_REGEX = r'(Page)?(\s)?((\[)?((?P<current>\d+)/(?P<last>\d+))(\])?)'
 
 class BaseMenu(menus.MenuPages):
@@ -633,7 +635,8 @@ class PaginatorEmbedInterface(PaginatorInterface):
 
 
 
-
+def get_bot_uptime(bot, brief=False):
+    return human_timedelta(bot.uptime, accuracy=None, brief=brief, suffix=False)
 
 
 
