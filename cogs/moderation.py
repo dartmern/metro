@@ -34,7 +34,7 @@ class moderation(commands.Cog, description="Moderation commands."):
         self.bot = bot
 
 
-    @commands.command(name="kick", brief="Kick a member from the server.")
+    @commands.command(name="kick", brief="Kick a member from the server.", slash_command=True)
     @commands.has_guild_permissions(kick_members=True)
     @commands.bot_has_permissions(send_messages=True, kick_members=True)
     async def kick_cmd(self,
@@ -53,13 +53,14 @@ class moderation(commands.Cog, description="Moderation commands."):
         except:
             pass
         await member.kick(reason=reason)
-        await ctx.reply(f"Kicked **{member}**")
+        await ctx.send(f"Kicked **{member}**")
 
 
     @commands.command(
         name="ban",
         brief="Ban a member from the server.",
-        usage="<member> [reason]"
+        usage="<member> [reason]",
+        slash_command=True
     )
     @commands.has_guild_permissions(ban_members=True)
     @commands.bot_has_permissions(send_messages=True, ban_members=True)
@@ -92,12 +93,13 @@ class moderation(commands.Cog, description="Moderation commands."):
             pass
 
 
-        await ctx.reply(f"Banned **{member}**")
+        await ctx.send(f"Banned **{member}**")
 
 
     @commands.command(name="unban",
                       brief="Unban a previously banned member.",
-                      usage="<member>")
+                      usage="<member>",
+                      slash_command=True)
     @commands.has_guild_permissions(ban_members=True)
     @commands.bot_has_permissions(send_messages=True, ban_members=True)
     async def unban_cmd(

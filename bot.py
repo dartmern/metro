@@ -203,7 +203,8 @@ bot_data = {
     "help_command" : None,
     "owner_id" : 525843819850104842,
     "command_prefix" : get_prefix,
-    "slash_commands" : False
+    "slash_commands" : False,
+    "slash_commands_guilds" : [812143286457729055]
 }
 
 bot = MetroBot(**bot_data)
@@ -226,7 +227,7 @@ bot.cross = "<:mCross:819254444217860116>"
 async def on_ready():
 
     bot.uptime = discord.utils.utcnow()
-    
+
     print(
         f"-----\nLogged in as: {bot.user.name} : {bot.user.id}\n-----\nMy current default prefix is: m.\n-----")
 

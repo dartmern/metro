@@ -1,5 +1,7 @@
 import discord
-from discord.ext import commands
+from discord import utils
+from discord.ext import commands, menus
+from discord.ext.menus.views import ViewMenuPages
 
 from typing import Optional
 import unicodedata
@@ -15,6 +17,7 @@ import os
 
 
 from utils.useful import Embed, get_bot_uptime
+from utils.pages import ExtraPages
 
 
 
@@ -39,6 +42,21 @@ def chunkIt(seq, num):
         last += avg
 
     return out
+
+
+class Source(menus.ListPageSource):
+    def __init__(self, entries):
+        super().__init__(entries=entries, per_page=4)
+
+    async def format_page(self, menu, entries):
+        
+        maximum = self.get_max_pages()
+        embed=discord.Embed()
+        embed.description='\n'.join(f"{i}\n**ID:** {i.id}\n**GUILD:** {i.guild}" for i in entries)
+
+        embed.set_footer(text=f'[{menu.current_page + 1}/{maximum}]')
+        return embed
+        
 
 class info(commands.Cog, description="Information about members, guilds, or roles."):
     def __init__(self, bot):
@@ -313,6 +331,16 @@ class info(commands.Cog, description="Information about members, guilds, or role
     async def uptime(self, ctx):
 
         await ctx.send(f'I have an uptime of: **{get_bot_uptime(self.bot, brief=True)}**')
+
+
+    @commands.command()
+    @commands.bot_has_permissions(send_messages=True, embed_links=True)
+    async def emojis(self, ctx):
+
+        menu = ViewMenuPages(source=Source(self.bot.emojis), clear_reactions_after=True)
+        await menu.start(ctx)
+
+
 
 
 

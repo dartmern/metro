@@ -85,6 +85,7 @@ class GroupHelpPageSource(menus.ListPageSource):
         self.description = self.group.description
 
     async def format_page(self, menu, commands):
+        
         maximum = self.get_max_pages()
         if maximum > 1:
             try:
