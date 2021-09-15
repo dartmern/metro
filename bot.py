@@ -236,18 +236,6 @@ async def on_ready():
 
         
 
-@bot.command(slash_command=True, message_command=False, slash_commands_guilds=[812143286457729055])
-async def pong(ctx):
-
-    start = time.perf_counter()
-    m = await ctx.send('Pinging...')
-    end = time.perf_counter()
-
-    typing_ping = (end - start) * 1000
-
-
-    await m.edit(content=f'Typing: `{round(typing_ping, 1)} ms`\nWebsocket: `{round(bot.latency*1000)} ms`\nDatabase: `unknown`')
-
 
 
 @bot.command(name="eval", aliases=["exec","e"])
