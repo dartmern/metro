@@ -3,7 +3,7 @@ from discord import utils
 from discord.ext import commands, menus
 from discord.ext.menus.views import ViewMenuPages
 
-from typing import Optional
+from typing import Optional, Union
 import unicodedata
 
 from utils.useful import Embed
@@ -121,11 +121,37 @@ class info(commands.Cog, description="Information about members, guilds, or role
 
     @commands.command(aliases=['ui','whois'])
     @commands.bot_has_permissions(send_messages=True)
-    async def userinfo(self, ctx, member : Optional[discord.Member]):
+    async def userinfo(self, ctx, member : Union[discord.Member, discord.User, None]):
         """
         Shows all the information about the specified user.
         If user isn't specified, it defaults to the author.
         """
+
+        if ctx.guild is None:
+
+            member = member or ctx.author   
+
+            embed = discord.Embed(
+                description=member.mention,
+                timestamp=discord.utils.utcnow()
+            )
+            embed.add_field(
+                name='Joined at',
+                value='N/A',
+                inline=True
+            )
+            embed.add_field(
+                name='Created at',
+                value=f"{discord.utils.format_dt(member.created_at)}\n({discord.utils.format_dt(member.created_at, 'R')})",
+                inline=False
+            )
+            embed.set_thumbnail(url=member.avatar.url)
+            embed.set_author(name=member, icon_url=member.avatar.url)
+            embed.set_footer(text=f'User ID: {member.id}')
+
+            return await ctx.send(embed=embed)
+
+
 
         member = member or ctx.author
 

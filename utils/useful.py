@@ -635,7 +635,7 @@ class PaginatorEmbedInterface(PaginatorInterface):
 
 
 
-def get_bot_uptime(bot, brief=False):
+def get_bot_uptime(bot : commands.Bot, brief : bool =False):
     return human_timedelta(bot.uptime, accuracy=None, brief=brief, suffix=False)
 
 

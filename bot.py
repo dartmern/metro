@@ -36,6 +36,9 @@ async def get_prefix(bot, message):
 
 
     if not message.guild:
+        if message.author.id == 525843819850104842:
+            return commands.when_mentioned_or('?','m.','')(bot, message)
+
         return commands.when_mentioned_or('?','m.')(bot, message)
 
     prefix = await bot.db.fetch('SELECT prefix FROM prefixes WHERE "guild_id" = $1', message.guild.id)

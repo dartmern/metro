@@ -39,7 +39,7 @@ class moderation(commands.Cog, description="Moderation commands."):
     @commands.bot_has_permissions(send_messages=True, kick_members=True)
     async def kick_cmd(self,
                        ctx,
-                       member : MemberConverter,
+                       member : discord.Member,
                        *,
                        reason=None  
                        ):
@@ -67,7 +67,7 @@ class moderation(commands.Cog, description="Moderation commands."):
     async def ban_cmd(
             self,
             ctx,
-            member : typing.Union[MemberConverter, discord.User],
+            member : discord.Member,
             *,
             reason : str = None
     ):
