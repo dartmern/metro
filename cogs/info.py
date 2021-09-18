@@ -367,6 +367,40 @@ class info(commands.Cog, description="Information about members, guilds, or role
         await menu.start(ctx)
 
 
+    @commands.command(aliases=['lc'])
+    @commands.bot_has_permissions(send_messages=True)
+    async def linecount(self, ctx):
+        """
+        Get the linecount + code stats for Metro.
+        """
+
+        import pathlib
+
+        p = pathlib.Path('./')
+        cm = cr = fn = cl = ls = fc = 0
+        for f in p.rglob('*.py'):
+            if str(f).startswith("venv"):
+                continue
+            fc += 1
+            with f.open(encoding='utf8',errors='ignore') as of:
+                for l in of.readlines():
+                    l = l.strip()
+                    if l.startswith('class'):
+                        cl += 1
+                    if l.startswith('def'):
+                        fn += 1
+                    if l.startswith('async def'):
+                        cr += 1
+                    if '#' in l:
+                        cm += 1
+                    ls += 1
+
+        await ctx.send(f"Files: {fc}\nLines: {ls:,}\nClasses: {cl}\nFunctions: {fn}\nCoroutines: {cr}\nComments: {cm:,}")
+
+
+
+
+
 
 
 
