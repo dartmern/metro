@@ -96,9 +96,9 @@ class reminder(commands.Cog):
 
     async def cog_command_error(self, ctx, error):
         if isinstance(error, commands.BadArgument):
-            await ctx.send_or_reply(error)
+            await ctx.send(error)
         if isinstance(error, commands.TooManyArguments):
-            await ctx.send_or_reply(
+            await ctx.send(
                 f"You called the {ctx.command.name} command with too many arguments."
             )
 
@@ -282,7 +282,7 @@ class reminder(commands.Cog):
         )
 
         delta = human_timedelta(when.dt - datetime.timedelta(seconds=4))
-        #{discord.utils.format_dt(when.dt, "R")}
+        #dunno why it's off by 4 seconds but this should fix
         await ctx.send(f'Alright, I will remind you about {when.arg} in {delta}\nTimer id: {timer.id}')
 
     @reminder.command(

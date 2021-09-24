@@ -8,9 +8,12 @@ import typing
 import traceback
 import asyncio
 import os
+import io
 import sys
 from collections import Counter
 import argparse, shlex
+import textwrap
+from contextlib import redirect_stdout
 
 
 from utils.useful import Embed, fuzzy, BaseMenu, pages, clean_code, ts_now, Pag, get_bot_uptime
@@ -361,17 +364,52 @@ class developer(commands.Cog, description="Developer commands."):
             except:
                 return await ctx.send('Failed to delete that message, try again later.')
 
-    
 
+    @commands.command()
+    @commands.is_owner()
+    async def eval(self, ctx, *, body : str):
+        env = {
+            'bot': self.bot,
+            'ctx': ctx,
+            'channel': ctx.channel,
+            'author': ctx.author,
+            'guild': ctx.guild,
+            'message': ctx.message,
+            '_': self._last_result
+        }
 
+        env.update(globals())
 
+        body = self.cleanup_code(body)
+        stdout = io.StringIO()
 
+        to_compile = f'async def func():\n{textwrap.indent(body, "  ")}'
 
-        
+        try:
+            exec(to_compile, env)
+        except Exception as e:
+            return await ctx.send(f'```py\n{e.__class__.__name__}: {e}\n```')
 
-    
-        
+        func = env['func']
+        try:
+            with redirect_stdout(stdout):
+                ret = await func()
+        except Exception as e:
+            value = stdout.getvalue()
+            await ctx.send(f'```py\n{value}{traceback.format_exc()}\n```')
+        else:
+            value = stdout.getvalue()
+            try:
+                await ctx.message.add_reaction('\u2705')
+            except:
+                pass
 
+            if ret is None:
+                if value:
+                    await ctx.send(f'```py\n{value}\n```')
+            else:
+                self._last_result = ret
+                await ctx.send(f'```py\n{value}{ret}\n```')
 
 
 

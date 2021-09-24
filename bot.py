@@ -20,6 +20,8 @@ from traceback import format_exception
 
 from utils.json_loader import read_json
 
+os.environ["JISHAKU_NO_UNDERSCORE"] = "True"
+
 info_file = read_json('info')
 
 
@@ -146,7 +148,7 @@ class MyContext(commands.Context):
 
 
 
-class MetroBot(commands.Bot):
+class MetroBot(commands.AutoShardedBot):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.session = aiohttp.ClientSession()
@@ -238,50 +240,7 @@ async def on_ready():
 
 
 
-@bot.command(name="eval", aliases=["exec","e"])
-@commands.is_owner()
-async def _eval(ctx, *, code):
-    """
-    Eval python code. 
-    
-    This can be inside of a regular codeblock or a python codeblock.
-    :warning: **This command will be depreciated soon** :warning:
-    """
-    code = clean_code(code)
 
-    local_variables = {
-        "discord": discord,
-        "commands": commands,
-        "bot": bot,
-        "ctx": ctx,
-        "channel": ctx.channel,
-        "author": ctx.author,
-        "guild": ctx.guild,
-        "message": ctx.message
-    }
-
-    stdout = io.StringIO()
-
-    try:
-        with contextlib.redirect_stdout(stdout):
-            exec(
-                f"async def func():\n{textwrap.indent(code, '    ')}", local_variables,
-            )
-
-            obj = await local_variables["func"]()
-            result = f"{stdout.getvalue()}\n-- {obj}\n"
-    except Exception as e:
-        result = "".join(format_exception(e, e, e.__traceback__))
-
-    pager = Pag(
-        timeout=100,
-        entries=[result[i: i + 2000] for i in range(0, len(result), 2000)],
-        length=1,
-        prefix="```py\n",
-        suffix="```"
-    )
-
-    await pager.start(ctx)
 
 
 
