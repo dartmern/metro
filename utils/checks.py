@@ -13,25 +13,12 @@ def can_execute_action(ctx, user, target):
 
 
 
-def is_a_tester():
+def is_tester():
     def predicate(ctx):
-
-        author = ctx.author
-        guild = ctx.bot.get_guild(812143286457729055)
-
-        dev_role = discord.utils.get(guild.roles, id=861141649265262592)
-
-        if not author in guild.members:
-            return False
-
+        role = ctx.guild.get_role(861141649265262592)
+        if role in ctx.author.roles:
+            return True
         else:
-
-            if dev_role in author.roles:
-                return True
-
-            else:
-
-                return False
-
+            raise commands.BadArgument('Pickup the tester role by typing `!tester` in my support server to use this.')
     return commands.check(predicate)
 

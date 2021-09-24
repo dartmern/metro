@@ -439,6 +439,7 @@ class meta(commands.Cog):
         bot.help_command.cog = self
 
 
+
     @commands.command(name='invite')
     @commands.bot_has_permissions(send_messages=True)
     async def _invite(self, ctx):

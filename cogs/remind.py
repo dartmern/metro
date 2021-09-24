@@ -1,6 +1,6 @@
+from utils.useful import Embed
 import discord
-from discord.ext import commands
-from discord.ext.commands.core import command
+from discord.ext import commands, menus
 
 from utils.remind_utils import HumanTime, UserFriendlyTime
 
@@ -9,6 +9,8 @@ import asyncio
 import json
 import datetime
 import asyncpg
+import ast
+import textwrap
 
 
 
@@ -17,29 +19,45 @@ from datetime import timedelta
 from utils.remind_utils import format_relative, human_timedelta
 from dateutil.relativedelta import relativedelta
 
+from utils.pages import ExtraPages
+
+class MySource(menus.ListPageSource):
+    def __init__(self, data):
+        super().__init__(data, per_page=5)
+
+    async def format_page(self, menu, entries):
+
+        embed= Embed()
+
+        for i in entries:
+            embed.add_field(name=f'ID: {i.get("id")}:  in {human_timedelta(i.get("expires"))}',value=i.get("?column?"),inline=False)
+
+        embed.set_footer(text=f'{len(entries)} reminder{"s" if len(entries) > 1 else ""}')
+
+        return embed
+
 
 
 class Timer:
-    __slots__ = ('args', 'kwargs', 'event', 'id', 'created_at', 'expires')
+    __slots__ = ("args", "kwargs", "event", "id", "created_at", "expires")
 
     def __init__(self, *, record):
-        self.id = record['id']
-
-        extra = record['extra']
-        self.args = extra.get('args', [])
-        self.kwargs = extra.get('kwargs', {})
-        self.event = record['event']
-        self.created_at = record['created']
-        self.expires = record['expires']
+        self.id = record["id"]
+        extra = record["extra"]
+        self.args = extra.get("args", [])
+        self.kwargs = extra.get("kwargs", {})
+        self.event = record["event"]
+        self.created_at = record["created"]
+        self.expires = record["expires"]
 
     @classmethod
     def temporary(cls, *, expires, created, event, args, kwargs):
         pseudo = {
-            'id': None,
-            'extra': { 'args': args, 'kwargs': kwargs },
-            'event': event,
-            'created': created,
-            'expires': expires
+            "id": None,
+            "extra": {"args": args, "kwargs": kwargs},
+            "event": event,
+            "created": created,
+            "expires": expires,
         }
         return cls(record=pseudo)
 
@@ -57,22 +75,56 @@ class Timer:
         return human_timedelta(self.created_at)
 
     def __repr__(self):
-        return f'<Timer created={self.created_at} expires={self.expires} event={self.event}>'
+        return f"<Timer created={self.created_at} expires={self.expires} event={self.event}>"
 
 
-class reminder(commands.Cog, description="Reminder utilities."):
+
+
+class reminder(commands.Cog):
+    """
+    Module for handling all timed tasks.
+    """
+
     def __init__(self, bot):
         self.bot = bot
+        self._have_data = asyncio.Event(loop=bot.loop)
+        self._current_timer = None
+        self._task = bot.loop.create_task(self.dispatch_timers())
+
+    def cog_unload(self):
+        self._task.cancel()
+
+    async def cog_command_error(self, ctx, error):
+        if isinstance(error, commands.BadArgument):
+            await ctx.send_or_reply(error)
+        if isinstance(error, commands.TooManyArguments):
+            await ctx.send_or_reply(
+                f"You called the {ctx.command.name} command with too many arguments."
+            )
 
     async def get_active_timer(self, *, connection=None, days=7):
         query = "SELECT * FROM reminders WHERE expires < (CURRENT_DATE + $1::interval) ORDER BY expires LIMIT 1;"
         con = connection or self.bot.db
 
-        record = await con.fetchrow(query, datetime.timedelta(days=days))
-        return Timer(record=record) if record else None
+        record = await con.fetchrow(query, timedelta(days=days))
+        if record:
+            if type(record["extra"]) is dict:
+                extra = record["extra"]
+            else:
+                extra = json.loads(record["extra"])
+            record_dict = {
+                "id": record["id"],
+                "extra": extra,
+                "event": record["event"],
+                "created": record["created"],
+                "expires": record["expires"],
+            }
+        return Timer(record=record_dict) if record else None
 
     async def wait_for_active_timers(self, *, connection=None, days=7):
+
         timer = await self.get_active_timer(connection=connection, days=days)
+        
         if timer is not None:
             self._have_data.set()
             return timer
@@ -85,10 +137,10 @@ class reminder(commands.Cog, description="Reminder utilities."):
     async def call_timer(self, timer):
         # delete the timer
         query = "DELETE FROM reminders WHERE id=$1;"
-        await self.bot.pool.execute(query, timer.id)
+        await self.bot.db.execute(query, timer.id)
 
         # dispatch the event
-        event_name = f'{timer.event}_timer_complete'
+        event_name = f"{timer.event}_timer_complete"
         self.bot.dispatch(event_name, timer)
 
     async def dispatch_timers(self):
@@ -98,8 +150,8 @@ class reminder(commands.Cog, description="Reminder utilities."):
                 # so we're gonna cap it off at 40 days
                 # see: http://bugs.python.org/issue20493
                 timer = self._current_timer = await self.wait_for_active_timers(days=40)
+                
                 now = datetime.datetime.utcnow()
-
                 if timer.expires >= now:
                     to_sleep = (timer.expires - now).total_seconds()
                     await asyncio.sleep(to_sleep)
@@ -110,11 +162,14 @@ class reminder(commands.Cog, description="Reminder utilities."):
         except (OSError, discord.ConnectionClosed, asyncpg.PostgresConnectionError):
             self._task.cancel()
             self._task = self.bot.loop.create_task(self.dispatch_timers())
+        except Exception as e:
+            raise e
 
     async def short_timer_optimisation(self, seconds, timer):
         await asyncio.sleep(seconds)
-        event_name = f'{timer.event}_timer_complete'
+        event_name = f"{timer.event}_timer_complete"
         self.bot.dispatch(event_name, timer)
+
 
     async def create_timer(self, *args, **kwargs):
         """Creates a timer.
@@ -162,24 +217,25 @@ class reminder(commands.Cog, description="Reminder utilities."):
 
         timer = Timer.temporary(event=event, args=args, kwargs=kwargs, expires=when, created=now)
         delta = (when - now).total_seconds()
-        if delta <= 60:
+        if delta <= 10:
             # a shortcut for small timers
             self.bot.loop.create_task(self.short_timer_optimisation(delta, timer))
             return timer
 
-        query = """INSERT INTO reminders (event, extra, expires, created)
-                   VALUES ($1, $2::jsonb, $3, $4)
+        next_id_query = """SELECT MAX(id) FROM reminders;"""
+        id = await connection.fetch(next_id_query)
+
+        id = int(id[0].get('max')) + 1
+
+
+        query = """INSERT INTO reminders (id, event, extra, expires, created)
+                   VALUES ($1, $2, $3::jsonb, $4, $5)
                    RETURNING id;
                 """
 
         jsonb = json.dumps({"args": args, "kwargs": kwargs})
-        row = await connection.fetchrow(
-            query,
-            event,
-            jsonb,
-            when,
-            now,
-        )
+
+        row = await connection.fetchrow(query, id, event, jsonb, when, now)
         timer.id = row[0]
 
         # only set the data check if it can be waited on
@@ -225,13 +281,112 @@ class reminder(commands.Cog, description="Reminder utilities."):
             message_id=ctx.message.id
         )
 
-        delta = human_timedelta(when.dt)
-        await ctx.send(f'Alright, I will remind you about {when.arg} in {delta}')
+        delta = human_timedelta(when.dt - datetime.timedelta(seconds=4))
+        #{discord.utils.format_dt(when.dt, "R")}
+        await ctx.send(f'Alright, I will remind you about {when.arg} in {delta}\nTimer id: {timer.id}')
 
+    @reminder.command(
+        name='list',
+        aliases=['show']
+    )
+    async def reminders_list(self, ctx):
+        """
+        Display all your current reminders.
+        """
+
+        query = """
+                SELECT id, expires, extra #>> '{args,2}'
+                FROM reminders
+                WHERE event = 'reminder'
+                AND extra #>> '{args,0}' = $1
+                ORDER BY expires;
+                """
+
+        records = await self.bot.db.fetch(query, str(ctx.author.id))
+
+        if not records:
+            return await ctx.send('You have no reminders.')
+
+        menu = ExtraPages(source=MySource(records))
+        
+        await menu.start(ctx)
+
+    
+    @reminder.command(
+        name='delete',
+        aliases=['cancel','remove']
+    )
+    async def reminder_remove(self, ctx, *, id : int):
+        """
+        Deletes a reminder by it's id
+        """        
+
+        query = """
+                DELETE FROM reminders
+                WHERE id=$1
+                AND event = 'reminder'
+                AND extra #>> '{args,0}' = $2;
+                """
+
+        status = await self.bot.db.execute(query, id, str(ctx.author.id))
+        if status == "DELETE 0":
+            return await ctx.send('Could not delete any reminders with that ID')
+
+        # if the current timer is being deleted
+        if self._current_timer and self._current_timer.id == id:
+            # cancel the task and re-run it
+            self._task.cancel()
+            self._task = self.bot.loop.create_task(self.dispatch_timers())
+
+        await ctx.send("Successfully deleted reminder.")
+
+
+    @reminder.command(
+        name='clear',
+        aliases=['wipe']
+    )
+    async def reminder_clear(self, ctx):
+        """
+        Clear all reminders you set.
+        """
+
+        query = """
+                SELECT COUNT(*)
+                FROM reminders
+                WHERE event = 'reminder'
+                AND extra #>> '{args,0}' = $1;
+                """
+
+        author_id = str(ctx.author.id)
+        total = await self.bot.db.fetchrow(query, author_id)
+        total = total[0]
+
+        if total == 0:
+            return await ctx.send("You have no reminders to clear.")
+
+        confirm = await ctx.confirm(f'Are you sure you want to clear **{total}** reminder(s)', timeout=30)
+
+        if confirm is None:
+            return await ctx.send('Timed out.')
+
+        if confirm is False:
+            return await ctx.send('Canceled.')
+
+        query = """DELETE FROM reminders WHERE event = 'reminder' AND extra #>> '{args,0}' = $1;"""
+
+        await self.bot.db.execute(query, author_id)
+        await ctx.send(f'Successfully deleted **{total}** reminder(s)')
+        
+
+            
+
+
+        
 
     
     @commands.Cog.listener()
     async def on_reminder_timer_complete(self, timer):
+        
 
         author_id, channel_id, message = timer.args
 

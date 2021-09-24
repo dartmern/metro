@@ -38,6 +38,7 @@ def human_join(seq, delim=", ", final="or"):
 
 
 def human_timedelta(dt, *, source=None, accuracy=3, brief=False, suffix=True):
+
     now = source or discord.utils.utcnow()
     # Microsecond free zone
     now = now.replace(microsecond=0, tzinfo=datetime.timezone.utc)
@@ -90,11 +91,8 @@ def human_timedelta(dt, *, source=None, accuracy=3, brief=False, suffix=True):
     if accuracy is not None:
         output = output[:accuracy]
 
-    if accuracy is not None:
-        output = output[:accuracy]
-
     if len(output) == 0:
-        return "1 second" + suffix
+        return "now"
     else:
         if not brief:
             return human_join(output, final="and") + suffix
@@ -102,18 +100,90 @@ def human_timedelta(dt, *, source=None, accuracy=3, brief=False, suffix=True):
             return " ".join(output) + suffix
 
 
+
+class PastShortTime:
+    compiled = re.compile(
+        """(?:(?P<years>[0-9])(?:years?|y))?             # e.g. 2y
+                             (?:(?P<months>[0-9]{1,2})(?:months?|mo))?     # e.g. 2months
+                             (?:(?P<weeks>[0-9]{1,4})(?:weeks?|w))?        # e.g. 10w
+                             (?:(?P<days>[0-9]{1,5})(?:days?|d))?          # e.g. 14d
+                             (?:(?P<hours>[0-9]{1,5})(?:hours?|h))?        # e.g. 12h
+                             (?:(?P<minutes>[0-9]{1,5})(?:minutes?|m))?    # e.g. 10m
+                             (?:(?P<seconds>[0-9]{1,5})(?:seconds?|s))?    # e.g. 15s
+                          """,
+        re.VERBOSE,
+    )
+
+    def __init__(self, argument, *, now=None):
+        match = self.compiled.fullmatch(argument)
+        if match is None or not match.group(0):
+            raise commands.BadArgument("Invalid time provided")
+
+        data = {k: int(v) for k, v in match.groupdict(default=0).items()}
+        now = now or discord.utils.utcnow()
+        self.dt = now - relativedelta(**data)
+        print("THIS IS THE DT")
+        print(self.dt)
+
+    @classmethod
+    async def convert(cls, ctx, argument):
+        return cls(argument, now=ctx.message.created_at)
+
+
 class HumanTime:
     calendar = pdt.Calendar(version=pdt.VERSION_CONTEXT_STYLE)
 
     def __init__(self, argument, *, now=None):
-        now = now or datetime.datetime.utcnow()
+        now = now or discord.utils.utcnow()
         dt, status = self.calendar.parseDT(argument, sourceTime=now)
         if not status.hasDateOrTime:
-            raise commands.BadArgument('invalid time provided, try e.g. "tomorrow" or "3 days"')
+            raise commands.BadArgument(
+                'Invalid time provided, try e.g. "tomorrow" or "3 days"'
+            )
 
         if not status.hasTime:
             # replace it with the current time
-            dt = dt.replace(hour=now.hour, minute=now.minute, second=now.second, microsecond=now.microsecond)
+            dt = dt.replace(
+                hour=now.hour,
+                minute=now.minute,
+                second=now.second,
+                microsecond=now.microsecond,
+                tzinfo=datetime.timezone.utc,
+            )
+        else:
+            dt = dt.replace(tzinfo=datetime.timezone.utc)
+
+        self.dt = dt
+        self._past = dt < now
+
+    @classmethod
+    async def convert(cls, ctx, argument):
+        return cls(argument, now=ctx.message.created_at)
+
+
+class PastHumanTime:
+    calendar = pdt.Calendar(version=pdt.VERSION_CONTEXT_STYLE)
+
+    def __init__(self, argument, *, now=None):
+        now = now or discord.utils.utcnow()
+        argument = argument + " ago"
+        dt, status = self.calendar.parseDT(argument, sourceTime=now)
+        if not status.hasDateOrTime:
+            raise commands.BadArgument(
+                'Invalid time provided, try e.g. "yesterday" or "3 days ago"'
+            )
+
+        if not status.hasTime:
+            # replace it with the current time
+            dt = dt.replace(
+                hour=now.hour,
+                minute=now.minute,
+                second=now.second,
+                microsecond=now.microsecond,
+                tzinfo=datetime.timezone.utc,
+            )
+        else:
+            dt = dt.replace(tzinfo=datetime.timezone.utc)
 
         self.dt = dt
         self._past = dt < now
@@ -146,6 +216,40 @@ class ShortTime:
     async def convert(cls, ctx, argument):
         return cls(argument, now=ctx.message.created_at)
 
+class Time(HumanTime):
+    def __init__(self, argument, *, now=None):
+        try:
+            o = ShortTime(argument, now=now)
+        except Exception as e:
+            super().__init__(argument)
+        else:
+            self.dt = o.dt
+            self._past = False
+
+
+class NegativeTime(PastHumanTime):
+    def __init__(self, argument, *, now=None):
+        try:
+            o = PastShortTime(argument, now=now)
+        except Exception as e:
+            print(e)
+            super().__init__(argument)
+        else:
+            self.dt = o.dt
+            self._past = False
+
+
+class FutureTime(Time):
+    def __init__(self, argument, *, now=None):
+        super().__init__(argument, now=now)
+
+        if self._past:
+            raise commands.BadArgument("this time is in the past")
+
+
+class PastTime(NegativeTime):
+    def __init__(self, argument, *, now=None):
+        super().__init__(argument, now=now)
 
 
 
@@ -260,6 +364,7 @@ class UserFriendlyTime(commands.Converter):
             import traceback
             traceback.print_exc()
             raise
+
 
 def format_dt(dt, style=None):
     if dt.tzinfo is None:
