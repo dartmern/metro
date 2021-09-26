@@ -38,6 +38,17 @@ class Arguments(argparse.ArgumentParser):
         raise RuntimeError(message)
 
 
+import os
+
+def clearConsole():
+    command = 'clear'
+    if os.name in ('nt', 'dos'):  # If Machine is running on Windows, use cls
+        command = 'cls'
+    os.system(command)
+
+
+
+
 
 class developer(commands.Cog, description="Developer commands."):
     def __init__(self, bot):
@@ -428,7 +439,17 @@ class developer(commands.Cog, description="Developer commands."):
 
 
 
+    @commands.command(aliases=['cc'])
+    @commands.is_owner()
+    async def clearconsole(self, ctx):
+        try:
+            clearConsole()
+        except Exception as e:
+            return await ctx.send(str(e))
 
+        await ctx.check()
+
+        
 
 
 
