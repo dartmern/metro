@@ -104,6 +104,8 @@ class MyContext(commands.Context):
         except discord.HTTPException:
             pass
 
+        
+
     async def cross(self):
         emoji = self.bot.get_emoji(819254444217860116)
 

@@ -1,13 +1,9 @@
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 
 import humanize
-import asyncio
+
 import datetime as dt
-import re
-import binascii
-import base64
-import yarl
 
 from utils.useful import Cooldown, Embed
 
@@ -115,18 +111,6 @@ class core(commands.Cog, description="Core events."):
             m = await ctx.send(embed=embed)
 
 
-    @commands.Cog.listener()
-    async def on_message(self, message):
-
-        if message.author.bot:
-            return
-
-        if message.content.startswith(f"<@!{self.bot.user.id}>") and \
-            len(message.content) == len(f"<@!{self.bot.user.id}>"):
-
-            await message.channel.send(f"My prefix here is: `m.` \nFor more information type `m.help`")
-
-
-
+    
 def setup(bot):
     bot.add_cog(core(bot))
