@@ -292,7 +292,7 @@ class info(commands.Cog, description="Information about members, guilds, or role
         else:
             obj = self.bot.get_command(command.replace('.', ' '))
             if obj is None:
-                embed = Embed(description=f"take the [**entire repo**]({source_url})")
+                embed = Embed(description=f"Take my [**entire reposoitory**]({source_url})")
                 return await ctx.send(embed=embed)
 
             src = obj.callback.__code__
@@ -310,7 +310,7 @@ class info(commands.Cog, description="Information about members, guilds, or role
 
         final_url = f'<{source_url}/blob/{branch}/{location}#L{firstlineno}-L{firstlineno + len(lines) - 1}>'
         embed = Embed(color=ctx.me.color,
-                              description=f"source code for [`{command}`]({final_url})")
+                              description=f"Source code for [`{command}`]({final_url})")
         await ctx.send(embed=embed)
 
 
@@ -356,7 +356,7 @@ class info(commands.Cog, description="Information about members, guilds, or role
     @commands.bot_has_permissions(send_messages=True)
     async def uptime(self, ctx):
 
-        await ctx.send(f'I have an uptime of: **{get_bot_uptime(self.bot, brief=True)}**')
+        await ctx.send(f'I have an uptime of: **{get_bot_uptime(self.bot, brief=False)}**')
 
 
     @commands.command()
