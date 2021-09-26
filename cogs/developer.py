@@ -42,6 +42,16 @@ class Arguments(argparse.ArgumentParser):
 class developer(commands.Cog, description="Developer commands."):
     def __init__(self, bot):
         self.bot = bot
+        self._last_result = None
+
+    def cleanup_code(self, content):
+        """Automatically removes code blocks from the code."""
+        # remove ```py\n```
+        if content.startswith('```') and content.endswith('```'):
+            return '\n'.join(content.split('\n')[1:-1])
+
+        # remove `foo`
+        return content.strip('` \n')
 
 
 
@@ -368,6 +378,10 @@ class developer(commands.Cog, description="Developer commands."):
     @commands.command()
     @commands.is_owner()
     async def eval(self, ctx, *, body : str):
+        """
+        Evaluate python code.
+        """
+
         env = {
             'bot': self.bot,
             'ctx': ctx,
