@@ -122,6 +122,8 @@ class docs(commands.Cog, description="Read docs about discord.py or python"):
             'latest': 'https://discordpy.readthedocs.io/en/latest',
             'python': 'https://docs.python.org/3',
             'master': 'https://discordpy.readthedocs.io/en/master',
+            'edpy' : 'https://enhanced-dpy.readthedocs.io/en/latest'
+            
         }
 
         if obj is None:
@@ -162,31 +164,48 @@ class docs(commands.Cog, description="Read docs about discord.py or python"):
 
 
 
-    @commands.group(name="rtfm", aliases=["readthefuckingdocs","rtfd"],invoke_without_command=True, case_insensitive=True)
+    @commands.group(name="rtfm",invoke_without_command=True, case_insensitive=True, slash_command=True)
     @commands.bot_has_permissions(send_messages=True)
-    async def read_the_fucking_manual(self, ctx, *, obj : str = None):
-        """Gives you a documentation link for a discord.py entity.
+    async def rtfm(self, ctx, *, obj : str = None):
+        """Gives you a documentation link for a enhanced-discord.py entity.
         Events, objects, and functions are all supported through a
         a cruddy fuzzy algorithm.
         """
 
+        await self.do_rtfm(ctx, 'edpy', obj)
 
-        await self.do_rtfm(ctx, "latest", obj)
 
 
-    @read_the_fucking_manual.command(name="python",aliases=["py"])
+    @rtfm.command(name="python",aliases=["py"],slash_command=True)
     @commands.bot_has_permissions(send_messages=True)
-    async def rtfm_py(self, ctx, *, obj : str = None):
+    async def rtfm_py(self, ctx, *, object : str = commands.Option(default='None',description='Object to search for')):
         """Gives you a documentation link for a Python entity."""
 
-        await self.do_rtfm(ctx, "python", obj)
+        await self.do_rtfm(ctx, "python", object)
 
-    @read_the_fucking_manual.command(name="master",aliases=["2.0"])
+    @rtfm.command(name="master",aliases=["2.0"],slash_command=True)
     @commands.bot_has_permissions(send_messages=True)
-    async def rtfm_master(self, ctx, *, obj : str = None):
+    async def rtfm_master(self, ctx, *, object : str = commands.Option(default='None',description='Object to search for')):
         """Gives you a documentation link for a discord.py entity. (master branch)"""
 
-        await self.do_rtfm(ctx, "master", obj)
+        await self.do_rtfm(ctx, "master", object)
+
+
+    @rtfm.command(name='dpy',aliases=['discordpy', 'discord.py'],slash_command=True)
+    @commands.bot_has_permissions(send_messages=True)
+    async def rtfm_dpy(self, ctx, *, object : str = commands.Option(default='None',description='Object to search for')):
+        """Gives you a documentation link for a discord.py entity."""
+
+        await self.do_rtfm(ctx, "latest", object)
+
+
+    @rtfm.command(name='edpy',slash_command=True)
+    @commands.bot_has_permissions(send_messages=True)
+    async def rtfm_edpy(self, ctx, *, object : str = commands.Option(default='None',description='Object to search for')):
+        """Gives you a documentation link for a ed-py entity."""
+
+        await self.do_rtfm(ctx, 'edpy', object)
+
 
 def setup(bot):
     bot.add_cog(docs(bot))
