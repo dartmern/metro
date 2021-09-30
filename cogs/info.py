@@ -210,16 +210,31 @@ class info(commands.Cog, description="Information about members, guilds, or role
         await ctx.send(embed=embed)
 
 
-    @commands.command(name='prefix')
+    @commands.command(slash_command=True, message_command=True, slash_commands_guilds=[812143286457729055])
     @commands.bot_has_permissions(send_messages=True)
-    async def set_prefix(self, ctx, prefix : Optional[str]):
+    async def prefix(self, ctx, prefix : str = commands.Option(default='None',description='new prefix')):
         """
         Set the prefix for this guild.
         (Needs `manage_guild` permission to work)
         """
 
+        if len(prefix) > 5:
+            try:
+                return await ctx.interaction.response.send_message('Prefixes must be shorter than 5 characters.',ephemeral=True)
+            except:
+                return await ctx.send('Prefixes must be shorter than 5 characters.')
+
+        if prefix == '/':
+            try:
+                return await ctx.interaction.response.send_message('You cannot change your prefix to `/`',ephemeral=True)
+            except:
+                return await ctx.send(f"You cannot change your prefix to `/`")
+
         if prefix is None:
-            prefix = 'm.'
+            data = await self.bot.db.fetch('SELECT prefix FROM prefixes WHERE "guild_id" = $1', ctx.guild.id)
+            prefix = data[0].get('prefix')
+
+            return await ctx.send(f'Your prefix for **{ctx.guild}** was changed to `{prefix}`')
 
 
         data = await self.bot.db.fetch('SELECT prefix FROM prefixes WHERE "guild_id" = $1', ctx.guild.id)
