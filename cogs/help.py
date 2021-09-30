@@ -289,6 +289,20 @@ class MetroHelp(commands.HelpCommand):
 
         default_cooldown = cooldown.default_mapping._cooldown.per
 
+        if command.slash_command is True:
+            is_slash = '<:mCheck:819254444197019669>'
+        else:
+            is_slash = '<:mCross:819254444217860116>'
+
+        if command.message_command is True:
+            is_msg = '<:mCheck:819254444197019669>'
+
+        else:
+            is_msg = '<:mCross:819254444217860116>'
+
+
+        em.add_field(name='Command information:',value=f'Slash command: {is_slash}\nMessage command: {is_msg}',inline=False)
+
         em.add_field(
             name="Cooldowns",
             value=f"Can be used `1` time every `{default_cooldown}` seconds",
@@ -433,9 +447,16 @@ class MetroHelp(commands.HelpCommand):
 
 class meta(commands.Cog):
     def __init__(self, bot):
+
+        attrs = {
+            'name' : 'help',
+            'slash_command' : True,
+            'message_command' : True
+        }
+
         self.bot = bot
         self.old_help_command = bot.help_command
-        bot.help_command = MetroHelp()
+        bot.help_command = MetroHelp(command_attrs=attrs)
         bot.help_command.cog = self
 
 
