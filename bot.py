@@ -142,6 +142,19 @@ class MyContext(commands.Context):
         
 
 
+class PresView(discord.ui.View):
+    def __init__(self, bot):
+        super().__init__(timeout=None)
+        self.bot = bot
+
+    @discord.ui.button(label='Check bot status',style=discord.ButtonStyle.green, custom_id='presistent_view:green')
+    async def foo(self, button : discord.ui.Button, interaction : discord.Interaction):
+        await interaction.response.send_message(f'The bot is currently online with **{round(self.bot.latency*1000)}ms** latency.\n\nIf there are problems, ask us in <#869693768582979715>',ephemeral=True)
+
+
+    @discord.ui.button(label='Need help?',style=discord.ButtonStyle.gray, custom_id='presistend_view:gray')
+    async def bar(self, button : discord.ui.Button, interaction : discord.Interaction):
+        await interaction.response.send_message(f'Please consider asking your question in <#869693768582979715> or testing the bot in <#858413232608116802>',ephemeral=True)
 
 
 
@@ -156,6 +169,21 @@ class MetroBot(commands.AutoShardedBot):
         self.session = aiohttp.ClientSession()
 
         self.maintenance = False
+        self.pres_views = False
+
+    async def on_ready(self):
+
+        if not self.persistent_views:
+            self.add_view(PresView(self))
+            self.pres_views = True
+
+        self.uptime = discord.utils.utcnow()
+
+        print(
+            f"-----\nLogged in as: {self.user.name} : {self.user.id}\n-----\nMy current default prefix is: m.\n-----")
+
+        
+
 
     def add_command(self, command):
         """Override `add_command` to make a default cooldown for every command"""
@@ -211,7 +239,7 @@ bot_data = {
     "owner_id" : 525843819850104842,
     "command_prefix" : get_prefix,
     "slash_commands" : False,
-    "slash_commands_guilds" : [812143286457729055]
+    "slash_command_guilds" : [812143286457729055]
 }
 
 bot = MetroBot(**bot_data)
@@ -230,18 +258,13 @@ bot.cross = "<:mCross:819254444217860116>"
 
 
 
-@bot.event
-async def on_ready():
-
-    bot.uptime = discord.utils.utcnow()
-
-    print(
-        f"-----\nLogged in as: {bot.user.name} : {bot.user.id}\n-----\nMy current default prefix is: m.\n-----")
-
-        
-
-
-
+@bot.command(hidden=True)
+async def statusview(ctx):
+    """
+    Start up the status views. (presviews)
+    """
+    await ctx.message.delete()
+    await ctx.send('Click on the buttons below for status updates!',view=PresView(bot))
 
 
 
