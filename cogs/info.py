@@ -212,7 +212,7 @@ class info(commands.Cog, description="Information about members, guilds, or role
 
     @commands.command(slash_command=True, message_command=True, slash_commands_guilds=[812143286457729055])
     @commands.bot_has_permissions(send_messages=True)
-    async def prefix(self, ctx, prefix : str = commands.Option(default='None',description='new prefix')):
+    async def prefix(self, ctx, prefix : str = commands.Option(default=None,description='new prefix')):
         """
         Set the prefix for this guild.
         (Needs `manage_guild` permission to work)
@@ -234,7 +234,7 @@ class info(commands.Cog, description="Information about members, guilds, or role
             data = await self.bot.db.fetch('SELECT prefix FROM prefixes WHERE "guild_id" = $1', ctx.guild.id)
             prefix = data[0].get('prefix')
 
-            return await ctx.send(f'Your prefix for **{ctx.guild}** was changed to `{prefix}`')
+            return await ctx.send(f'Your prefix for **{ctx.guild}** is `{prefix}`')
 
 
         data = await self.bot.db.fetch('SELECT prefix FROM prefixes WHERE "guild_id" = $1', ctx.guild.id)
