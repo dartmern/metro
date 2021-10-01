@@ -178,14 +178,14 @@ class docs(commands.Cog, description="Read docs about discord.py or python"):
 
     @rtfm.command(name="python",aliases=["py"],slash_command=True)
     @commands.bot_has_permissions(send_messages=True)
-    async def rtfm_py(self, ctx, *, object : str = commands.Option(default='None',description='Object to search for')):
+    async def rtfm_py(self, ctx, *, object : str = commands.Option(default=None,description='Object to search for')):
         """Gives you a documentation link for a Python entity."""
 
         await self.do_rtfm(ctx, "python", object)
 
     @rtfm.command(name="master",aliases=["2.0"],slash_command=True)
     @commands.bot_has_permissions(send_messages=True)
-    async def rtfm_master(self, ctx, *, object : str = commands.Option(default='None',description='Object to search for')):
+    async def rtfm_master(self, ctx, *, object : str = commands.Option(default=None,description='Object to search for')):
         """Gives you a documentation link for a discord.py entity. (master branch)"""
 
         await self.do_rtfm(ctx, "master", object)
@@ -193,7 +193,7 @@ class docs(commands.Cog, description="Read docs about discord.py or python"):
 
     @rtfm.command(name='dpy',aliases=['discordpy', 'discord.py'],slash_command=True)
     @commands.bot_has_permissions(send_messages=True)
-    async def rtfm_dpy(self, ctx, *, object : str = commands.Option(default='None',description='Object to search for')):
+    async def rtfm_dpy(self, ctx, *, object : str = commands.Option(default=None,description='Object to search for')):
         """Gives you a documentation link for a discord.py entity."""
 
         await self.do_rtfm(ctx, "latest", object)
@@ -201,7 +201,7 @@ class docs(commands.Cog, description="Read docs about discord.py or python"):
 
     @rtfm.command(name='edpy',slash_command=True)
     @commands.bot_has_permissions(send_messages=True)
-    async def rtfm_edpy(self, ctx, *, object : str = commands.Option(default='None',description='Object to search for')):
+    async def rtfm_edpy(self, ctx, *, object : str = commands.Option(default=None,description='Object to search for')):
         """Gives you a documentation link for a ed-py entity."""
 
         await self.do_rtfm(ctx, 'edpy', object)
