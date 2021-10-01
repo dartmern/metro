@@ -289,20 +289,6 @@ class MetroHelp(commands.HelpCommand):
 
         default_cooldown = cooldown.default_mapping._cooldown.per
 
-        if command.slash_command is True:
-            is_slash = '<:mCheck:819254444197019669>'
-        else:
-            is_slash = '<:mCross:819254444217860116>'
-
-        if command.message_command is True:
-            is_msg = '<:mCheck:819254444197019669>'
-
-        else:
-            is_msg = '<:mCross:819254444217860116>'
-
-
-        em.add_field(name='Command information:',value=f'Slash command: {is_slash}\nMessage command: {is_msg}',inline=False)
-
         em.add_field(
             name="Cooldowns",
             value=f"Can be used `1` time every `{default_cooldown}` seconds",
@@ -450,8 +436,8 @@ class meta(commands.Cog):
 
         attrs = {
             'name' : 'help',
-            'slash_command' : True,
-            'message_command' : True
+            'description' : 'Show bot help or help for a command',
+            'aliases' : ['h','command']
         }
 
         self.bot = bot
@@ -461,9 +447,9 @@ class meta(commands.Cog):
 
 
 
-    @commands.command(name='invite')
+    @commands.command(name='invite',slash_command=True)
     @commands.bot_has_permissions(send_messages=True)
-    async def _invite(self, ctx):
+    async def invite(self, ctx):
 
         basic = discord.Permissions.none()
         basic.create_instant_invite = True
