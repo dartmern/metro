@@ -1,4 +1,4 @@
-from cogs.channel import MySource
+
 from sys import prefix
 from utils.pages import ExtraPages
 import discord
@@ -249,18 +249,18 @@ class MetroHelp(commands.HelpCommand):
         cmd = bot.all_commands.get(keys[0])
         if cmd is None:
             string = await maybe_coro(self.command_not_found, self.remove_mentions(keys[0]))
-            return await self.send_error_message(string)
+            return await self.send_error_message(ctx, string)
 
         for key in keys[1:]:
             try:
                 found = cmd.all_commands.get(key)
             except AttributeError:
                 string = await maybe_coro(self.subcommand_not_found, cmd, self.remove_mentions(key))
-                return await self.send_error_message(string)
+                return await self.send_error_message(ctx, string)
             else:
                 if found is None:
                     string = await maybe_coro(self.subcommand_not_found, cmd, self.remove_mentions(key))
-                    return await self.send_error_message(string)
+                    return await self.send_error_message(ctx, string)
                 cmd = found
 
         if isinstance(cmd, commands.Group):
@@ -325,7 +325,12 @@ class MetroHelp(commands.HelpCommand):
         with contextlib.suppress(commands.CommandError):
             if not await command.can_run(self.context):
                 raise commands.CommandError
-            return await View.start(self.context, self.get_command_help(command))
+            try:
+                return await self.context.interaction.response.send_message(embed=self.get_command_help(command),ephemeral=True)
+            except:
+                return await self.context.send(embed=self.get_command_help(command),view=View(self.context.author))
+
+
         raise commands.BadArgument("You do not have the permissions to view this command's help.")
 
 
@@ -421,11 +426,15 @@ class MetroHelp(commands.HelpCommand):
 
         return f"No command/category called `{command}` found."
 
-    async def send_error_message(self, error):
+    async def send_error_message(self, ctx, error):
         if error is None:
             return
-        channel = self.get_destination()
-        await channel.send(error)
+
+        try:
+            return await ctx.interaction.response.send_message(error, ephemeral=True)
+        except:
+            return await ctx.send(error)
+       
 
 
 
@@ -437,7 +446,9 @@ class meta(commands.Cog):
         attrs = {
             'name' : 'help',
             'description' : 'Show bot help or help for a command',
-            'aliases' : ['h','command']
+            'aliases' : ['h','command'],
+            'slash_command' : True,
+            'message_command' : True
         }
 
         self.bot = bot
@@ -451,44 +462,10 @@ class meta(commands.Cog):
     @commands.bot_has_permissions(send_messages=True)
     async def invite(self, ctx):
 
-        basic = discord.Permissions.none()
-        basic.create_instant_invite = True
-        basic.manage_emojis = True
-        basic.read_messages = True
-        basic.send_messages = True
-        basic.embed_links = True
-        basic.read_message_history = True
-        basic.add_reactions = True
-        basic.use_external_emojis = True
-        basic.connect = True
-        basic.speak = True
 
-
-        advan = discord.Permissions.none()
-        advan.manage_guild = True
-        advan.manage_roles = True
-        advan.manage_channels = True
-        advan.kick_members = True
-        advan.ban_members = True
-        advan.create_instant_invite = True
-        advan.manage_emojis = True
-        advan.read_messages = True
-        advan.send_messages = True
-        advan.manage_messages = True
-        advan.embed_links = True
-        advan.read_message_history = True
-        advan.add_reactions = True
-        advan.use_external_emojis = True
-        advan.connect = True
-        advan.speak = True
-        advan.priority_speaker = True
-
-        admin = discord.Permissions.none()
-        admin.administrator = True
-
-        basic_button = discord.ui.Button(label='Basic Perms',url=str(discord.utils.oauth_url(ctx.me.id, permissions=basic)))
-        advan_button = discord.ui.Button(label='Advanced Perms',url=str(discord.utils.oauth_url(ctx.me.id, permissions=advan)))
-        admin_button = discord.ui.Button(label='Admin Perms',url=str(discord.utils.oauth_url(ctx.me.id, permissions=admin)))
+        basic_button = discord.ui.Button(label='Basic Perms',url='https://discord.com/api/oauth2/authorize?client_id=788543184082698252&permissions=140663671873&scope=bot%20applications.commands')
+        advan_button = discord.ui.Button(label='Advanced Perms',url='https://discord.com/api/oauth2/authorize?client_id=788543184082698252&permissions=140932115831&scope=bot%20applications.commands')
+        admin_button = discord.ui.Button(label='Admin Perms',url='https://discord.com/api/oauth2/authorize?client_id=788543184082698252&permissions=8&scope=bot%20applications.commands')
 
         view = discord.ui.View()
         view.add_item(basic_button)
