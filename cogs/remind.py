@@ -253,7 +253,9 @@ class reminder(commands.Cog):
     @commands.group(
         aliases=['remind','rm'],
         usage="<when>",
-        invoke_without_command=True
+        invoke_without_command=True,
+        slash_command=True
+
     )
     @commands.bot_has_permissions(send_messages=True)
     async def reminder(self, ctx, *, when : UserFriendlyTime(commands.clean_content, default='\u2026')):
@@ -286,8 +288,46 @@ class reminder(commands.Cog):
         await ctx.send(f'Alright, I will remind you about {when.arg} in {delta}\nTimer id: {timer.id}')
 
     @reminder.command(
+        aliases=['remind','rm'],
+        usage="<when>",
+        slash_command=True
+
+    )
+    @commands.bot_has_permissions(send_messages=True)
+    async def create(self, ctx, *, when : UserFriendlyTime(commands.clean_content, default='\u2026')):
+        """Reminds you of something after a certain amount of time.
+
+        The input can be any direct date (e.g. YYYY-MM-DD) or a human
+        readable offset. Examples:
+
+        - "next thursday at 3pm do something funny"
+        - "do the dishes tomorrow"
+        - "in 3 days do the thing"
+        - "2d unmute someone"
+
+        Times are in UTC.
+        """
+
+        timer = await self.create_timer(
+            when.dt,
+            "reminder",
+            ctx.author.id,
+            ctx.channel.id,
+            when.arg,
+            connection=self.bot.db,
+            created=ctx.message.created_at,
+            message_id=ctx.message.id
+        )
+        
+        # - datetime.timedelta(seconds=4)
+        delta = human_timedelta(when.dt)
+        #dunno why it's off by 4 seconds but this should fix
+        await ctx.send(f'Alright, I will remind you about {when.arg} in {delta}\nTimer id: {timer.id}')
+
+    @reminder.command(
         name='list',
-        aliases=['show']
+        aliases=['show'],
+        slash_command=True
     )
     async def reminders_list(self, ctx):
         """
@@ -314,7 +354,8 @@ class reminder(commands.Cog):
     
     @reminder.command(
         name='delete',
-        aliases=['cancel','remove']
+        aliases=['cancel','remove'],
+        slash_command=True
     )
     async def reminder_remove(self, ctx, *, id : int):
         """
@@ -343,7 +384,8 @@ class reminder(commands.Cog):
 
     @reminder.command(
         name='clear',
-        aliases=['wipe']
+        aliases=['wipe'],
+        slash_command=True
     )
     async def reminder_clear(self, ctx):
         """
