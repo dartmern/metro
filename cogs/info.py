@@ -1,5 +1,7 @@
+import asyncio
 import discord
 from discord import utils
+from discord import message
 from discord.ext import commands, menus
 from discord.ext.menus.views import ViewMenuPages
 
@@ -247,43 +249,67 @@ class info(commands.Cog, description="Information about members, guilds, or role
         await ctx.send('Set the prefix for **{}** to `{}`'.format(ctx.guild.name, prefix))
 
         
-    
+    def read_tags(self, ctx : commands.Context):
+
+        DPY_GUILD = ctx.bot.get_guild(336642139381301249)
+
+        ids = []
+        tags = []
+
+        for member in DPY_GUILD.humans:
+            ids.append(member.id)
+            
+
+        cwd = get_path()
+        with open(cwd+'/config/'+'tags.txt', 'r', encoding='utf8') as file:
+            for line in file.read().split("\n"):
+
+                
+                id = line[-51:]
+                id = id[:18]
+
+                try:
+                    if int(id) not in ids:
+                        tag = line[10:112]
+                        tag = tag.strip()
+                        tags.append(str(tag))
+                except:
+                    pass
+
+        
+        
+        return tags
+
+
 
     @commands.command(hidden=True)
     @commands.is_owner()  
     @commands.bot_has_permissions(send_messages=True)  
     async def tags(self, ctx):
-        await ctx.send('Loading up tags... This could take up to 2 minutes in ideal conditions. All other commands have paused.',delete_after=3)
+        
+        def check(m):
+            return m.author == ctx.author and m.channel == ctx.channel and m.content.lower() == '?tag all --text'
 
-        DPY_GUILD = ctx.bot.get_guild(336642139381301249)
+        await ctx.send('Send `?tag all --text`')
+        message = await self.bot.wait_for('message', timeout=60, check=check)
 
-        tags = []
-
-        cwd = get_path()
-        with open(cwd+'/config/'+'tags.txt', 'r', encoding='utf8') as file:
-            for line in file.read().split("\n"):
-                id = line[-51:]
-                id = id[:18]
-
-                try:
-                    id = DPY_GUILD.get_member(int(id))
-                except:
-                    continue
-
-                if id not in DPY_GUILD.members:
-                    tag = line[10:112]
-                    tag = tag.strip()
-                    tags.append(f'{tag}')
+        await ctx.message.add_reaction(self.bot.check)
 
         
-        
-        m = chunkIt(tags, 5)
-        
+        loop = asyncio.get_running_loop()
 
+        result = await loop.run_in_executor(None, self.read_tags, ctx)
+
+        m = chunkIt(result, 10)
 
         for i in m:
-            await ctx.author.send(str(i))
-        await ctx.send('{} Finished! Check your DMs!.'.format(ctx.author.mention),delete_after=.1)
+            message = ", ".join(x for x in i)
+            await ctx.author.send(message)
+
+        
+        #for i in result:
+            #await ctx.author.send(str(i))
+        #await ctx.send('{} Finished! Check your DMs!.'.format(ctx.author.mention),delete_after=.1)
 
 
     @commands.command(aliases=['sourcecode', 'code'],
@@ -411,6 +437,7 @@ class info(commands.Cog, description="Information about members, guilds, or role
                     ls += 1
 
         await ctx.send(f"Files: {fc}\nLines: {ls:,}\nClasses: {cl}\nFunctions: {fn}\nCoroutines: {cr}\nComments: {cm:,}")
+
 
 
 
