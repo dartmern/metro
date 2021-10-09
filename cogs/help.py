@@ -359,7 +359,7 @@ class MetroHelp(commands.HelpCommand):
             description=
             f"**Total Commands:** {len(list(bot.walk_commands()))} | **Usable by you (here):** {len(await self.filter_commands(list(bot.walk_commands()), sort=True))}"
             f"\n```diff\n- [] = optional argument\n- <> = required argument\n- Do not type these when using commands!\n+ Type {ctx.clean_prefix}help [Command/Module] for more help on a command```"
-            f"[Support](https://discord.gg/2ceTMZ9qJh) | [Invite]({discord.utils.oauth_url(788543184082698252)}) | [Donate](https://www.patreon.com/metrodiscordbot) | [Source](https://vex.wtf)"
+            f"[Support](https://discord.gg/2ceTMZ9qJh) | [Invite](https://discord.com/api/oauth2/authorize?client_id=788543184082698252&permissions=140663671873&scope=bot%20applications.commands) | [Donate](https://www.patreon.com/metrodiscordbot) | [Source](https://vex.wtf)"
         )
         embed.add_field(
             name=f"**Modules: [{len(bot.cogs)-2}]**",
