@@ -2,13 +2,14 @@ import discord
 from discord.ext import commands, menus
 
 
-from typing import Optional
+from typing import Optional, Union
 import typing
 
 import traceback
 import asyncio
 import os
 import io
+import copy
 import sys
 from collections import Counter
 import argparse, shlex
@@ -30,6 +31,9 @@ class Arguments(argparse.ArgumentParser):
 def restart_program():
         python = sys.executable
         os.execl(python, python, * sys.argv)
+
+
+
 
 
 
@@ -386,12 +390,15 @@ class developer(commands.Cog, description="Developer commands."):
                 return await ctx.send('Failed to delete that message, try again later.')
 
 
-    @commands.command()
-    @commands.is_owner()
+    @commands.command(slash_command=False)
     async def eval(self, ctx, *, body : str):
-        """
-        Evaluate python code.
-        """
+        """Evaluate python code."""
+
+        if ctx.author.id != 525843819850104842:
+            try:
+                return await ctx.interaction.response.send_message('You must own this bot to use this command.',ephemeral=True)
+            except:
+                return await ctx.send('You must own this bot to use this command.')
 
         env = {
             'bot': self.bot,
@@ -448,6 +455,21 @@ class developer(commands.Cog, description="Developer commands."):
             return await ctx.send(str(e))
 
         await ctx.check()
+
+
+    @commands.command()
+    @commands.is_owner()
+    async def sudo(self, ctx, channel : Union[discord.TextChannel, None], who : Union[discord.Member, discord.User], *, command : str):
+        """Run a command as another user optionally in another channel."""
+
+        msg = copy.copy(ctx.message)
+        channel = channel or ctx.channel
+        msg.channel = channel
+        msg.author = who
+        msg.content = ctx.prefix + command
+        new_ctx = await self.bot.get_context(msg, cls=type(ctx))
+        
+        await self.bot.invoke(new_ctx)
 
 
         
