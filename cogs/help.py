@@ -384,8 +384,10 @@ class MetroHelp(commands.HelpCommand):
         view.add_item(item)
         view.add_item(item2)
 
-
-        await channel.send(embed=embed,view=view)
+        try:
+            await ctx.interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        except:
+            await channel.send(embed=embed,view=view)
 
 
     async def send_command_help(self, command):
