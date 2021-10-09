@@ -239,7 +239,8 @@ bot_data = {
     "owner_id" : 525843819850104842,
     "command_prefix" : get_prefix,
     "slash_commands" : False,
-    "slash_command_guilds" : [812143286457729055]
+    "slash_command_guilds" : [812143286457729055],
+    'chunk_guilds_at_startup' : False
 }
 
 bot = MetroBot(**bot_data)
