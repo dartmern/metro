@@ -122,7 +122,8 @@ class docs(commands.Cog, description="Read docs about discord.py or python"):
             'latest': 'https://discordpy.readthedocs.io/en/latest',
             'python': 'https://docs.python.org/3',
             'master': 'https://discordpy.readthedocs.io/en/master',
-            'edpy' : 'https://enhanced-dpy.readthedocs.io/en/latest'
+            'edpy' : 'https://enhanced-dpy.readthedocs.io/en/latest',
+            'aiohttp' : 'https://docs.aiohttp.org/en/stable/'
             
         }
 
@@ -205,6 +206,13 @@ class docs(commands.Cog, description="Read docs about discord.py or python"):
         """Gives you a documentation link for a ed-py entity."""
 
         await self.do_rtfm(ctx, 'edpy', object)
+
+    @rtfm.command(name='aiohttp',slash_command=True)
+    @commands.bot_has_permissions(send_messages=True)
+    async def rtfm_aiohttp(self, ctx, *, object : str = commands.Option(default=None, description='Object to search for')):
+        """Gives you documentation link for a aiohttp entity."""
+
+        await self.do_rtfm(ctx, 'aiohttp', object)
 
 
 def setup(bot):
