@@ -1,3 +1,9 @@
+# R. Danny's reminder cog with small amounts of modifications.
+# https://github.com/Rapptz/RoboDanny/blob/rewrite/cogs/reminder.py
+
+# Credits to Danny for making this
+
+
 from utils.useful import Embed
 import discord
 from discord.ext import commands, menus
@@ -135,6 +141,7 @@ class reminder(commands.Cog):
         return await self.get_active_timer(connection=connection, days=days)
 
     async def call_timer(self, timer):
+        
         # delete the timer
         query = "DELETE FROM reminders WHERE id=$1;"
         await self.bot.db.execute(query, timer.id)
@@ -144,8 +151,12 @@ class reminder(commands.Cog):
         self.bot.dispatch(event_name, timer)
 
     async def dispatch_timers(self):
+
+      
         try:
+            
             while not self.bot.is_closed():
+                
                 # can only asyncio.sleep for up to ~48 days reliably
                 # so we're gonna cap it off at 40 days
                 # see: http://bugs.python.org/issue20493
@@ -225,7 +236,10 @@ class reminder(commands.Cog):
         next_id_query = """SELECT MAX(id) FROM reminders;"""
         id = await connection.fetch(next_id_query)
 
-        id = int(id[0].get('max')) + 1
+        if id[0].get('max') is None:
+            id = 1
+        else:
+            id = int(id[0].get('max')) + 1
 
 
         query = """INSERT INTO reminders (id, event, extra, expires, created)
