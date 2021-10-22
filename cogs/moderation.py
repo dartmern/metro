@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from cogs.buttons import human_timedelta
 
 from utils.converters import ActionReason, MemberConverter, MemberID
 
@@ -11,6 +12,8 @@ import datetime
 import re
 import humanize
 from humanize.time import precisedelta
+
+from utils import remind_utils
 
 
 time_regex = re.compile(r"(\d{1,5}(?:[.,]?\d{1,5})?)([smhd])")
@@ -244,6 +247,7 @@ class moderation(commands.Cog, description="Moderation commands."):
     @commands.has_guild_permissions(manage_channels=True)
     @commands.bot_has_permissions(send_messages=True, manage_channels=True)
     async def slowmode(self, ctx, time : TimeConverter=None):
+        """Change the slowmode for the current channel."""
 
         if time:
             delta = datetime.timedelta(seconds=int(time))
@@ -260,6 +264,80 @@ class moderation(commands.Cog, description="Moderation commands."):
             await ctx.channel.edit(slowmode_delay=0)
             await ctx.send(f"Removed the slowmode for this channel")
 
+
+    @commands.command()
+    @commands.bot_has_permissions(ban_members=True, send_messages=True)
+    @commands.has_permissions(ban_members=True, send_messages=True)
+    async def tempban(self, ctx, member : discord.Member, duration : remind_utils.FutureTime, *, reason : ActionReason):
+        """Temporarily bans a member for the specified duration.
+
+        The duration can be a a short time form, e.g. 30d or a more human
+        duration such as "until thursday at 3PM" or a more concrete time
+        such as "2024-12-31".
+
+        Note that times are in UTC.
+
+        You can also ban from ID to ban regardless whether they're
+        in the server or not.
+        """
+        
+
+        if reason is None:
+            reason = f'Action requested by: {ctx.author} (ID: {ctx.author.id})'
+        
+        reminder_cog = self.bot.get_cog('reminder')
+        if reminder_cog is None:
+            return await ctx.send('This function is not available at this time. Try again later.')
+
+        until = f"for {human_timedelta(duration.dt)}"
+        heads_up = f"You have been banned from {ctx.guild.name} {until}. \n{reason}"
+
+        try:
+            await member.send(heads_up)
+        except (AttributeError, discord.HTTPException):
+            pass
+
+        await ctx.guild.ban(member, reason=reason)
+
+        timer = await reminder_cog.create_timer(duration.dt, 'tempban', ctx.guild.id,
+                                                                    ctx.author.id,
+                                                                    member.id,
+                                                                    connection=self.bot.db,
+                                                                    created=ctx.message.created_at
+        )
+        
+        await ctx.send(f'Tempbanned {member} {until}')
+
+
+    @commands.Cog.listener()
+    async def on_tempban_timer_complete(self, timer):
+        guild_id, mod_id, member_id = timer.args
+        print('b4')
+        await self.bot.wait_until_ready()
+        print('co')
+
+        guild = self.bot.get_guild(guild_id)
+        if guild is None:
+            # RIP
+            return
+
+        moderator = await self.bot.get_or_fetch_member(guild, mod_id)
+        if moderator is None:
+            try:
+                moderator = await self.bot.fetch_user(mod_id)
+            except:
+                # request failed somehow
+                moderator = f'Mod ID {mod_id}'
+            else:
+                moderator = f'{moderator} (ID: {mod_id})'
+        else:
+            moderator = f'{moderator} (ID: {mod_id})'
+
+        reason = f'Automatic unban from timer made on {timer.created_at} by {moderator}.'
+        await guild.unban(discord.Object(id=member_id), reason=reason)
+
+
+        
 
 
 
