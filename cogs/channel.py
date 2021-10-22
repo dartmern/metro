@@ -10,65 +10,27 @@ from typing import Optional, Union
 
 import argparse, shlex
 
+from utils.new_pages import SimplePages
+
 
 class Arguments(argparse.ArgumentParser):
     def error(self, message):
         raise RuntimeError(message)
 
-class ChannelConfirm(discord.ui.View):
-    def __init__(self, author):
-        super().__init__(timeout=30)
-        self.user = author
-        self.value = None
 
-
-    async def on_timeout(self) -> None:
-        self.foo.disabled = True
-        self.boo.disabled = True
-        await self.message.edit(view=self)
-
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if self.user == interaction.user:
-            return True
-        await interaction.response.send_message(f"Only {self.user} can use this menu. Please invoke the command yourself to use this.",
-                                                ephemeral=True)
-        return False
-
-    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.danger)
-    async def foo(self, _, interaction: discord.Interaction) -> None:
-        self.value = True
-
-        for item in self.children:
-            item.disabled = True
-
-        await interaction.message.edit(view=self)
-
-        self.stop()
-
-
-    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.gray)
-    async def boo(self, _, interaction: discord.Interaction) -> None:
-        
-        self.value = False
-
-        for item in self.children:
-            item.disabled = True
-
-        await interaction.message.edit(view=self)
-
-        self.stop()
-
-
-class MySource(menus.ListPageSource):
-    def __init__(self, data):
-        super().__init__(data, per_page=10)
-
+class ChannelSource(menus.ListPageSource):
     async def format_page(self, menu, entries):
-        offset = menu.current_page * self.per_page
+        pages = []
+        for index, entry in enumerate(entries, start=menu.current_page * self.per_page):
+            pages.append(f'{entry.mention} | {entry.name} | {entry.id}')
 
-        return '\n'.join(f'{i.mention} | {i.name} | {i.id}' for i in entries)
+        maximum = self.get_max_pages()
+        if maximum > 1:
+            footer = f'Page {menu.current_page + 1}/{maximum} ({len(self.entries)} entries)'
+            menu.embed.set_footer(text=footer)
 
-
+        menu.embed.description = '\n'.join(pages)
+        return menu.embed
 
 
 class channelstats(commands.Cog, description="Channel information."):
@@ -100,8 +62,8 @@ class channelstats(commands.Cog, description="Channel information."):
         """
 
         if flags is None:
-            pages = ViewMenuPages(MySource(tuple(ctx.guild.channels)), clear_reactions_after=True)
-            await pages.start(ctx)
+            pages = SimplePages(source=ChannelSource(list(ctx.guild.channels),per_page=8),ctx=ctx)
+            await pages.start()
             return
 
         parser = Arguments(add_help=False, allow_abbrev=False)
@@ -172,27 +134,22 @@ class channelstats(commands.Cog, description="Channel information."):
         Create a Text Channel
         """
 
-        view = ChannelConfirm(ctx.author)
+        confirm = await ctx.confirm(f'Are you sure you want to create a channel named "{name}"?',delete_after=True, timeout=30)
 
-        message = await ctx.send(f'Are you sure you want to create a channel named "{name}"?',view=view)
-        
-        await view.wait()
+        if confirm is None:
+            return await ctx.send(f'Timed out.')
 
-        if view.value is None:
-            await message.delete()
-            return await ctx.send('Timed out. Run the command again to create the channel.')
+        if confirm is False:
+            return await ctx.send(f'Canceled.')
 
-        elif view.value:
+        else:
 
             #No need to replace spaces as d.py does it for us
             channel = await ctx.guild.create_text_channel(name=name, category=category)
 
             return await ctx.send(f"Created {channel.mention}")
 
-        else:
 
-            await message.delete()
-            return await ctx.send("Command canceled.")
 
     
     
