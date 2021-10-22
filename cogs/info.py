@@ -323,7 +323,8 @@ class info(commands.Cog, description="Information about members, guilds, or role
         branch = 'master'
 
         if command is None:
-            embed = Embed(description=f"take the [entire repo]({source_url})")
+            embed = Embed(description=f"Take the [**entire reposoitory**]({source_url})")
+            embed.set_footer(text='Please make sure you follow the license.')
             return await ctx.send(embed=embed)
 
         if command == 'help':
@@ -333,7 +334,8 @@ class info(commands.Cog, description="Information about members, guilds, or role
         else:
             obj = self.bot.get_command(command.replace('.', ' '))
             if obj is None:
-                embed = Embed(description=f"Take my [**entire reposoitory**]({source_url})")
+                embed = Embed(description=f"Take the [**entire reposoitory**]({source_url})")
+                embed.set_footer(text='Please make sure you follow the license.')
                 return await ctx.send(embed=embed)
 
             src = obj.callback.__code__
@@ -352,6 +354,7 @@ class info(commands.Cog, description="Information about members, guilds, or role
         final_url = f'<{source_url}/blob/{branch}/{location}#L{firstlineno}-L{firstlineno + len(lines) - 1}>'
         embed = Embed(color=ctx.me.color,
                               description=f"Source code for [`{command}`]({final_url})")
+        embed.set_footer(text='Please make sure you follow the license.')
         await ctx.send(embed=embed)
 
 
