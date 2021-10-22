@@ -1,6 +1,7 @@
 import datetime
 from typing import Optional
 import discord
+from discord import message
 from discord.ext import commands
 
 
@@ -9,13 +10,14 @@ from pathlib import Path
 import os
 import asyncpg
 import aiohttp
+import asyncio
 import time
 
 #for eval cmd since i don't want to do it in a cog
 import io
 import contextlib
 import textwrap
-from utils.useful import clean_code, Pag, Cooldown, ts_now
+from utils.useful import Embed, clean_code, Pag, Cooldown
 from traceback import format_exception
 
 from utils.json_loader import read_json
@@ -114,6 +116,39 @@ class MyContext(commands.Context):
         except discord.HTTPException:
             pass
 
+    async def send(self, content : str = None, embed : discord.Embed = None, **kwargs):
+
+        if content: 
+            content=str(content)
+
+            if self.bot.http.token in content:
+                content = content.replace(self.bot.http.token, "[Token Hidden]")
+
+        message = await super().send(content=content, embed=embed, **kwargs)
+            
+        return message
+
+    async def st_send(self, content : str = None, embed : discord.Embed = None, hide : bool = False, **kwargs):
+
+        if content: 
+            content=str(content)
+
+            if self.bot.http.token in content:
+                content = content.replace(self.bot.http.token, "[Token Hidden]")
+            
+        try:
+            message = await self.interaction.response.send_message(content=content, embed=embed, ephemeral=hide, **kwargs)
+        except:
+            message = await self.send(content=content, embed=embed, **kwargs)
+
+        return message
+        
+        
+
+
+
+
+
     async def confirm(
         self,
         message : str,
@@ -152,9 +187,57 @@ class PresView(discord.ui.View):
         await interaction.response.send_message(f'The bot is currently online with **{round(self.bot.latency*1000)}ms** latency.\n\nIf there are problems, ask us in <#869693768582979715>',ephemeral=True)
 
 
-    @discord.ui.button(label='Need help?',style=discord.ButtonStyle.gray, custom_id='presistend_view:gray')
-    async def bar(self, button : discord.ui.Button, interaction : discord.Interaction):
-        await interaction.response.send_message(f'Please consider asking your question in <#869693768582979715> or testing the bot in <#858413232608116802>',ephemeral=True)
+    @discord.ui.button(label='Report an issue',style=discord.ButtonStyle.red, custom_id='presistent_view:red')
+    async def boo(self, button : discord.ui.Button, interaction : discord.Interaction):
+
+        await interaction.response.send_message(f'{self.bot.check} Messaged you a report ticket!',ephemeral=True)
+
+        m = await interaction.user.send(f'Are you sure you want to make a ticket to report a bot issue?')
+        await m.add_reaction(self.bot.check)
+        await m.add_reaction(self.bot.cross)
+
+        def check(reaction, user):
+
+            if user == interaction.user and str(reaction.emoji) == self.bot.cross:
+                raise commands.BadArgument('Canceled.')
+
+            return user == interaction.user and str(reaction.emoji) == self.bot.check
+        try:
+            reaction, user = await self.bot.wait_for('reaction_add',check=check, timeout=60)
+        except asyncio.TimeoutError:
+            return await interaction.user.send('Timed out.') 
+
+        else:
+
+            await m.delete(silent=True)
+
+            await interaction.user.send('Please type your report information.')
+            def check(m):
+                return m.author == interaction.user and m.guild is None
+
+            try:
+                m = await self.bot.wait_for('message',check=check, timeout=300)
+            except asyncio.TimeoutError:
+                return await interaction.user.send('Timed out.')
+
+            await interaction.user.send('Thank you for your report! If needed you will be contacted through the bot.')
+
+            overwrites = {
+                interaction.guild.default_role: discord.PermissionOverwrite(read_messages=False),
+                interaction.guild.me: discord.PermissionOverwrite(read_messages=True),
+            }
+            category = self.bot.get_channel(897610105095323678)
+            try:
+                channel = await interaction.guild.create_text_channel(name=interaction.user, category=category,overwrites=overwrites)
+            except:
+                channel = await interaction.guild.create_text_channel(name=interaction.user.id, category=category,overwrites=overwrites)
+            
+            embed = Embed(title='New Report!',description=f'Author: `{interaction.user}` (ID: {interaction.user.id})\n\nReport Content: \n{str(m)}')
+            await channel.send(embed=embed)
+            return
+
+
+
 
 
 
@@ -298,6 +381,13 @@ async def statusview(ctx):
     """
     await ctx.message.delete()
     await ctx.send('Click on the buttons below for status updates!',view=PresView(bot))
+
+
+
+
+    
+
+
 
 
 
