@@ -29,7 +29,7 @@ class block(commands.Cog, description="Manage your server by blocking/temp-block
         self.bot = bot
 
 
-    @commands.command(name='block',slash_command=True)
+    @commands.command(name='block',slash_command=False)
     @can_block()
     @commands.bot_has_permissions(manage_channels=True, send_messages=True)
     @commands.bot_has_permissions(manage_channels=True, send_messages=True)
@@ -37,6 +37,10 @@ class block(commands.Cog, description="Manage your server by blocking/temp-block
         """
         Block a member from your channel.
         """
+        if member is None:
+            return await ctx.send("Please specify a member to block.")
+
+        
         
         if member.top_role >= ctx.author.top_role:
             return
@@ -53,7 +57,7 @@ class block(commands.Cog, description="Manage your server by blocking/temp-block
         await ctx.check()
 
 
-    @commands.command(name='unblock',slash_command=True)
+    @commands.command(name='unblock',slash_command=False)
     @can_block()
     @commands.bot_has_permissions(manage_channels=True, send_messages=True)
     @commands.bot_has_permissions(manage_channels=True, send_messages=True)
@@ -61,6 +65,8 @@ class block(commands.Cog, description="Manage your server by blocking/temp-block
         """
         Unblock a member from your channel.
         """
+        if member is None:
+            return await ctx.send("Please specify a member to unblock.")
 
         
         if member.top_role >= ctx.author.top_role:
