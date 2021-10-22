@@ -9,6 +9,7 @@ import datetime
 from discord.ext.commands.cooldowns import BucketType
 from discord.ext.commands.errors import MissingPermissions
 from humanize.time import precisedelta
+from bot import MyContext
 
 
 from utils.useful import Embed, RoboPages
@@ -220,27 +221,29 @@ class buttons(commands.Cog, description='Button related stuff. (and some secret 
 
 
 
-    @commands.command()
+    @commands.command(slash_command=True)
     @commands.is_owner()
     @commands.bot_has_permissions(send_messages=True)
-    async def saya(self, ctx, *, message : str):
+    async def saya(self, ctx : MyContext, message : str = commands.Option(default=None, description='message you want to replace')):
         """
         A more advanced echo/say command with variables.
 
-        `
-        {member.mention} - Returns your mentions
+        
+        `{member.mention} - Returns your mentions
         {member.id} - Returns your id
         {member} - Returns your username+discrim (abcd#1234)
         {member.discriminator} - Returns your discriminator (1234)
-        {member.name} - Returns your name (abcd)
-        `
+        {member.name} - Returns your name (abcd)`
         """
 
         
         message = message.replace('{member.mention}', "$MENTION").replace('{member.id}','$ID').replace('{member}','$MEMBER').replace('{member.discriminator}','$DISCRIM').replace('{member.name}','$NAME')
         message = substitute_args(message, ctx.author)
 
-        await ctx.send(str(message))
+        await ctx.st_send(str(message), hide=True)
+
+
+    
 
 
 
