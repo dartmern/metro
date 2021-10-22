@@ -14,7 +14,7 @@ import textwrap
 from discord.ui import view
 from discord.ext.menus.views import ViewMenuPages
 
-from utils.useful import Embed, Cooldown, RoboPages
+from utils.useful import Embed, Cooldown, OldRoboPages
 
 
 
@@ -117,7 +117,7 @@ class GroupHelpPageSource(menus.ListPageSource):
         return embed
 
 
-class HelpMenu(RoboPages):
+class HelpMenu(OldRoboPages):
     def __init__(self, source):
         super().__init__(source)
 
