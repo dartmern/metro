@@ -3,18 +3,30 @@ from discord.ext import commands, menus
 
 
 from typing import Optional, Union
-import typing
+
 
 import traceback
 import asyncio
 import os
 import io
+import datetime
+import itertools
 import copy
 import sys
 from collections import Counter
 import argparse, shlex
 import textwrap
 from contextlib import redirect_stdout
+
+
+from jishaku.paginators import WrappedPaginator
+from jishaku.codeblocks import Codeblock, codeblock_converter
+from jishaku.features.baseclass import Feature
+from jishaku.models import copy_context_with
+from jishaku.paginators import WrappedPaginator
+import jishaku.modules
+
+
 
 
 from utils.useful import Embed, fuzzy, BaseMenu, pages, clean_code, ts_now, Pag, get_bot_uptime
@@ -471,6 +483,66 @@ class developer(commands.Cog, description="Developer commands."):
         
         await self.bot.invoke(new_ctx)
 
+
+    @commands.command(help="Reloads all extensions", aliases=['rall'])
+    @commands.is_owner()
+    @commands.bot_has_permissions(send_messages=True, embed_links=True)
+    async def reloadall(self, ctx, *extensions: jishaku.modules.ExtensionConverter):
+        self.bot.last_rall = datetime.datetime.utcnow()
+        pages = WrappedPaginator(prefix='', suffix='')
+        to_send = []
+        err = False
+        first_reload_failed_extensions = []
+
+        extensions = extensions or [await jishaku.modules.ExtensionConverter.convert(self, ctx, '~')]
+
+        for extension in itertools.chain(*extensions):
+            method, icon = (
+                (self.bot.reload_extension, "\N{CLOCKWISE RIGHTWARDS AND LEFTWARDS OPEN CIRCLE ARROWS}")
+                if extension in self.bot.extensions else
+                (self.bot.load_extension, "\N{INBOX TRAY}")
+            )
+            # noinspection PyBroadException
+            try:
+                method(extension)
+                pages.add_line(f"{icon} `{extension}`")
+            except Exception:
+                first_reload_failed_extensions.append(extension)
+
+        error_keys = {
+            discord.ext.commands.ExtensionNotFound: 'Not found',
+            discord.ext.commands.NoEntryPointError: 'No setup function',
+            discord.ext.commands.ExtensionNotLoaded: 'Not loaded',
+            discord.ext.commands.ExtensionAlreadyLoaded: 'Already loaded'
+        }
+
+        for extension in first_reload_failed_extensions:
+            method, icon = (
+                (self.bot.reload_extension, "\N{CLOCKWISE RIGHTWARDS AND LEFTWARDS OPEN CIRCLE ARROWS}")
+                if extension in self.bot.extensions else
+                (self.bot.load_extension, "\N{INBOX TRAY}")
+            )
+            try:
+                method(extension)
+                pages.add_line(f"{icon} `{extension}`")
+
+            except tuple(error_keys.keys()) as exc:
+                pages.add_line(f"{icon}❌ `{extension}` - {error_keys[type(exc)]}")
+
+            except discord.ext.commands.ExtensionFailed as e:
+                traceback_string = f"```py" \
+                                   f"\n{''.join(traceback.format_exception(etype=None, value=e, tb=e.__traceback__))}" \
+                                   f"\n```"
+                pages.add_line(f"{icon}❌ `{extension}` - Execution error")
+                to_dm = f"❌ {extension} - Execution error - Traceback:"
+
+                if (len(to_dm) + len(traceback_string) + 5) > 2000:
+                    await ctx.author.send(file=io.StringIO(traceback_string))
+                else:
+                    await ctx.author.send(f"{to_dm}\n{traceback_string}")
+
+        for page in pages.pages:
+            await ctx.send(page)
 
         
 
