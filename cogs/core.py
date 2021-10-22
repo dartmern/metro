@@ -48,14 +48,23 @@ class core(commands.Cog, description="Core events."):
             await ctx.send(content=f"```yaml\nSyntax: {command}\n{separator}{indicator}\n{missing} is a required argument that is missing```",embed=ctx.bot.help_command.get_command_help(ctx.command))
 
         elif isinstance(error, commands.BotMissingPermissions):
-            return await ctx.send(
-                f"I am missing the `{error.missing_permissions[0]}` permission to do that."
+
+            missing_perms = '\n'.join(error.missing_perms)
+            try:
+                return await ctx.send(
+                f"I am missing the `{missing_perms}` permissions to do that."
             )
+            except:
+                return await ctx.author.send(
+                f"I am missing the `{missing_perms}` permissions to do that."
+                )
 
         elif isinstance(error, commands.MissingPermissions):
 
+            missing_perms = '\n'.join(error.missing_perms)
+
             return await ctx.send(
-                f"You are missing the `{error.missing_permissions[0]}` permission to do that!"
+                f"You are missing the `{missing_perms}` permission to do that!"
             )
 
 
@@ -63,7 +72,7 @@ class core(commands.Cog, description="Core events."):
             return
 
         elif isinstance(error, commands.CheckFailure):
-            await ctx.send("You do not have permission to use this command!")
+            await ctx.send("You do not have permission to use this command.")
             return
 
         elif isinstance(error, commands.MemberNotFound):
@@ -95,20 +104,25 @@ class core(commands.Cog, description="Core events."):
                 description=f"You are on cooldown! Try again in **{humanize.precisedelta(dt.timedelta(seconds=error.retry_after), format='%.0f' if error.retry_after > 1 else '%.1f')}**"
                             + cooldowns
             )
+            em.set_footer(text='Spamming commands may result in a blacklist.')
             return await ctx.send(embed=em)
 
         elif isinstance(error, commands.BadArgument):
             await ctx.send(str(error))
 
         else:
-            print(error)
+            
 
             embed = Embed(
-                title=error,
-                description=f"```py\n{error}``` \nPlease join my [support server](https://discord.gg/2ceTMZ9qJh) for more information\n - This bug has been reported to our developers and is being fixed"
+            
+                description=f"```py\n{error}``` \njust chill out. my dev got an angry dm and should know what happened"
             )
             embed.set_footer(text="Continuing to spam commands can result in a blacklist")
             m = await ctx.send(embed=embed)
+            
+            await ctx.send("_")
+            print(f'This happened in:\n\nguild_id : {ctx.guild.id}\nmember_id : {ctx.author.id}\nmessage_link : {ctx.message.jump_url}')
+            raise error
 
 
     
