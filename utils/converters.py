@@ -83,6 +83,48 @@ class ActionReason(commands.Converter):
 
 
 
+async def prettify(ctx, arg):
+    pretty_arg = await commands.clean_content().convert(ctx, str(arg))
+    return pretty_arg
+
+
+class DiscordCommand(commands.Converter):
+    """
+    Basic command converter.
+    """
+
+    async def convert(self, ctx, argument):
+        command = ctx.bot.get_command(argument.lower())
+        if not command:
+            raise commands.BadArgument(
+                f"Command `{await prettify(ctx, argument)}` not found."
+            )
+        return command
+
+
+class ChannelOrRoleOrMember(commands.Converter):
+    """
+    Converter for config command group
+    """
+
+    async def convert(self, ctx, argument):
+        try:
+            return await commands.TextChannelConverter().convert(ctx, argument)
+        except commands.ChannelNotFound:
+            try:
+                return await commands.RoleConverter.convert(ctx, argument)
+            except Exception:
+                try:
+                    return await commands.MemberConverter().convert(ctx, argument)
+                except Exception:
+                    raise commands.BadArgument(
+                        f"Entity `{await prettify(ctx, argument)}` is an invalid input. Please specify a channel, role, or user."
+                    )
+
+
+
+
+
 
 
 
