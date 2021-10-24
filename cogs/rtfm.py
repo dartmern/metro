@@ -165,7 +165,7 @@ class docs(commands.Cog, description="Read docs about discord.py or python"):
 
 
 
-    @commands.group(name="rtfm",invoke_without_command=True, case_insensitive=True, slash_command=True)
+    @commands.group(name="rtfm",invoke_without_command=True, case_insensitive=True, slash_command=True, aliases=['rtfd'])
     @commands.bot_has_permissions(send_messages=True)
     async def rtfm(self, ctx, *, obj : str = None):
         """Gives you a documentation link for a enhanced-discord.py entity.
