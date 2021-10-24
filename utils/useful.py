@@ -428,65 +428,6 @@ def ts_now(type):
 
 
 
-class NewPag(commands.Paginator):
-    """
-    A paginator that allows automatic wrapping of lines should they not fit.
-    This is useful when paginating unpredictable output,
-    as it allows for line splitting on big chunks of data.
-    Delimiters are prioritized in the order of their tuple.
-    Parameters
-    -----------
-    wrap_on: tuple
-        A tuple of wrapping delimiters.
-    include_wrapped: bool
-        Whether to include the delimiter at the start of the new wrapped line.
-    force_wrap: bool
-        If this is True, lines will be split at their maximum points should trimming not be possible
-        with any provided delimiter.
-    """
-
-    def __init__(self, *args, wrap_on=('\n', ' '), include_wrapped=True, force_wrap=False, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.wrap_on = wrap_on
-        self.include_wrapped = include_wrapped
-        self.force_wrap = force_wrap
-
-    def add_line(self, line='', *, empty=False):
-        true_max_size = self.max_size - self._prefix_len - self._suffix_len - 2
-        original_length = len(line)
-
-        while len(line) > true_max_size:
-            search_string = line[0:true_max_size - 1]
-            wrapped = False
-
-            for delimiter in self.wrap_on:
-                position = search_string.rfind(delimiter)
-
-                if position > 0:
-                    super().add_line(line[0:position], empty=empty)
-                    wrapped = True
-
-                    if self.include_wrapped:
-                        line = line[position:]
-                    else:
-                        line = line[position + len(delimiter):]
-
-                    break
-
-            if not wrapped:
-                if self.force_wrap:
-                    super().add_line(line[0:true_max_size - 1])
-                    line = line[true_max_size - 1:]
-                else:
-                    raise ValueError(
-                        f"Line of length {original_length} had sequence of {len(line)} characters"
-                        f" (max is {true_max_size}) that WrappedPaginator could not wrap with"
-                        f" delimiters: {self.wrap_on}"
-                    )
-
-        super().add_line(line, empty=empty)
-
-
 
 
 
