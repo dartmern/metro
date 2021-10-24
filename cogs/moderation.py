@@ -266,8 +266,8 @@ class moderation(commands.Cog, description="Moderation commands."):
 
 
     @commands.command()
-    @commands.bot_has_permissions(ban_members=True, send_messages=True)
     @commands.has_permissions(ban_members=True, send_messages=True)
+    @commands.bot_has_permissions(ban_members=True, send_messages=True)
     async def tempban(self, ctx, member : discord.Member, duration : remind_utils.FutureTime, *, reason : ActionReason):
         """Temporarily bans a member for the specified duration.
 
