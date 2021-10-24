@@ -37,6 +37,9 @@ class core(commands.Cog, description="Core events."):
                 print(error)
                 return
 
+        elif isinstance(error, commands.BadArgument):
+            await ctx.send(str(error))
+
         elif isinstance(error, commands.MissingRequiredArgument):
 
             missing = f"{str(error.param).split(':')[0]}"
@@ -47,9 +50,9 @@ class core(commands.Cog, description="Core events."):
 
             await ctx.send(content=f"```yaml\nSyntax: {command}\n{separator}{indicator}\n{missing} is a required argument that is missing```",embed=ctx.bot.help_command.get_command_help(ctx.command))
 
-        elif isinstance(error, commands.BotMissingPermissions):
+        elif isinstance(error, commands.errors.BotMissingPermissions):
 
-            missing_perms = '\n'.join(error.missing_perms)
+            missing_perms = '\n'.join(error.missing_permissions)
             try:
                 return await ctx.send(
                 f"I am missing the `{missing_perms}` permissions to do that."
@@ -59,9 +62,13 @@ class core(commands.Cog, description="Core events."):
                 f"I am missing the `{missing_perms}` permissions to do that."
                 )
 
-        elif isinstance(error, commands.MissingPermissions):
+        elif isinstance(error, commands.errors.MissingPermissions):
 
-            missing_perms = '\n'.join(error.missing_perms)
+            if ctx.author.id == ctx.bot.owner_id:
+                await ctx.reinvoke()
+                return
+
+            missing_perms = '\n'.join(error.missing_permissions)
 
             return await ctx.send(
                 f"You are missing the `{missing_perms}` permission to do that!"
@@ -107,8 +114,7 @@ class core(commands.Cog, description="Core events."):
             em.set_footer(text='Spamming commands may result in a blacklist.')
             return await ctx.send(embed=em)
 
-        elif isinstance(error, commands.BadArgument):
-            await ctx.send(str(error))
+
 
         else:
             
