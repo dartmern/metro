@@ -7,6 +7,7 @@ from discord.ext.menus.views import ViewMenuPages
 
 from typing import Optional, Union
 import unicodedata
+from utils.new_pages import SimplePages
 
 from utils.useful import Embed
 from discord.ext.commands.cooldowns import BucketType
@@ -290,8 +291,8 @@ class info(commands.Cog, description="Information about members, guilds, or role
         def check(m):
             return m.author == ctx.author and m.channel == ctx.channel and m.content.lower() == '?tag all --text'
 
-        await ctx.send('Send `?tag all --text`')
-        message = await self.bot.wait_for('message', timeout=60, check=check)
+        #await ctx.send('Send `?tag all --text`')
+        #message = await self.bot.wait_for('message', timeout=60, check=check)
 
         await ctx.message.add_reaction(self.bot.check)
 
@@ -407,8 +408,8 @@ class info(commands.Cog, description="Information about members, guilds, or role
     @commands.bot_has_permissions(send_messages=True, embed_links=True)
     async def emojis(self, ctx):
 
-        menu = ViewMenuPages(source=Source(self.bot.emojis), clear_reactions_after=True)
-        await menu.start(ctx)
+        menu = SimplePages(source=Source(self.bot.emojis),ctx=ctx)
+        await menu.start()
 
 
     @commands.command(aliases=['lc'])
