@@ -254,6 +254,8 @@ class MetroBot(commands.AutoShardedBot):
         self.maintenance = False
         self.pres_views = False
 
+        self.usage = {}
+
     async def on_ready(self):
 
         if not self.persistent_views:
