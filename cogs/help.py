@@ -1,5 +1,6 @@
 
 from sys import prefix
+from utils.new_pages import SimplePages
 from utils.pages import ExtraPages
 import discord
 from discord.ext.commands import BucketType
@@ -204,9 +205,14 @@ class ButtonMenuSrc(menus.ListPageSource):
         sub_commands = []
 
         for command in commands:
-            signature = f"`{command.name} {command.signature}` {command.short_doc}"
+            
+            if command.signature == '':
+                signature = f"`{command.name}` {command.short_doc}"
+            else:
+                signature = f"`{command.name} {command.signature}` {command.short_doc}"
             sub_commands.append(signature)
 
+        
         embed.add_field(name='Subcommands',value='\n'.join(sub_commands),inline=False)
 
         embed.set_footer(
@@ -268,7 +274,7 @@ class MetroHelp(commands.HelpCommand):
         else:
             return await self.send_command_help(cmd)
 
-    def get_command_help(self, command) -> Embed:
+    async def get_command_help(self, command) -> Embed:
 
         ctx = self.context
         # Base
@@ -302,11 +308,12 @@ class MetroHelp(commands.HelpCommand):
         )
 
         if not isinstance(command, commands.Group):
-
             return em
 
+        group = await self.filter_commands(command.walk_commands())
+
         all_subs = [
-            f"`{sub.name}` {f'`{sub.signature}`' if sub.signature else ''} {sub.short_doc}" for sub in command.walk_commands()
+            f"`{sub.name}` {f'`{sub.signature}`' if sub.signature else ''} {sub.short_doc}" for sub in group
         ]   
 
         if len(all_subs) == 0:
@@ -328,7 +335,7 @@ class MetroHelp(commands.HelpCommand):
             try:
                 return await self.context.interaction.response.send_message(embed=self.get_command_help(command),ephemeral=True)
             except:
-                return await self.context.send(embed=self.get_command_help(command),view=View(self.context.author))
+                return await self.context.send(embed=await self.get_command_help(command),view=View(self.context.author))
 
 
         raise commands.BadArgument("You do not have the permissions to view this command's help.")
@@ -339,22 +346,15 @@ class MetroHelp(commands.HelpCommand):
         ctx = self.context
         bot = ctx.bot
 
-        newline = '\n'
+        nl = '\n'
         cogs = []
         for cog in bot.cogs:
             cogs.append(cog.capitalize())
 
         cogs.remove('Jishaku')
-        try:
-            cogs.remove('Core')
-            cogs.remove('Developer')
-        except:
-            pass
-
-
-        channel = bot.get_channel(812527644855107584)
-        
-
+        cogs.remove('Core')
+        cogs.remove('Developer')
+    
         embed = Embed(
             description=
             f"**Total Commands:** {len(list(bot.walk_commands()))} | **Usable by you (here):** {len(await self.filter_commands(list(bot.walk_commands()), sort=True))}"
@@ -362,10 +362,11 @@ class MetroHelp(commands.HelpCommand):
             f"[Support](https://discord.gg/2ceTMZ9qJh) | [Invite](https://discord.com/api/oauth2/authorize?client_id=788543184082698252&permissions=140663671873&scope=bot%20applications.commands) | [Donate](https://www.patreon.com/metrodiscordbot) | [Source](https://vex.wtf)"
         )
         embed.add_field(
-            name=f"**Modules: [{len(bot.cogs)-2}]**",
-            value=f"```\n{newline.join(cogs)}```",
+            name=f"**Modules: [{len(cogs)}]**",
+            value=f"```\n{nl.join(cogs)}```",
             inline=True
         )
+        
         
 
         
@@ -394,22 +395,22 @@ class MetroHelp(commands.HelpCommand):
         await self.handle_help(command)
 
     async def send_group_help(self, group):
-
-        if int(len(group.commands)) == 0:
+        
+        entries = await self.filter_commands(group.commands)
+        
+        if int(len(group.commands)) == 0 or len(entries) == 0:
             await self.handle_help(group)
             return
 
-        entries = await self.filter_commands(group.commands)
-
-        menu = HelpMenu(ButtonMenuSrc(group, entries, prefix=self.context.clean_prefix))
-        await menu.start(self.context)
+        menu = SimplePages(ButtonMenuSrc(group, entries, prefix=self.context.clean_prefix),ctx=self.context)
+        await menu.start()
         
 
     async def send_cog_help(self, cog):
         entries = await self.filter_commands(cog.get_commands())
 
-        menu = HelpMenu(GroupHelpPageSource(cog, entries, prefix=self.context.prefix))
-        await menu.start(self.context)
+        menu = SimplePages(GroupHelpPageSource(cog, entries, prefix=self.context.prefix), ctx=self.context)
+        await menu.start()
 
 
 
@@ -420,7 +421,7 @@ class MetroHelp(commands.HelpCommand):
             
             commands = await self.filter_commands(self.context.bot.commands)
             
-            menu = ExtraPages(source=HelpSource(tuple(commands), prefix=self.context.prefix),)
+            menu = ExtraPages(source=HelpSource(tuple(commands), prefix=self.context.prefix))
             await menu.start(self.context)
             return
 
