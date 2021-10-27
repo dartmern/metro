@@ -145,10 +145,6 @@ class MyContext(commands.Context):
         
         
 
-
-
-
-
     async def confirm(
         self,
         message : str,
@@ -258,7 +254,17 @@ class MetroBot(commands.AutoShardedBot):
 
     async def on_ready(self):
 
+        await bot.wait_until_ready()
+
+        from cogs.support_views import RoleView, TesterButton, AllRoles, Verify
+
         if not self.persistent_views:
+            self.add_view(TesterButton(self))
+            self.add_view(RoleView(self))
+            self.add_view(AllRoles(self))
+            
+            self.add_view(Verify(self))
+
             self.add_view(PresView(self))
             self.pres_views = True
 
