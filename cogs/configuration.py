@@ -35,9 +35,6 @@ class configuration(commands.Cog, description='Configure the bot/server.'):
         if ctx.author.id == ctx.bot.owner_id:
             return True  # Bot devs are immune.
 
-        if isinstance(ctx.author, discord.Member):
-            if ctx.author.guild_permissions.manage_guild:
-                return True  # Manage guild is immune.
 
         if str(ctx.command) in self.command_config[ctx.guild.id]:
             raise commands.BadArgument('This command is disabled in this guild.')
@@ -139,15 +136,17 @@ class configuration(commands.Cog, description='Configure the bot/server.'):
         ctx : MyContext, 
         entity : Optional[ChannelOrRoleOrMember] = None, 
         *commands : DiscordCommand):
-        """Prevent specific commands from being run in channels, users, or roles."""
+        """Prevent specific commands from being run in channels, users, or roles.
+        
+        **Tip:** Use `~` in place of entity to disable a command for the entire guild.
+        """
 
         if not commands:
-            return await ctx.send('Please input commands to disable')
-
+            return await ctx.send_help('config disable')
         entity = entity or ctx.guild
         await ctx.trigger_typing()
         await self.disable_command(ctx, entity, [str(n.name) for n in commands])
-        
+
 
     @config_disable.command(
         name='list'
@@ -283,6 +282,29 @@ class configuration(commands.Cog, description='Configure the bot/server.'):
 
 
         
+    @config_disable.command(
+        name='clear'
+    )
+    @commands.has_permissions(manage_guild=True)
+    async def config_disable_clear(self, ctx : MyContext):
+        """
+        Clear all disabled commands.
+        """
+
+        confirm = await ctx.confirm(f'Are you sure you want to clear all your disabled commands?',timeout=30)
+
+        if confirm is None:
+            return await ctx.send('Timed out.')
+
+        if confirm is False:
+            return await ctx.send('Canceled.')
+
+        await ctx.trigger_typing()
+        query = "DELETE FROM command_config WHERE server_id = $1;"
+        await self.bot.db.execute(query, ctx.guild.id)
+
+        await ctx.send('Cleared the server\'s disabled command list.')
+
 
 
 
@@ -298,10 +320,13 @@ class configuration(commands.Cog, description='Configure the bot/server.'):
         entity : Optional[ChannelOrRoleOrMember] = None,
         *commands : DiscordCommand
     ):
-        """Let specific commands being runable in channels, users, or roles"""
+        """Let specific commands being runable in channels, users, or roles.
+        
+        **Tip:** Use `~` in place of entity to disable a command for the entire guild.
+        """
 
         if not commands:
-            return await ctx.send('Please input commands to enable')
+            return await ctx.send_help('config enable')
 
         await ctx.trigger_typing()
         entity = entity or ctx.guild
