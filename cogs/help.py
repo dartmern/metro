@@ -166,8 +166,8 @@ class ButtonMenuSrc(menus.ListPageSource):
         super().__init__(entries=commands, per_page=9)
         self.group = group
         self.prefix = prefix
-        self.title = f"`{self.group.name}`"
-        self.description = self.group.description
+        self.description = self.group.help  
+        
 
     async def format_page(self, menu, commands):
 
@@ -185,7 +185,12 @@ class ButtonMenuSrc(menus.ListPageSource):
             
             footer = f'Type "{self.prefix}help [Command | Module] for more information' + " | [1/1]"
 
-        embed = Embed(title=self.title, description=self.description)
+        if self.group.signature == '':
+            title = f'`{self.group.name}`'
+        else:
+            title = f"`{self.group.name}` `{self.group.signature}`"
+
+        embed = Embed(title=title, description=self.description)
 
         cooldown = discord.utils.find(lambda x: isinstance(x, Cooldown), self.group.checks) or Cooldown(1, 3, 1, 1,
                                                                                                      discord.ext.commands.BucketType.user)
@@ -351,9 +356,12 @@ class MetroHelp(commands.HelpCommand):
         for cog in bot.cogs:
             cogs.append(cog.capitalize())
 
-        cogs.remove('Jishaku')
-        cogs.remove('Core')
-        cogs.remove('Developer')
+        try:
+            cogs.remove('Jishaku')
+            cogs.remove('Core')
+            cogs.remove('Developer')
+        except:
+            pass
     
         embed = Embed(
             description=
