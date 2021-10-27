@@ -108,6 +108,10 @@ class ChannelOrRoleOrMember(commands.Converter):
     """
 
     async def convert(self, ctx, argument):
+
+        if argument.lower() == '~':
+            return ctx.guild
+            
         try:
             return await commands.TextChannelConverter().convert(ctx, argument)
         except commands.ChannelNotFound:
