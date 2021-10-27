@@ -48,11 +48,11 @@ class core(commands.Cog, description="Core events."):
             indicator = ('^' * (len(missing) + 2))
             separator = (' '*8 + separator)
 
-            await ctx.send(content=f"```yaml\nSyntax: {command}\n{separator}{indicator}\n{missing} is a required argument that is missing```",embed=ctx.bot.help_command.get_command_help(ctx.command))
+            await ctx.send(content=f"```yaml\nSyntax: {command}\n{separator}{indicator}\n{missing} is a required argument that is missing```",embed=await ctx.bot.help_command.get_command_help(ctx.command))
 
         elif isinstance(error, commands.errors.BotMissingPermissions):
 
-            missing_perms = '\n'.join(error.missing_permissions)
+            missing_perms = ', '.join(error.missing_permissions)
             try:
                 return await ctx.send(
                 f"I am missing the `{missing_perms}` permissions to do that."
@@ -68,7 +68,7 @@ class core(commands.Cog, description="Core events."):
                 await ctx.reinvoke()
                 return
 
-            missing_perms = '\n'.join(error.missing_permissions)
+            missing_perms = ', '.join(error.missing_permissions)
 
             return await ctx.send(
                 f"You are missing the `{missing_perms}` permission to do that!"
@@ -97,6 +97,11 @@ class core(commands.Cog, description="Core events."):
             )
 
         elif isinstance(error, commands.CommandOnCooldown):
+
+            if ctx.channel.id == 895082808161226803:
+                await ctx.reinvoke()
+                return
+
             command = ctx.command
             default = discord.utils.find(
                 lambda c: isinstance(c, Cooldown), command.checks
