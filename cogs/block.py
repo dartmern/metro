@@ -29,10 +29,10 @@ class block(commands.Cog, description="Manage your server by blocking/temp-block
         self.bot = bot
 
 
-    @commands.command(name='block',slash_command=False)
+    @commands.command(name='block')
     @can_block()
     @commands.bot_has_permissions(manage_channels=True, send_messages=True)
-    @commands.bot_has_permissions(manage_channels=True, send_messages=True)
+    @commands.has_permissions(manage_channels=True, send_messages=True)
     async def block(self, ctx, member : discord.Member = commands.Option(default=None, description='member to block')):
         """
         Block a member from your channel.
@@ -57,10 +57,10 @@ class block(commands.Cog, description="Manage your server by blocking/temp-block
         await ctx.check()
 
 
-    @commands.command(name='unblock',slash_command=False)
+    @commands.command(name='unblock')
     @can_block()
     @commands.bot_has_permissions(manage_channels=True, send_messages=True)
-    @commands.bot_has_permissions(manage_channels=True, send_messages=True)
+    @commands.has_permissions(manage_channels=True, send_messages=True)
     async def unblock(self, ctx, member : discord.Member = commands.Option(default=None, description='member to unblock')):
         """
         Unblock a member from your channel.
@@ -83,7 +83,8 @@ class block(commands.Cog, description="Manage your server by blocking/temp-block
 
 
     @commands.command(name='tempblock')
-    @commands.bot_has_permissions(send_messages=True)
+    @commands.bot_has_permissions(manage_channels=True, send_messages=True)
+    @commands.has_permissions(manage_channels=True, send_messages=True)
     async def tempblock(self, ctx, duration : remind_utils.FutureTime, *, member : discord.Member):
         """Temporarily blocks a user from your channel.
 
