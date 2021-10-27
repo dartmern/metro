@@ -6,7 +6,6 @@ import youtube_dl
 
 from discord.ext import commands
 
-from utils.checks import is_tester
 
 # Suppress noise about console usage from errors
 youtube_dl.utils.bug_reports_message = lambda: ''
@@ -88,7 +87,6 @@ class music(commands.Cog, description='Make your server enjoy music within disco
         await ctx.send(f'Now playing: {query}')
 
     @commands.command()
-    @is_tester()
     async def yt(self, ctx, *, url):
         """Plays from a url (almost anything youtube_dl supports)"""
 
@@ -99,7 +97,6 @@ class music(commands.Cog, description='Make your server enjoy music within disco
         await ctx.send(f'Now playing: {player.title}')
 
     @commands.command()
-    @is_tester()
     async def stream(self, ctx, *, url):
         """Streams from a url (same as yt, but doesn't predownload)"""
 
@@ -110,7 +107,6 @@ class music(commands.Cog, description='Make your server enjoy music within disco
         await ctx.send(f'Now playing: {player.title}')
 
     @commands.command()
-    @is_tester()
     async def volume(self, ctx, volume: int):
         """Changes the player's volume"""
 
@@ -121,7 +117,6 @@ class music(commands.Cog, description='Make your server enjoy music within disco
         await ctx.send(f"Changed volume to {volume}%")
 
     @commands.command()
-    @is_tester()
     async def stop(self, ctx):
         """Stops and disconnects the bot from voice"""
 

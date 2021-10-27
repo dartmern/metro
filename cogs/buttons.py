@@ -224,6 +224,7 @@ class buttons(commands.Cog, description='Button related stuff. (and some secret 
     @commands.command(slash_command=True)
     @commands.is_owner()
     @commands.bot_has_permissions(send_messages=True)
+    @commands.has_permissions(send_messages=True)
     async def saya(self, ctx : MyContext, message : str = commands.Option(default=None, description='message you want to replace')):
         """
         A more advanced echo/say command with variables.

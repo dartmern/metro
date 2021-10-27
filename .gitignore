@@ -131,3 +131,7 @@ dmypy.json
 # Pyre type checker
 .pyre/
 >>>>>>> refs/remotes/metro/main
+cogs/__pycache__/buttons.cpython-38.pyc
+cogs/__pycache__/core.cpython-38.pyc
+cogs/__pycache__/help.cpython-38.pyc
+cogs/__pycache__/info.cpython-38.pyc
