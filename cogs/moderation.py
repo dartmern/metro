@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
-from cogs.buttons import human_timedelta
+from bot import MyContext
+from utils.remind_utils import human_timedelta
 
 from utils.converters import ActionReason, MemberConverter, MemberID
 
@@ -32,7 +33,7 @@ class TimeConverter(commands.Converter):
                 raise commands.BadArgument("{} is not a number!".format(v))
         return time
 
-class moderation(commands.Cog, description="Moderation commands."):
+class moderation(commands.Cog, description=":hammer: Moderation commands."):
     def __init__(self, bot):
         self.bot = bot
 
@@ -69,7 +70,7 @@ class moderation(commands.Cog, description="Moderation commands."):
     async def ban_cmd(
             self,
             ctx,
-            member : discord.Member,
+            member : discord.User,
             *,
             reason : str = None
     ):
@@ -105,9 +106,9 @@ class moderation(commands.Cog, description="Moderation commands."):
     @commands.bot_has_permissions(send_messages=True, ban_members=True)
     async def unban_cmd(
             self,
-            ctx,
-            *,
-            member : discord.User
+            ctx : MyContext,
+            member : discord.User,
+            reason : str = None
     ):
         """
         Unbans an user from the server.
@@ -117,7 +118,7 @@ class moderation(commands.Cog, description="Moderation commands."):
         for ban in bans:
             user = ban.user
             if user.id == member.id:
-                await ctx.guild.unban(user)
+                await ctx.guild.unban(user, reason=reason)
                 await ctx.send(f"Unbanned **{user}**")
                 return
         raise commands.BadArgument(
@@ -276,9 +277,6 @@ class moderation(commands.Cog, description="Moderation commands."):
         such as "2024-12-31".
 
         Note that times are in UTC.
-
-        You can also ban from ID to ban regardless whether they're
-        in the server or not.
         """
         
 

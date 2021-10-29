@@ -167,7 +167,7 @@ class Verify(discord.ui.View):
         
 
 
-class support(commands.Cog, description='Support only commands.'):
+class support(commands.Cog, description=':test_tube: Support only commands.'):
     def __init__(self, bot):
         self.bot = bot
 
@@ -229,7 +229,88 @@ class support(commands.Cog, description='Support only commands.'):
         """
         await ctx.send('There are no tasks to test as of now! \nIf you want, keep an eye out on the pins and pings in this channel. You will get notified when commands are available to test.')
 
+    
+    @commands.command(hidden=True, aliases=['enablehelp'])
+    async def disablehelp(self, ctx):
+
         
+        message = getattr(ctx.message.reference, "resolved", None)
+
+        content = """
+        Metro Disable/Enable Help
+
+        **Use `config disable/enable` to disable a couple of commands for an entity**
+        **If you want to disable all commands for an entity use the ignore command** (see `?ignorehelp`)
+
+        `config` 
+
+            `disable [entity] [commands...]` - disable commands for an entity (example: `m.config disable #general help`)
+                    `clear` - clear/reset all disabled commands
+                    `list` - list all disabled commands
+            
+            `enable [entity] [commands...]` - enable commands for an entity (example: `m.config enable #general help`)
+                    `all` - clear/reset all disabled commands (enable all commands)
+
+        For entity you may use the following:
+            - channel (mention/name/id)
+            - role (mention/name/id)
+            - member (mention/username/id)
+            - guild (use `~` as a placeholder for guild)
+
+        Examples:
+            `m.config disable ~ source` - disable source for the entire guild
+            `m.config disable #general help` - disable help for #general
+            `m.config enable @dartmern ban` - enable the ban command for @dartmern
+            `m.config enable @Tester button` - enable button command for @Tester
+
+        If you have any questions feel free to ask in support!
+        """
+
+        if message is None:
+            await ctx.send(content)
+        else:
+            await message.reply(content, mention_author=True)
+
+
+    @commands.group()
+    async def faq(self, ctx):
+        pass
+
+    @faq.command()
+    async def music(self, ctx):
+
+        content = """
+        Music is just a hard pass. 
+        it's just not worth developing a music bot with tons of features with how much they are in the "gray area" of youtube. 
+        On top of that I don't want this bot to be known for music.
+        
+        - dartmern
+        
+        Source: https://discord.com/channels/812143286457729055/902011074046488577/902011126471094283 (first thing in future updates)
+        """
+
+        await ctx.send(content=content)
+
+    @faq.command()
+    async def source(self, ctx):
+
+        content = """
+        My source is here: https://github.com/dartmern/metro
+        
+        You can view a command's source with the source command: `?source [command]`"""
+
+        await ctx.send(content=content)
+
+    @faq.command()
+    async def x(self, ctx):
+
+        content = """
+        **add this... / when will this be added**
+        
+        Post your suggestions in <#902009169228472330> for suggestions about the **bot**
+        """
+
+        await ctx.send(content=content)
 
 
         

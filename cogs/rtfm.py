@@ -42,7 +42,7 @@ class SphinxObjectFileReader:
                 pos = buf.find(b'\n')
 
 
-class docs(commands.Cog, description="Read docs about discord.py or python"):
+class docs(commands.Cog, description=":books: Fuzzy search through documentations."):
     def __init__(self, bot):
         self.bot = bot
 

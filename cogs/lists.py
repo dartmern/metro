@@ -98,7 +98,7 @@ class Lists(commands.Cog, description=':notepad_spiral: Manage and create notes 
 
         await self.bot.db.execute("DELETE FROM todo WHERE (user_id, text) = ($1, $2)", ctx.author.id, to_del['text'])
         return await ctx.send(
-            f'**Deleted task {index}**! - created at {to_del["added_time"]}'
+            f'**Deleted task {index}**!'
             f'\n\u200b  → {to_del["text"][0:1900]}{"..." if len(to_del["text"]) > 1900 else ""}'
         )
         

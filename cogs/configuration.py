@@ -9,7 +9,7 @@ from collections import defaultdict
 
 from utils.converters import ChannelOrRoleOrMember, DiscordCommand
 
-class configuration(commands.Cog, description='Configure the bot/server.'):
+class configuration(commands.Cog, description=':gear: Configure the bot/server.'):
     def __init__(self, bot):
         self.bot = bot
         
@@ -311,7 +311,9 @@ class configuration(commands.Cog, description='Configure the bot/server.'):
 
 
     @config.group(
-        name='enable'
+        name='enable',
+        invoke_without_command=True,
+        case_insensitive=True
     )
     @commands.has_permissions(manage_guild=True)
     async def config_enable(
@@ -331,6 +333,21 @@ class configuration(commands.Cog, description='Configure the bot/server.'):
         await ctx.trigger_typing()
         entity = entity or ctx.guild
         await self.enable_command(ctx, entity, [str(c) for c in commands])
+
+
+    @config_enable.command(
+        name='all'
+    )
+    @commands.has_permissions(manage_guild=True)
+    async def config_enable_all(self, ctx):
+        """
+        Clear all disabled commands.
+        """
+
+        await ctx.invoke(self.config_disable_clear)
+
+
+
 
 
 

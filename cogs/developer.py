@@ -27,9 +27,73 @@ from jishaku.paginators import WrappedPaginator
 import jishaku.modules
 
 
+from utils.useful import Embed, fuzzy, BaseMenu, pages, get_bot_uptime
 
 
-from utils.useful import Embed, fuzzy, BaseMenu, pages, clean_code, ts_now, Pag, get_bot_uptime
+class TabularData:
+    def __init__(self):
+        self._widths = []
+        self._columns = []
+        self._rows = []
+
+    def set_columns(self, columns):
+        self._columns = columns
+        self._widths = [len(c) + 2 for c in columns]
+
+    def add_row(self, row):
+        rows = [str(r) for r in row]
+        self._rows.append(rows)
+        for index, element in enumerate(rows):
+            width = len(element) + 2
+            if width > self._widths[index]:
+                self._widths[index] = width
+
+    def add_rows(self, rows):
+        for row in rows:
+            self.add_row(row)
+
+    def render(self):
+        """Renders a table in rST format.
+        Example:
+        +-------+-----+
+        | Name  | Age |
+        +-------+-----+
+        | Alice | 24  |
+        |  Bob  | 19  |
+        +-------+-----+
+        """
+
+        sep = '+'.join('-' * w for w in self._widths)
+        sep = f'+{sep}+'
+
+        to_draw = [sep]
+
+        def get_entry(d):
+            elem = '|'.join(f'{e:^{self._widths[i]}}' for i, e in enumerate(d))
+            return f'|{elem}|'
+
+        to_draw.append(get_entry(self._columns))
+        to_draw.append(sep)
+
+        for row in self._rows:
+            to_draw.append(get_entry(row))
+
+        to_draw.append(sep)
+        return '\n'.join(to_draw)
+
+class plural:
+    def __init__(self, value):
+        self.value = value
+    def __format__(self, format_spec):
+        v = self.value
+        singular, sep, plural = format_spec.partition('|')
+        plural = plural or f'{singular}s'
+        if abs(v) != 1:
+            return f'{v} {plural}'
+        return f'{v} {singular}'
+
+
+
 
 @pages()
 async def show_result(self, menu, entry):
@@ -543,6 +607,51 @@ class developer(commands.Cog, description="Developer commands."):
 
         for page in pages.pages:
             await ctx.send(page)
+
+
+    @commands.command(hidden=True)
+    @commands.is_owner()
+    async def sql(self, ctx, *, query: str):
+        """Run some SQL."""
+        # the imports are here because I imagine some people would want to use
+        # this cog as a base for their other cog, and since this one is kinda
+        # odd and unnecessary for most people, I will make it easy to remove
+        # for those people.
+        
+        import time
+
+        query = self.cleanup_code(query)
+
+        is_multistatement = query.count(';') > 1
+        if is_multistatement:
+            # fetch does not support multiple statements
+            strategy = ctx.bot.db.execute
+        else:
+            strategy = ctx.bot.db.fetch
+
+        try:
+            start = time.perf_counter()
+            results = await strategy(query)
+            dt = (time.perf_counter() - start) * 1000.0
+        except Exception:
+            return await ctx.send(f'```py\n{traceback.format_exc()}\n```')
+
+        rows = len(results)
+        if is_multistatement or rows == 0:
+            return await ctx.send(f'`{dt:.2f}ms: {results}`')
+
+        headers = list(results[0].keys())
+        table = TabularData()
+        table.set_columns(headers)
+        table.add_rows(list(r.values()) for r in results)
+        render = table.render()
+
+        fmt = f'```\n{render}\n```\n*Returned {plural(rows):row} in {dt:.2f}ms*'
+        if len(fmt) > 2000:
+            fp = io.BytesIO(fmt.encode('utf-8'))
+            await ctx.send('Too many results...', file=discord.File(fp, 'results.txt'))
+        else:
+            await ctx.send(fmt)
 
         
 

@@ -9,7 +9,7 @@ import asyncio
 
 import discord
 from discord.ext import commands
-from cogs.buttons import human_timedelta
+from utils.remind_utils import human_timedelta
 
 from utils.useful import Embed
 from utils import remind_utils
@@ -24,7 +24,7 @@ def can_block():
 
     return commands.check(predicate)
 
-class block(commands.Cog, description="Manage your server by blocking/temp-blocking spammers."):
+class block(commands.Cog, description=":mute: Manage your server by blocking/temp-blocking spammers."):
     def __init__(self, bot):
         self.bot = bot
 

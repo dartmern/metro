@@ -170,70 +170,6 @@ class MyContext(commands.Context):
 
         
 
-        
-
-
-class PresView(discord.ui.View):
-    def __init__(self, bot):
-        super().__init__(timeout=None)
-        self.bot = bot
-
-    @discord.ui.button(label='Check bot status',style=discord.ButtonStyle.green, custom_id='presistent_view:green')
-    async def foo(self, button : discord.ui.Button, interaction : discord.Interaction):
-        await interaction.response.send_message(f'The bot is currently online with **{round(self.bot.latency*1000)}ms** latency.\n\nIf there are problems, ask us in <#869693768582979715>',ephemeral=True)
-
-
-    @discord.ui.button(label='Report an issue',style=discord.ButtonStyle.red, custom_id='presistent_view:red')
-    async def boo(self, button : discord.ui.Button, interaction : discord.Interaction):
-
-        await interaction.response.send_message(f'{self.bot.check} Messaged you a report ticket!',ephemeral=True)
-
-        m = await interaction.user.send(f'Are you sure you want to make a ticket to report a bot issue?')
-        await m.add_reaction(self.bot.check)
-        await m.add_reaction(self.bot.cross)
-
-        def check(reaction, user):
-
-            if user == interaction.user and str(reaction.emoji) == self.bot.cross:
-                raise commands.BadArgument('Canceled.')
-
-            return user == interaction.user and str(reaction.emoji) == self.bot.check
-        try:
-            reaction, user = await self.bot.wait_for('reaction_add',check=check, timeout=60)
-        except asyncio.TimeoutError:
-            return await interaction.user.send('Timed out.') 
-
-        else:
-
-            await m.delete(silent=True)
-
-            await interaction.user.send('Please type your report information.')
-            def check(m):
-                return m.author == interaction.user and m.guild is None
-
-            try:
-                m = await self.bot.wait_for('message',check=check, timeout=300)
-            except asyncio.TimeoutError:
-                return await interaction.user.send('Timed out.')
-
-            await interaction.user.send('Thank you for your report! If needed you will be contacted through the bot.')
-
-            overwrites = {
-                interaction.guild.default_role: discord.PermissionOverwrite(read_messages=False),
-                interaction.guild.me: discord.PermissionOverwrite(read_messages=True),
-            }
-            category = self.bot.get_channel(897610105095323678)
-            try:
-                channel = await interaction.guild.create_text_channel(name=interaction.user, category=category,overwrites=overwrites)
-            except:
-                channel = await interaction.guild.create_text_channel(name=interaction.user.id, category=category,overwrites=overwrites)
-            
-            embed = Embed(title='New Report!',description=f'Author: `{interaction.user}` (ID: {interaction.user.id})\n\nReport Content: \n{str(m)}')
-            await channel.send(embed=embed)
-            return
-
-
-
 
 
 
@@ -264,8 +200,7 @@ class MetroBot(commands.AutoShardedBot):
             self.add_view(AllRoles(self))
             
             self.add_view(Verify(self))
-
-            self.add_view(PresView(self))
+            
             self.pres_views = True
 
         self.uptime = discord.utils.utcnow()

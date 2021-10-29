@@ -57,7 +57,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
 
 
-class music(commands.Cog, description='Make your server enjoy music within discord!'):
+class music(commands.Cog, description=':musical_note: Make your server enjoy music within discord!'):
     def __init__(self, bot):
         self.bot = bot
 

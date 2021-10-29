@@ -61,7 +61,7 @@ class Source(menus.ListPageSource):
         return embed
         
 
-class info(commands.Cog, description="Information about members, guilds, or roles."):
+class info(commands.Cog, description=":information_source: Information about members, guilds, or roles."):
     def __init__(self, bot):
         self.bot = bot
 
@@ -354,7 +354,7 @@ class info(commands.Cog, description="Information about members, guilds, or role
 
         final_url = f'<{source_url}/blob/{branch}/{location}#L{firstlineno}-L{firstlineno + len(lines) - 1}>'
         embed = Embed(color=ctx.me.color,
-                              description=f"Source code for [`{command.qualified_name}`]({final_url})")
+                              description=f"Source code for [`{obj.qualified_name}`]({final_url})")
         embed.set_footer(text='Please make sure you follow the license.')
         await ctx.send(embed=embed)
 

@@ -18,7 +18,7 @@ class detect(aiohttp.ClientSession):
         return bool(re.findall("|".join(phrases), source, re.MULTILINE))
 
 
-class fun(commands.Cog, description="Fun commands!"):
+class fun(commands.Cog, description=":smile: Fun commands!"):
     def __init__(self, bot):
         self.bot = bot
 

@@ -88,7 +88,7 @@ class Timer:
 
 class reminder(commands.Cog):
     """
-    Module for handling all timed tasks.
+    :thinking: Module for handling all timed tasks.
     """
 
     def __init__(self, bot):

@@ -285,12 +285,12 @@ class MetroHelp(commands.HelpCommand):
         # Base
         if command.signature == "":
             em = Embed(
-                title=f"`{command.name}`",
+                title=f"`{command.qualified_name}`",
                 description=self.get_doc(command)
             )
         else:
             em = Embed(
-                title=f"`{command.name}` `{command.signature}`",
+                title=f"`{command.qualified_name}` `{command.signature}`",
                 description=self.get_doc(command)
             )
 
@@ -353,15 +353,14 @@ class MetroHelp(commands.HelpCommand):
 
         nl = '\n'
         cogs = []
+        bl_cogs = ['jishaku','developer','core']
         for cog in bot.cogs:
-            cogs.append(cog.capitalize())
+            if cog.lower() in bl_cogs:
+                pass
+            else:
+                cog_object = bot.get_cog(cog)
+                cogs.append(f'• **{cog.capitalize()}** - {cog_object.description}')
 
-        try:
-            cogs.remove('Jishaku')
-            cogs.remove('Core')
-            cogs.remove('Developer')
-        except:
-            pass
     
         embed = Embed(
             description=
@@ -371,7 +370,7 @@ class MetroHelp(commands.HelpCommand):
         )
         embed.add_field(
             name=f"**Modules: [{len(cogs)}]**",
-            value=f"```\n{nl.join(cogs)}```",
+            value=f"{nl.join(cogs)}",
             inline=True
         )
         
@@ -451,7 +450,7 @@ class MetroHelp(commands.HelpCommand):
 
 
 
-class meta(commands.Cog):
+class meta(commands.Cog, description='ℹ️ Get bot stats and information.'):
     def __init__(self, bot):
 
         attrs = {
