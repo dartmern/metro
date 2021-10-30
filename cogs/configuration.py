@@ -1,5 +1,5 @@
 from re import A
-from typing import Optional
+from typing import Optional, Union
 import discord
 from discord.ext import commands
 
@@ -8,7 +8,7 @@ from bot import MyContext
 
 from collections import defaultdict
 
-from utils.converters import ChannelOrRoleOrMember, DiscordCommand
+from utils.converters import ChannelOrRoleOrMember, DiscordCommand, DiscordGuild
 from utils.new_pages import SimplePages
 from utils.useful import Embed
 
@@ -27,6 +27,7 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
 
 
     async def load_plonks(self):
+        await self.bot.wait_until_ready()
         query = """
                 SELECT server_id, ARRAY_AGG(entity_id) AS entities
                 FROM plonks GROUP BY server_id;
@@ -39,6 +40,7 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
             ]   
 
     async def load_command_config(self):
+        await self.bot.wait_until_ready()
         query = """
                 SELECT entity_id, ARRAY_AGG(command) AS commands
                 FROM command_config GROUP BY entity_id;
@@ -121,15 +123,12 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
 
 
         if str(ctx.command) in self.command_config[ctx.guild.id]:
-            raise commands.BadArgument('This command is disabled in this guild.')
             return False  # Disabled for the whole server.
 
         if str(ctx.command) in self.command_config[ctx.channel.id]:
-            raise commands.BadArgument('This command is disabled in this channel.')
             return False  # Disabled for the channel
 
         if str(ctx.command) in self.command_config[ctx.author.id]:
-            raise commands.BadArgument('This command is disabled for you.')
             return False  # Disabled for the user
 
         if any(
@@ -138,7 +137,6 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
                 for role_id in ctx.author._roles
             )
         ):
-            raise commands.BadArgument(f'This command is disabled for you.')
             return False  # Disabled for the role
 
         return True  # Ok just in case we get here...
@@ -568,8 +566,37 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
         """Unignore all previously ignored entities."""
 
         await ctx.invoke(self.config_ignore_clear)
+  
+
+    @config.command(
+        name='toggle'
+    )
+    @commands.is_owner()
+    async def config_toggle(self, ctx : MyContext, *, command : str):
+        """Globally toggle a command."""
+
+        EXCEPTIONS = ['toggle']
+
+        cmd = self.bot.get_command(command)
+        if cmd is None:
+            return await ctx.send(f'Command `{command}` not found.')
+
+        if cmd.name in EXCEPTIONS:
+            return await ctx.send(
+                f'{self.bot.cross} Command `{cmd.qualified_name}`` cannot be disabled.'
+            )
+
+        cmd.enabled = not cmd.enabled
+        ternary = "Enabled" if cmd.enabled else "Disabled"
+        await ctx.send(f'{ternary} `{cmd.qualified_name}`')
 
         
+
+
+
+    
+
+
 
 
 
