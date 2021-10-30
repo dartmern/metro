@@ -2,7 +2,17 @@ import discord
 from discord.ext import commands
 
 
+import re
 
+def is_admin(ctx):
+    if (
+        ctx.author.id in ctx.bot.constants.admins
+        or ctx.author.id in ctx.bot.constants.owners
+    ):
+        return True
+    return
+
+SNOWFLAKE_REGEX = re.compile(r"([0-9]{15,21})$")
   
 def can_execute_action(ctx, user, target):
     return (
@@ -130,7 +140,70 @@ class ChannelOrRoleOrMember(commands.Converter):
 
 
 
+class DiscordGuild(commands.Converter):
+    """Match guild_id, or guild name exact, only if author is in the guild."""
 
+    def get_by_name(self, ctx, guild_name):
+        """Lookup by name.
+        Returns list of possible matches.
+        Try doing an exact match.
+        Fall back to inexact match.
+        Will only return matches if ctx.author is in the guild.
+        """
+        if is_admin(ctx):
+            result = discord.utils.find(lambda g: g.name == guild_name, ctx.bot.guilds)
+            if result:
+                return [result]
+
+            guild_name = guild_name.lower()
+
+            return [g for g in ctx.bot.guilds if g.name.lower() == guild_name]
+        else:
+            result = discord.utils.find(
+                lambda g: g.name == guild_name and g.get_member(ctx.author.id),
+                ctx.bot.guilds,
+            )
+            if result:
+                return [result]
+
+            guild_name = guild_name.lower()
+
+            return [
+                g
+                for g in ctx.bot.guilds
+                if g.name.lower() == guild_name and g.get_member(ctx.author.id)
+            ]
+
+    async def find_match(self, ctx, argument):
+        """Get a match...
+        If we have a number, try lookup by id.
+        Fallback to lookup by name.
+        Only allow matches where ctx.author shares a guild.
+        Disambiguate in case we have multiple name results.
+        """
+        lax_id_match = SNOWFLAKE_REGEX.match(argument)
+        if lax_id_match:
+            result = ctx.bot.get_guild(int(lax_id_match.group(1)))
+
+            if is_admin(ctx):
+                if result:
+                    return result
+            else:
+                if result and result.get_member(ctx.author.id):
+                    return result
+
+        results = self.get_by_name(ctx, argument)
+        if results:
+            return results[0]
+
+    async def convert(self, ctx, argument):
+        match = await self.find_match(ctx, str(argument))
+
+        if not match:
+            raise commands.BadArgument(
+                f"Server `{await prettify(ctx, argument)}` not found."
+            )
+        return match
 
 
 
