@@ -340,6 +340,10 @@ class MetroHelp(commands.HelpCommand):
             try:
                 return await self.context.interaction.response.send_message(embed=self.get_command_help(command),ephemeral=True)
             except:
+                
+                message = getattr(self.context.message.reference, "resolved", None)
+                if message:
+                    return await message.reply(embed=await self.get_command_help(command),view=View(self.context.author))
                 return await self.context.send(embed=await self.get_command_help(command),view=View(self.context.author))
 
 
