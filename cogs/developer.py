@@ -25,6 +25,7 @@ from jishaku.features.baseclass import Feature
 from jishaku.models import copy_context_with
 from jishaku.paginators import WrappedPaginator
 import jishaku.modules
+from bot import MyContext
 
 
 from utils.useful import Embed, fuzzy, BaseMenu, pages, get_bot_uptime
@@ -365,6 +366,20 @@ class developer(commands.Cog, description="Developer commands."):
                 return await ctx.send("That is not a vaild flag.")
 
     
+    @developer_cmds.command()
+    @commands.is_owner()
+    async def leave(self, ctx : MyContext, guild_id : int):
+        """Leave a guild the bot is in."""
+        guild = self.bot.get_guild(guild_id)
+
+        if guild is None:
+            return await ctx.send(f'Invaild guild. Use `{ctx.prefix}dev guilds` to see all guilds I\'m in.')
+
+        else:
+            await guild.leave()
+            await ctx.send(f'Left **{guild.name}** (ID: {guild.id})')
+
+
     @developer_cmds.command()
     @commands.bot_has_permissions(send_messages=True)
     async def info(self, ctx):
