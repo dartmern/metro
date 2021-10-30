@@ -1,3 +1,4 @@
+from re import A
 from typing import Optional
 import discord
 from discord.ext import commands
@@ -8,25 +9,104 @@ from bot import MyContext
 from collections import defaultdict
 
 from utils.converters import ChannelOrRoleOrMember, DiscordCommand
+from utils.new_pages import SimplePages
+from utils.useful import Embed
+
+
 
 class configuration(commands.Cog, description=':gear: Configure the bot/server.'):
     def __init__(self, bot):
         self.bot = bot
-        
 
+        bot.loop.create_task(self.load_command_config())
+        bot.loop.create_task(self.load_plonks())
+        
+        
+        self.ignored = defaultdict(list)
         self.command_config = defaultdict(list)
+
+
+    async def load_plonks(self):
+        query = """
+                SELECT server_id, ARRAY_AGG(entity_id) AS entities
+                FROM plonks GROUP BY server_id;
+                """
+        records = await self.bot.db.fetch(query)
+        if records:
+            [
+                self.ignored[record["server_id"]].extend(record["entities"])
+                for record in records
+            ]   
 
     async def load_command_config(self):
         query = """
                 SELECT entity_id, ARRAY_AGG(command) AS commands
                 FROM command_config GROUP BY entity_id;
                 """
-        records = await self.bot.cxn.fetch(query)
+        records = await self.bot.db.fetch(query)
         if records:
             [
                 self.command_config[record["entity_id"]].extend(record["commands"])
                 for record in records
             ]
+
+    async def ignore_entities(self, ctx : MyContext, entities):
+        failed = []
+        success = []
+        query = """
+                INSERT INTO plonks (server_id, entity_id)
+                VALUES ($1, $2)
+                """
+
+        async with self.bot.db.acquire() as conn:
+            async with conn.transaction():
+                for entity in entities:
+                    try:
+                        await self.bot.db.execute(query, ctx.guild.id, entity.id)
+                    except asyncpg.exceptions.UniqueViolationError:
+                        failed.append((str(entity), "Entity is already being ignored"))
+                    except Exception as e:
+                        failed.append(str(entity), e)
+                        continue
+                    else:
+                        success.append(str(entity))
+                        self.ignored[ctx.guild.id].append(entity.id)
+
+
+        if success:
+            await ctx.send(
+                f"Ignored entit{'y' if len(success) == 1 else 'ies'} `{', '.join(success)}`"
+            )
+        if failed:
+            await ctx.send(
+                f'\n'.join(failed)
+            )
+
+    async def bot_check_once(self, ctx):
+        # Reasons for bypassing
+        if ctx.guild is None:
+            return True  # Do not restrict in DMs.
+
+        if isinstance(ctx.author, discord.Member):
+            if ctx.author.guild_permissions.manage_guild:
+                return True  # Manage guild is immune.
+
+        # Now check channels, roles, and users.
+        if ctx.channel.id in self.ignored[ctx.guild.id]:
+            return False  # Channel is ignored.
+
+        if ctx.author.id in self.ignored[ctx.guild.id]:
+            return False  # User is ignored.
+
+        if any(
+            (
+                role_id in self.ignored[ctx.guild.id]
+                for role_id in [r.id for r in ctx.author.roles]
+            )
+        ):
+            return False  # Role is ignored.
+
+        return True  # Ok just in case we get here...
 
     async def bot_check(self, ctx):
         if ctx.guild is None:
@@ -34,6 +114,10 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
 
         if ctx.author.id == ctx.bot.owner_id:
             return True  # Bot devs are immune.
+
+        if isinstance(ctx.author, discord.Member):
+            if ctx.author.guild_permissions.manage_guild:
+                return True  # Manage guild is immune.
 
 
         if str(ctx.command) in self.command_config[ctx.guild.id]:
@@ -306,10 +390,6 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
         await ctx.send('Cleared the server\'s disabled command list.')
 
 
-
-
-
-
     @config.group(
         name='enable',
         invoke_without_command=True,
@@ -345,6 +425,158 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
         """
 
         await ctx.invoke(self.config_disable_clear)
+
+
+    @config.group(
+        name='ignore',
+        invoke_without_command=True,
+        case_insensitive=True,
+        usage = '[entities...]'
+    )
+    @commands.has_permissions(manage_guild=True)
+    async def config_ignore(self, ctx : MyContext, *entities : ChannelOrRoleOrMember):
+        """Ignore all commands in an entity."""
+        
+        if not entities:
+            return await ctx.send_help('config ignore')
+
+        await ctx.trigger_typing()
+        await self.ignore_entities(ctx, entities)
+
+    
+    @config_ignore.command(
+        name='list'
+    )
+    @commands.has_permissions(manage_guild=True)
+    async def config_ignore_list(self, ctx : MyContext):
+        """Show all ignored entities."""
+
+        await ctx.trigger_typing()
+        query = """
+                SELECT entity_id
+                FROM plonks
+                WHERE server_id = $1;"""
+        records = await self.bot.db.fetch(query, ctx.guild.id)
+
+        if not records:
+            return await ctx.send(f'No entities are being ignored.')
+
+        ignored_channel = []
+        ignored_member = []
+        ignored_role = []
+        for record in records:
+            if int(record["entity_id"]) == ctx.guild.id:
+                return await ctx.send('The entire guild has been ignored.')
+
+            try:
+                entity = await ChannelOrRoleOrMember().convert(ctx, str(record["entity_id"]))
+            except:
+                continue
+
+            else:
+                if isinstance(entity, discord.Role):
+                    ignored_role.append(entity.mention)
+                elif isinstance(entity, discord.TextChannel):
+                    ignored_channel.append(entity.mention)
+                elif isinstance(entity, discord.Member):
+                    ignored_member.append(entity.mention)
+                else:
+                    pass
+
+                    
+        embed = Embed()
+
+        if ignored_channel:
+            embed.add_field(
+                name='Ignored Channels',
+                value=', '.join(ignored_channel),
+                inline=False
+            )
+        if ignored_member:
+            embed.add_field(
+                name='Ignored Members',
+                value=', '.join(ignored_role),
+                inline=False
+            )
+        if ignored_role:
+            embed.add_field(
+                name='Ignored Roles',
+                value=', '.join(ignored_role),
+                inline=False
+            )
+
+        return await ctx.send(embed=embed)
+
+    @config_ignore.command(
+        name='clear'
+    )
+    @commands.has_permissions(manage_guild=True)
+    async def config_ignore_clear(self, ctx : MyContext):
+        """Clear the ignored list."""
+
+        await ctx.trigger_typing()
+
+        confirm = await ctx.confirm('Are you sure you want to clear your ignored list?',timeout=30)
+
+        if confirm is False:
+            return await ctx.send('Canceled.')
+
+        if confirm is None:
+            return await ctx.send('Timed out.')
+
+        query = """
+                DELETE FROM plonks WHERE server_id = $1;
+                """
+
+        await self.bot.db.execute(query, ctx.guild.id)
+        self.ignored[ctx.guild.id].clear()
+        await ctx.send(f'Cleared the server\'s ignored list.')
+
+
+    @config.group(
+        name='unignore'
+    )
+    @commands.has_permissions(manage_guild=True)
+    async def config_unignore(self, ctx : MyContext, *entities : ChannelOrRoleOrMember):
+        """Unignore ignored entities."""
+
+        if not entities:
+            return await ctx.send_help('config unignore')
+
+        await ctx.trigger_typing()
+        query = """
+                DELETE FROM plonks
+                WHERE server_id = $1
+                AND entity_id = ANY($2::BIGINT[]);"""
+
+        entries = [c.id for c in entities]
+
+        await self.bot.db.execute(query, ctx.guild.id, entries)
+        self.ignored[ctx.guild.id] = [
+            x for x in self.ignored[ctx.guild.id] if not x in entries
+        ]
+        await ctx.send(
+            f'Removed `{", ".join([str(x) for x in entries])}` from the ignored list.'
+        )
+
+
+    @config_unignore.command(
+        name='all'
+    )
+    @commands.has_permissions(manage_guild=True)
+    async def config_unignore_all(self, ctx : MyContext):
+        """Unignore all previously ignored entities."""
+
+        await ctx.invoke(self.config_ignore_clear)
+
+        
+
+
+
+            
+
+
+
 
 
 
