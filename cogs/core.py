@@ -119,20 +119,11 @@ class core(commands.Cog, description="Core events."):
             em.set_footer(text='Spamming commands may result in a blacklist.')
             return await ctx.send(embed=em)
 
-
-
-        else:
-            
-
-            embed = Embed(
-            
-                description=f"```py\n{error}``` \njust chill out. my dev got an angry dm and should know what happened"
+        elif isinstance(error, commands.errors.DisabledCommand):
+            return await ctx.send(
+                f"This command is globally disabled."
             )
-            embed.set_footer(text="Continuing to spam commands can result in a blacklist")
-            m = await ctx.send(embed=embed)
-            
-            await ctx.send("_")
-            print(f'This happened in:\n\nguild_id : {ctx.guild.id}\nmember_id : {ctx.author.id}\nmessage_link : {ctx.message.jump_url}')
+        else:
             raise error
 
 
