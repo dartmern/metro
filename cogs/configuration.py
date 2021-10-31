@@ -1,16 +1,17 @@
-from re import A
-from typing import Optional, Union
+
 import discord
 from discord.ext import commands
 
 import asyncpg
-from bot import MyContext
 
 from collections import defaultdict
+
+from typing import Optional
 
 from utils.converters import ChannelOrRoleOrMember, DiscordCommand, DiscordGuild
 from utils.new_pages import SimplePages
 from utils.useful import Embed
+from utils.context import MyContext
 
 
 
@@ -21,9 +22,9 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
         bot.loop.create_task(self.load_command_config())
         bot.loop.create_task(self.load_plonks())
         
-        
         self.ignored = defaultdict(list)
         self.command_config = defaultdict(list)
+
 
 
     async def load_plonks(self):
@@ -85,6 +86,7 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
             )
 
     async def bot_check_once(self, ctx):
+
         # Reasons for bypassing
         if ctx.guild is None:
             return True  # Do not restrict in DMs.
@@ -590,6 +592,10 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
         ternary = "Enabled" if cmd.enabled else "Disabled"
         await ctx.send(f'{ternary} `{cmd.qualified_name}`')
 
+
+
+
+        
         
 
 

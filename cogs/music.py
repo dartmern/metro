@@ -5,6 +5,7 @@ import discord
 import youtube_dl
 
 from discord.ext import commands
+from utils.context import MyContext
 
 
 # Suppress noise about console usage from errors
@@ -51,7 +52,10 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
         if 'entries' in data:
             # take first item from a playlist
-            data = data['entries'][0]
+            try:
+                data = data['entries'][0]
+            except:
+                pass
 
         filename = data['url'] if stream else ytdl.prepare_filename(data)
         return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)

@@ -3,16 +3,14 @@
 
 # Credits to Danny of course
 
-
-import datetime
-import asyncio
-
 import discord
 from discord.ext import commands
 from utils.remind_utils import human_timedelta
 
-from utils.useful import Embed
+
 from utils import remind_utils
+
+from utils.context import MyContext
 
 
 def can_block():

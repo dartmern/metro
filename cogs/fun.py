@@ -1,14 +1,13 @@
 import discord
 from discord.ext import commands
 
-from utils.useful import Embed, fuzzy
+from utils.useful import Embed
 
 import aiohttp
 import re
-
-from typing import Optional
-
 import random
+
+from utils.context import MyContext
 
 class detect(aiohttp.ClientSession):
     async def find(self, url):

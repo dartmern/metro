@@ -15,8 +15,8 @@ import asyncio
 import json
 import datetime
 import asyncpg
-import ast
-import textwrap
+
+from utils.context import MyContext
 
 
 
@@ -152,9 +152,7 @@ class reminder(commands.Cog):
 
     async def dispatch_timers(self):
 
-      
-        try:
-            
+        try:            
             while not self.bot.is_closed():
                 
                 # can only asyncio.sleep for up to ~48 days reliably
@@ -228,7 +226,7 @@ class reminder(commands.Cog):
 
         timer = Timer.temporary(event=event, args=args, kwargs=kwargs, expires=when, created=now)
         delta = (when - now).total_seconds()
-        if delta <= 10:
+        if delta <= 60:
             # a shortcut for small timers
             self.bot.loop.create_task(self.short_timer_optimisation(delta, timer))
             return timer

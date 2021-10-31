@@ -1,26 +1,15 @@
-import datetime
-from typing import Optional
 import discord
-from discord import message
 from discord.ext import commands
 
-
-#3rd party libs
 from pathlib import Path
 import os
 import asyncpg
 import aiohttp
-import asyncio
-import time
 
-#for eval cmd since i don't want to do it in a cog
-import io
-import contextlib
-import textwrap
-from utils.useful import Embed, clean_code, Pag, Cooldown
-from traceback import format_exception
-
+from utils.useful import Cooldown
 from utils.json_loader import read_json
+
+from utils.context import MyContext
 
 os.environ["JISHAKU_NO_UNDERSCORE"] = "True"
 
@@ -54,128 +43,14 @@ async def get_prefix(bot, message):
         prefix = prefix[0].get('prefix')
 
     if message.author.id == 525843819850104842:
+
+        if bot.noprefix == True:
         
-        return commands.when_mentioned_or(prefix, '')(bot, message)
+            return commands.when_mentioned_or(prefix, '')(bot, message)
+        return commands.when_mentioned_or(prefix)(bot, message)
     return commands.when_mentioned_or(prefix)(bot, message)
 
-class ConfirmationView(discord.ui.View):
-    def __init__(self, *, timeout: float, author_id: int, ctx, delete_after: bool) -> None:
-        super().__init__(timeout=timeout)
-        self.value: Optional[bool] = None
-        self.delete_after: bool = delete_after
-        self.author_id: int = author_id
-        self.ctx = ctx
-        self.message: Optional[discord.Message] = None
-
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if interaction.user and interaction.user.id == self.author_id:
-            return True
-        else:
-            await interaction.response.send_message('This confirmation dialog is not for you.', ephemeral=True)
-            return False
-
-    async def on_timeout(self) -> None:
-        self.confirm.disabled = True
-        self.cancel.disabled = True
-        self.value = None
-        await self.message.edit(view=self)
-
-    @discord.ui.button(label='Confirm', style=discord.ButtonStyle.green)
-    async def confirm(self, button: discord.ui.Button, interaction: discord.Interaction):
-        self.value = True
-        await interaction.response.defer()
-        if self.delete_after:
-            await interaction.delete_original_message()
-        self.stop()
-
-    @discord.ui.button(label='Cancel', style=discord.ButtonStyle.red)
-    async def cancel(self, button: discord.ui.Button, interaction: discord.Interaction):
-        self.value = False
-        await interaction.response.defer()
-        if self.delete_after:
-            await interaction.delete_original_message()
-        self.stop()
-
-class MyContext(commands.Context):
-
-    async def check(self):
-        emoji = self.bot.get_emoji(819254444197019669)
-
-        try:
-            await self.message.add_reaction(emoji)
-        except discord.HTTPException:
-            pass
-
-        
-
-    async def cross(self):
-        emoji = self.bot.get_emoji(819254444217860116)
-
-        try:
-            await self.message.add_reaction(emoji)
-        except discord.HTTPException:
-            pass
-
-    async def send(self, content : str = None, embed : discord.Embed = None, **kwargs):
-
-        if content: 
-            content=str(content)
-
-            if self.bot.http.token in content:
-                content = content.replace(self.bot.http.token, "[Token Hidden]")
-
-        message = await super().send(content=content, embed=embed, **kwargs)
-            
-        return message
-
-    async def st_send(self, content : str = None, embed : discord.Embed = None, hide : bool = False, **kwargs):
-
-        if content: 
-            content=str(content)
-
-            if self.bot.http.token in content:
-                content = content.replace(self.bot.http.token, "[Token Hidden]")
-            
-        try:
-            message = await self.interaction.response.send_message(content=content, embed=embed, ephemeral=hide, **kwargs)
-        except:
-            message = await self.send(content=content, embed=embed, **kwargs)
-
-        return message
-        
-        
-
-    async def confirm(
-        self,
-        message : str,
-        *,
-        timeout : float = 60.0,
-        delete_after : bool = True,
-        author_id : Optional[int] = None
-
-    ) -> Optional[bool]:
-
-        author_id = author_id or self.author.id
-
-        view = ConfirmationView(
-            timeout=timeout,
-            delete_after=delete_after,
-            ctx=self,
-            author_id=author_id
-
-        )
-        view.message = await self.send(message, view=view)
-        await view.wait()
-        return view.value
-
-        
-
-
-
-
-
-
-
+      
 
 
 class MetroBot(commands.AutoShardedBot):
@@ -186,7 +61,7 @@ class MetroBot(commands.AutoShardedBot):
         self.maintenance = False
         self.pres_views = False
 
-        self.usage = {}
+        self.noprefix = True
 
     async def on_ready(self):
 
@@ -208,7 +83,15 @@ class MetroBot(commands.AutoShardedBot):
         print(
             f"-----\nLogged in as: {self.user.name} : {self.user.id}\n-----\nMy current default prefix is: m.\n-----")
 
+        data = read_json('restart')
         
+        channel = self.get_channel(data["channel_id"])
+        message = channel.get_partial_message(data["message_id"])
+
+        try:
+            await message.edit(content=f'{self.check} Back online!')
+        except:
+            pass
 
 
     def add_command(self, command):
@@ -217,7 +100,7 @@ class MetroBot(commands.AutoShardedBot):
         super().add_command(command)
         command.cooldown_after_parsing = True
 
-        command.checks.append(Cooldown(1, 3, 1, 1, commands.BucketType.user))
+        command.checks.append(Cooldown(1, 1.5, 1, 1, commands.BucketType.user))
 
     async def get_context(self, message, *, cls=MyContext):
         """Making our custom context"""
@@ -302,40 +185,9 @@ bot_data = {
 }
 
 bot = MetroBot(**bot_data)
-bot.maintenance = False
-
-
-
-
-
 
 bot.check = "<:mCheck:819254444197019669>"
 bot.cross = "<:mCross:819254444217860116>"
-
-
-
-
-
-
-@bot.command(hidden=True)
-async def statusview(ctx):
-    """
-    Start up the status views. (presviews)
-    """
-    await ctx.message.delete()
-    await ctx.send('Click on the buttons below for status updates!',view=PresView(bot))
-
-
-
-
-    
-
-
-
-
-
-
-
 
 
 if __name__ == "__main__":

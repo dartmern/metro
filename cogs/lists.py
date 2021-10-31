@@ -2,9 +2,11 @@ import discord
 from discord import embeds
 from discord.ext import commands, menus
 
-from bot import MyContext
+from utils.context import MyContext
 from utils.useful import Embed
 from utils.new_pages import SimplePages
+
+
 
 class TodoListSource(menus.ListPageSource):
     def __init__(self, entries, ctx : MyContext):
@@ -143,6 +145,8 @@ class Lists(commands.Cog, description=':notepad_spiral: Manage and create notes 
 
         menu = SimplePages(source=TodoListSource(entries=data, ctx=ctx), ctx=ctx)
         await menu.start()
+
+    
 
 
         

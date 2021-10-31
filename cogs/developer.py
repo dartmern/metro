@@ -1,3 +1,4 @@
+import json
 import discord
 from discord.ext import commands, menus
 
@@ -6,7 +7,7 @@ from typing import Optional, Union
 
 
 import traceback
-import asyncio
+
 import os
 import io
 import datetime
@@ -22,10 +23,10 @@ from contextlib import redirect_stdout
 from jishaku.paginators import WrappedPaginator
 from jishaku.codeblocks import Codeblock, codeblock_converter
 from jishaku.features.baseclass import Feature
-from jishaku.models import copy_context_with
 from jishaku.paginators import WrappedPaginator
 import jishaku.modules
-from bot import MyContext
+from utils.context import MyContext
+from utils.json_loader import read_json, write_json
 
 
 from utils.useful import Embed, fuzzy, BaseMenu, pages, get_bot_uptime
@@ -106,11 +107,8 @@ class Arguments(argparse.ArgumentParser):
 
 
 def restart_program():
-        python = sys.executable
-        os.execl(python, python, * sys.argv)
-
-
-
+    python = sys.executable
+    os.execl(python, python, * sys.argv)
 
 
 
@@ -177,7 +175,7 @@ class developer(commands.Cog, description="Developer commands."):
     )
     @commands.is_owner()
     @commands.bot_has_permissions(send_messages=True)
-    async def invite_to_guild(self, ctx, guild_id : int, **flags : Optional[str]):
+    async def dev_invite(self, ctx, guild_id : int, **flags : Optional[str]):
         """
         Get a invite with a guild id.
 
@@ -209,7 +207,7 @@ class developer(commands.Cog, description="Developer commands."):
     )
     @commands.is_owner()
     @commands.bot_has_permissions(send_messages=True,embed_links=True)
-    async def servers(self, ctx, search=None):
+    async def dev_guilds(self, ctx, search=None):
         """
         Get all the guilds the bot is in.
 
@@ -243,70 +241,6 @@ class developer(commands.Cog, description="Developer commands."):
             else:
                 await ctx.send(f"No guild was found named **{search}**")
 
-
-    @developer_cmds.command(name="reload")
-    @commands.is_owner()
-    @commands.bot_has_permissions(send_messages=True)
-    async def reload_a_cog(self, ctx, cog):
-        """
-        Reload a cog.
-
-        Use this just in case `jsk reload <exts>` doesn't work or breaks.
-        """
-
-        ext = f"{cog.lower()}.py"
-
-        try:
-            self.bot.unload_extension(f"cogs.{ext[:-3]}")
-            self.bot.load_extension(f"cogs.{ext[:-3]}")
-            await ctx.send(f"Reloaded ``{ext}``")
-        except Exception:
-            desired_trace = traceback.format_exc()
-            await ctx.send(f"```py\n{desired_trace}```")
-
-
-
-
-    @developer_cmds.command(name="load")
-    @commands.is_owner()
-    @commands.bot_has_permissions(send_messages=True)
-    async def load_cog(self, ctx, cog):
-        """
-        Load a unloaded cog.
-
-        Use this just in case `jsk load <exts>` doesn't work or breaks.
-        """
-
-        ext = f"{cog.lower()}.py"
-        try:
-            self.bot.load_extension(f"cogs.{ext[:-3]}")
-            await ctx.send(f"Loaded ``{ext}``")
-        except Exception:
-            desired_trace = traceback.format_exc()
-            await ctx.send(f"```py\n{desired_trace}```")
-
-
-
-    @developer_cmds.command(name="unload")
-    @commands.is_owner()
-    @commands.bot_has_permissions(send_messages=True)
-    async def unload_cog(self, ctx, cog):
-        """
-        Unload a loaded cog.
-
-        Use this just in case `jsk unload <exts>` doesn't work or breaks.
-        """
-
-        if cog.lower() == "developer":
-            return await ctx.reply(f"You cannot reload `{cog.lower()}.py`")
-
-        ext = f"{cog.lower()}.py"
-        try:
-            self.bot.unload_extension(f"cogs.{ext[:-3]}")
-            await ctx.send(f"Unloaded ``{ext}``")
-        except Exception:
-            desired_trace = traceback.format_exc()
-            await ctx.send(f"```py\n{desired_trace}```")
 
 
     @developer_cmds.command(name='cleanup',brief='Cleanup my messages with no limit')
@@ -380,7 +314,23 @@ class developer(commands.Cog, description="Developer commands."):
             await ctx.send(f'Left **{guild.name}** (ID: {guild.id})')
 
 
+    @developer_cmds.command(
+        name='noprefix'
+    )
+    @commands.is_owner()
+    async def dev_noprefix(self, ctx):
+        """Toggle on/off no prefix for developers."""
+
+        if self.bot.noprefix == True:
+            self.bot.noprefix == False
+            return await ctx.send('No prefix turned off')
+
+        else:
+            self.bot.noprefix == True
+            return await ctx.send('No prefix turned on')
+
     @developer_cmds.command()
+    @commands.is_owner()
     @commands.bot_has_permissions(send_messages=True)
     async def info(self, ctx):
         """
@@ -434,6 +384,25 @@ class developer(commands.Cog, description="Developer commands."):
         
 
         await ctx.send(embed=embed)
+
+    @developer_cmds.command(
+        name='restart'
+    )
+    @commands.is_owner()
+    async def dev_restart(self, ctx):
+        """Restart the bot."""
+
+        message = await ctx.send('Restarting...')
+
+        write_json(
+            {
+                "message_id" : message.id,
+                "channel_id" : message.channel.id
+            }, 'restart'
+        )
+        restart_program()
+
+
 
 
     

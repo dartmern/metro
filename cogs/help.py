@@ -1,19 +1,16 @@
-
-from sys import prefix
 from utils.new_pages import SimplePages
 from utils.pages import ExtraPages
 import discord
-from discord.ext.commands import BucketType
+
 import discord.ext
 
 from discord.ext import commands, menus
 import contextlib
 
 import asyncio
-import textwrap
 
-from discord.ui import view
-from discord.ext.menus.views import ViewMenuPages
+
+from utils.context import MyContext
 
 from utils.useful import Embed, Cooldown, OldRoboPages
 

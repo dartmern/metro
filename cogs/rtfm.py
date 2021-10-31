@@ -8,6 +8,7 @@ import re
 import os
 import zlib
 
+from utils.context import MyContext
 
 class SphinxObjectFileReader:
     # Inspired by Sphinx's InventoryFileReader

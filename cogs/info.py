@@ -1,26 +1,26 @@
 import asyncio
 import discord
-from discord import utils
-from discord import message
+
 from discord.ext import commands, menus
-from discord.ext.menus.views import ViewMenuPages
+
 
 from typing import Optional, Union
 import unicodedata
 from utils.new_pages import SimplePages
 
 from utils.useful import Embed
-from discord.ext.commands.cooldowns import BucketType
+
 
 import time
-import json
+
 from pathlib import Path
 import inspect
-import os
+
+from utils.context import MyContext
 
 
 from utils.useful import Embed, get_bot_uptime
-from utils.pages import ExtraPages
+
 
 
 
@@ -215,11 +215,15 @@ class info(commands.Cog, description=":information_source: Information about mem
 
     @commands.command(slash_command=True, message_command=True, slash_commands_guilds=[812143286457729055])
     @commands.bot_has_permissions(send_messages=True)
-    async def prefix(self, ctx, prefix : str = commands.Option(default=None,description='new prefix')):
+    async def prefix(self, ctx, prefix : str = commands.Option(description='new prefix')):
         """
         Set the prefix for this guild.
         (Needs `manage_guild` permission to work)
         """
+        if prefix is None:
+            return await ctx.send_help(
+                'prefix'
+            )
 
         if len(prefix) > 5:
             try:
@@ -360,44 +364,6 @@ class info(commands.Cog, description=":information_source: Information about mem
 
 
     @commands.command()
-    @commands.bot_has_permissions(send_messages=True, embed_links=True)
-    async def convert(self, ctx, id : int):
-
-        try:
-            member = self.bot.get_member(id)
-
-            return await ctx.send(f'{member.mention} `{member}` (ID: {member.id})',allowed_mentions=discord.AllowedMentions.none())
-
-        except:
-            try:
-                user = self.bot.get_user(id)
-
-                return await ctx.send(f'{user.mention} `{user}` (ID: {user.id})',allowed_mentions=discord.AllowedMentions.none())
-
-            except:
-                try:
-                    channel = self.bot.get_channel(id)
-
-                    return await ctx.send(f'{channel.mention} (ID: {member.id})')
-
-                except:
-
-                    try:
-                        role = ctx.guild.get_role(id)
-
-                        return await ctx.send(f"{role.mention} (ID: {role.id})",allowed_mentions=discord.AllowedMentions.none())
-                    
-                    except:
-                        try:
-                            guild = self.bot.get_guild(id)
-
-                            return await ctx.send(f"{guild.name} (ID: {guild.id})",allowed_mentions=discord.AllowedMentions.none())
-
-                        except:
-                            return await ctx.send(f"This id either is a message or I cannot convert it into anything.")
-
-
-    @commands.command()
     @commands.bot_has_permissions(send_messages=True)
     async def uptime(self, ctx):
 
@@ -443,8 +409,30 @@ class info(commands.Cog, description=":information_source: Information about mem
         await ctx.send(f"Files: {fc}\nLines: {ls:,}\nClasses: {cl}\nFunctions: {fn}\nCoroutines: {cr}\nComments: {cm:,}")
 
 
+    @commands.command()
+    async def ping(self, ctx):
+        """Show the bot's latency in milliseconds.
+        Useful to see if the bot is lagging out."""
 
+        start = time.perf_counter()
+        message = await ctx.send('Pinging...')
+        end = time.perf_counter()
 
+        typing_ping = (end - start) * 1000
+
+        start = time.perf_counter()
+        await self.bot.db.execute('SELECT 1')
+        end = time.perf_counter()
+
+        database_ping = (end - start) * 1000
+        await asyncio.sleep(.2)
+
+        typing_emoji = self.bot.get_emoji(904156199967158293)
+
+        await message.edit(
+            content=f'{typing_emoji} **Typing:** | {round(typing_ping, 1)} ms'
+                    f'\n<:msql:904157158608867409> **Database:** | {round(database_ping, 1)} ms'
+                    f'\n<:mdiscord:904157585266049104> **Websocket:** | {round(self.bot.latency*1000)} ms')
 
 
 

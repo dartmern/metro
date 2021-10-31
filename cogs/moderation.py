@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from bot import MyContext
+from utils.context import MyContext
 from utils.remind_utils import human_timedelta
 
 from utils.converters import ActionReason, MemberConverter, MemberID
@@ -87,7 +87,7 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
             await ctx.guild.ban(member, reason=reason)
         except:
             raise commands.BadArgument(f"An error occurred while invoking the `ban` command. ")
-            return
+
 
         try:
             await member.send(
@@ -269,7 +269,7 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
     @commands.command()
     @commands.has_permissions(ban_members=True, send_messages=True)
     @commands.bot_has_permissions(ban_members=True, send_messages=True)
-    async def tempban(self, ctx, member : discord.Member, duration : remind_utils.FutureTime, *, reason : ActionReason):
+    async def tempban(self, ctx, member : discord.User, duration : remind_utils.FutureTime, *, reason : ActionReason):
         """Temporarily bans a member for the specified duration.
 
         The duration can be a a short time form, e.g. 30d or a more human
@@ -278,7 +278,6 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
 
         Note that times are in UTC.
         """
-        
 
         if reason is None:
             reason = f'Action requested by: {ctx.author} (ID: {ctx.author.id})'

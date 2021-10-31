@@ -79,7 +79,6 @@ class core(commands.Cog, description="Core events."):
             return
 
         elif isinstance(error, commands.CheckFailure):
-            await ctx.send("You do not have permission to use this command.")
             return
 
         elif isinstance(error, commands.MemberNotFound):
