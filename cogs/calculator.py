@@ -56,12 +56,13 @@ class calculator(commands.Cog, description='<:calc:904080776847560714> Custom ca
 
     @commands.command(
         name='calculator',
-        aliases=['calc','math']
+        aliases=['calc','math'],
+        slash_command=True
     )
     async def calculator(self, ctx : MyContext, *, equation : str):
         """Use a calculator and solve equations."""
 
-        await ctx.send(calc(equation))
+        await ctx.send(calc(equation),hide=True)
 
     
     

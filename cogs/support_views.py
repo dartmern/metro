@@ -11,6 +11,7 @@ import datetime
 import asyncio
 
 SUPPORT_GUILD = 812143286457729055
+TESTER_ROLE = 861141649265262592
 
 def in_support():
     def predicate(ctx):
@@ -147,31 +148,6 @@ class AllRoles(discord.ui.View):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
-class Verify(discord.ui.View):
-    def __init__(self, bot) -> None:
-        super().__init__(timeout=None)
-        self.bot = bot
-
-    @discord.ui.button(label='Verify', style=discord.ButtonStyle.green, custom_id='verify_button')
-    async def verify_button(self, button : discord.ui.Button, interaction : discord.Interaction):
-        
-
-        await interaction.response.send_message(f'{self.bot.check} Verifying...',ephemeral=True)
-        await asyncio.sleep(1.5)
-        if interaction.user.created_at > (discord.utils.utcnow() - datetime.timedelta(days=3)):
-            
-            await interaction.user.send(f'You were kicked for being too new! (Account was created in the last 3 days)')
-            await interaction.user.kick(reason='Kicked for being too new! (Account was created in the last 3 days)')
-
-        else:
-            
-            role = discord.Object(id=902693712688197642)
-            await interaction.user.remove_roles(role)
-
-            await interaction.user.send(f'{self.bot.check} You were verified in Metro Support Server!')
-            
-
-
         
 
 
@@ -179,8 +155,14 @@ class support(commands.Cog, description=':test_tube: Support only commands.'):
     def __init__(self, bot):
         self.bot = bot
 
+    @commands.Cog.listener()
+    async def on_member_join(self, member):
 
+        if member.guild.id != SUPPORT_GUILD:
+            return
 
+        if member.bot:
+            await member.add_roles(discord.Object(id=904872199943491596))
 
 
     @commands.command(hidden=True)
@@ -190,7 +172,7 @@ class support(commands.Cog, description=':test_tube: Support only commands.'):
         if ctx.author.id != self.bot.owner_id:
             return 
 
-        await ctx.message.delete()
+        await ctx.message.delete(silent=True)
 
         roles_channel = self.bot.get_channel(828466726659948576)
 
@@ -214,12 +196,6 @@ class support(commands.Cog, description=':test_tube: Support only commands.'):
         await roles_channel.send(embed=tester_embed, view=tester_view)
         await roles_channel.send(embed=roles, view=all_roles)
 
-        verify_channel = self.bot.get_channel(902694707161870376)
-
-        verify_em = Embed()
-        verify_em.title = 'Welcome to Metro Support Server!'
-        verify_em.description = "Please click the **Verify** button below to gain access to the server. This checks your account creation date to detect spam. If you have any issues/questions please contact a support member."
-        await verify_channel.send(embed=verify_em, view=Verify(ctx.bot))
 
 
     @commands.command()
@@ -241,6 +217,7 @@ class support(commands.Cog, description=':test_tube: Support only commands.'):
             '\nYou also agree that your bot does not have the following prefixes: `?`,`!`'
             '\nYour bot cannot have an avatar that might be considered NSFW, ping users when they join, post NSFW messages in not NSFW marked channels.'
             '\nRules that may apply to users should also be applied to bots.'
+            '\n**This is not a exextensive list and you can see all the rules listed in <#904215351833800744>**'
             '\n\nHit the **Confirm** button below to submit your request and agree to these terms.', timeout=60  
             )
 
@@ -272,6 +249,36 @@ class support(commands.Cog, description=':test_tube: Support only commands.'):
 
             await ctx.send('Your bot request has been submitted to the moderators. I will DM you about the status of your request.')
 
+
+    @commands.command()
+    @commands.is_owner()
+    async def approve(self, ctx, user : discord.Member, bot : int):
+
+        await user.send(f'Your bot (<@{bot}>) was added to {ctx.guild.name}')
+        await ctx.check()
+
+
+
+
+
+
+    @commands.command(
+        name='tester'
+    )
+    @in_support()
+    async def tester(self, ctx : MyContext):
+
+        role = ctx.guild.get_role(TESTER_ROLE)
+
+        if role in ctx.author.roles:
+            await ctx.author.remove_roles(role)
+            return await ctx.message.add_reaction('<:mminus:904450883587276870>')
+
+        else:
+            await ctx.author.add_roles(role)
+            return await ctx.message.add_reaction('<:mplus:904450883633426553>')
+
+        
 
     
 def setup(bot):

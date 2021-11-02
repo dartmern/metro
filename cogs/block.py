@@ -31,14 +31,10 @@ class block(commands.Cog, description=":mute: Manage your server by blocking/tem
     @can_block()
     @commands.bot_has_permissions(manage_channels=True, send_messages=True)
     @commands.has_permissions(manage_channels=True, send_messages=True)
-    async def block(self, ctx, member : discord.Member = commands.Option(default=None, description='member to block')):
+    async def block(self, ctx, member : discord.Member = commands.Option(description='member to block')):
         """
         Block a member from your channel.
         """
-        if member is None:
-            return await ctx.send("Please specify a member to block.")
-
-        
         
         if member.top_role >= ctx.author.top_role:
             return
@@ -59,13 +55,10 @@ class block(commands.Cog, description=":mute: Manage your server by blocking/tem
     @can_block()
     @commands.bot_has_permissions(manage_channels=True, send_messages=True)
     @commands.has_permissions(manage_channels=True, send_messages=True)
-    async def unblock(self, ctx, member : discord.Member = commands.Option(default=None, description='member to unblock')):
+    async def unblock(self, ctx, member : discord.Member = commands.Option(description='member to unblock')):
         """
         Unblock a member from your channel.
         """
-        if member is None:
-            return await ctx.send("Please specify a member to unblock.")
-
         
         if member.top_role >= ctx.author.top_role:
             return
@@ -92,7 +85,6 @@ class block(commands.Cog, description=":mute: Manage your server by blocking/tem
 
         Note that times are in UTC.
         """
-
         
         if member.top_role >= ctx.author.top_role:
             return

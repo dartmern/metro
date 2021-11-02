@@ -134,7 +134,7 @@ class HumanTime:
     calendar = pdt.Calendar(version=pdt.VERSION_CONTEXT_STYLE)
 
     def __init__(self, argument, *, now=None):
-        now = now or discord.utils.utcnow()
+        now = discord.utils.utcnow()
         dt, status = self.calendar.parseDT(argument, sourceTime=now)
         if not status.hasDateOrTime:
             raise commands.BadArgument(
@@ -255,23 +255,28 @@ class PastTime(NegativeTime):
 
 class UserFriendlyTime(commands.Converter):
     """That way quotes aren't absolutely necessary."""
+
     def __init__(self, converter=None, *, default=None):
         if isinstance(converter, type) and issubclass(converter, commands.Converter):
             converter = converter()
 
         if converter is not None and not isinstance(converter, commands.Converter):
-            raise TypeError('commands.Converter subclass necessary.')
+            raise TypeError("commands.Converter subclass necessary.")
 
         self.converter = converter
         self.default = default
 
     async def check_constraints(self, ctx, now, remaining):
+        if not hasattr(self, "dt"):
+            self.arg = remaining
+            self.dt = None
+            return self
         if self.dt < now:
-            raise commands.BadArgument('This time is in the past.')
+            raise commands.BadArgument("This time is in the past.")
 
         if not remaining:
             if self.default is None:
-                raise commands.BadArgument('Missing argument after the time.')
+                raise commands.BadArgument("Missing argument after the time.")
             remaining = self.default
 
         if self.converter is not None:
@@ -290,6 +295,7 @@ class UserFriendlyTime(commands.Converter):
     async def convert(self, ctx, argument):
         # Create a copy of ourselves to prevent race conditions from two
         # events modifying the same instance of a converter
+        #argument = argument.replace('for')  # people sometimes use "for" in the time string
         result = self.copy()
         try:
             calendar = HumanTime.calendar
@@ -298,25 +304,30 @@ class UserFriendlyTime(commands.Converter):
 
             match = regex.match(argument)
             if match is not None and match.group(0):
-                data = { k: int(v) for k, v in match.groupdict(default=0).items() }
-                remaining = argument[match.end():].strip()
+                data = {k: int(v) for k, v in match.groupdict(default=0).items()}
+                remaining = argument[match.end() :].strip()
                 result.dt = now + relativedelta(**data)
                 return await result.check_constraints(ctx, now, remaining)
 
-
             # apparently nlp does not like "from now"
             # it likes "from x" in other cases though so let me handle the 'now' case
-            if argument.endswith('from now'):
+            argument = argument.replace(
+                ",", ""
+            )  # In case someone actually says 3,600 seconds
+            if argument.endswith("from now"):
                 argument = argument[:-8].strip()
 
-            if argument[0:2] == 'me':
+            if argument[0:2] == "me":
                 # starts with "me to", "me in", or "me at "
-                if argument[0:6] in ('me to ', 'me in ', 'me at '):
+                if argument[0:6] in ("me to ", "me in ", "me at "):
                     argument = argument[6:]
+
+            if argument.strip().startswith("for "):
+                argument = argument[4:]
 
             elements = calendar.nlp(argument, sourceTime=now)
             if elements is None or len(elements) == 0:
-                raise commands.BadArgument('Invalid time provided, try e.g. "tomorrow" or "3 days".')
+                return await result.check_constraints(ctx, now, argument)
 
             # handle the following cases:
             # "date time" foo
@@ -327,43 +338,54 @@ class UserFriendlyTime(commands.Converter):
             dt, status, begin, end, dt_string = elements[0]
 
             if not status.hasDateOrTime:
-                raise commands.BadArgument('Invalid time provided, try e.g. "tomorrow" or "3 days".')
-
+                raise commands.BadArgument(
+                    "Invalid time provided, try `tomorrow` or `2 days`."
+                )
             if begin not in (0, 1) and end != len(argument):
-                raise commands.BadArgument('Time is either in an inappropriate location, which ' \
-                                           'must be either at the end or beginning of your input, ' \
-                                           'or I just flat out did not understand what you meant. Sorry.')
+                raise commands.BadArgument(
+                    f"I did not understand your input. Please use the `{ctx.clean_prefix}examples` command for assistance."
+                )
 
             if not status.hasTime:
                 # replace it with the current time
-                dt = dt.replace(hour=now.hour, minute=now.minute, second=now.second, microsecond=now.microsecond)
+                dt = dt.replace(
+                    hour=now.hour,
+                    minute=now.minute,
+                    second=now.second,
+                    microsecond=now.microsecond,
+                    tzinfo=datetime.timezone.utc,
+                )
+            else:
+                dt = dt.replace(tzinfo=datetime.timezone.utc)
 
             # if midnight is provided, just default to next day
             if status.accuracy == pdt.pdtContext.ACU_HALFDAY:
                 dt = dt.replace(day=now.day + 1)
 
-            result.dt =  dt.replace(tzinfo=datetime.timezone.utc)
+            result.dt = dt
 
             if begin in (0, 1):
                 if begin == 1:
                     # check if it's quoted:
-                    if argument[0] != '"':
-                        raise commands.BadArgument('Expected quote before time input...')
+                    # if argument[0] != '"':
+                    #     raise commands.BadArgument(
+                    #         "Expected quote before time input..."
+                    #     )
 
-                    if not (end < len(argument) and argument[end] == '"'):
-                        raise commands.BadArgument('If the time is quoted, you must unquote it.')
+                    # if not (end < len(argument) and argument[end] == '"'):
+                    #     raise commands.BadArgument(
+                    #         "If the time is quoted, you must unquote it."
+                    #     )
 
-                    remaining = argument[end + 1:].lstrip(' ,.!')
+                    remaining = argument[end + 1 :].lstrip(" ,.!")
                 else:
-                    remaining = argument[end:].lstrip(' ,.!')
+                    remaining = argument[end:].lstrip(" ,.!")
             elif len(argument) == end:
                 remaining = argument[:begin].strip()
 
             return await result.check_constraints(ctx, now, remaining)
-        except:
-            import traceback
-            traceback.print_exc()
-            raise
+        except Exception as e:
+            print(f"Error in UserFriendlyTime: {e}")
 
 
 def format_dt(dt, style=None):

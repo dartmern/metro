@@ -67,14 +67,12 @@ class MetroBot(commands.AutoShardedBot):
 
         await bot.wait_until_ready()
 
-        from cogs.support_views import RoleView, TesterButton, AllRoles, Verify
+        from cogs.support_views import RoleView, TesterButton, AllRoles
 
         if not self.persistent_views:
             self.add_view(TesterButton(self))
             self.add_view(RoleView(self))
             self.add_view(AllRoles(self))
-            
-            self.add_view(Verify(self))
             
             self.pres_views = True
 

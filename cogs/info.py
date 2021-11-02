@@ -12,6 +12,7 @@ from utils.useful import Embed
 
 
 import time
+import os
 
 from pathlib import Path
 import inspect
@@ -220,28 +221,9 @@ class info(commands.Cog, description=":information_source: Information about mem
         Set the prefix for this guild.
         (Needs `manage_guild` permission to work)
         """
-        if prefix is None:
-            return await ctx.send_help(
-                'prefix'
-            )
 
-        if len(prefix) > 5:
-            try:
-                return await ctx.interaction.response.send_message('Prefixes must be shorter than 5 characters.',ephemeral=True)
-            except:
-                return await ctx.send('Prefixes must be shorter than 5 characters.')
-
-        if prefix == '/':
-            try:
-                return await ctx.interaction.response.send_message('You cannot change your prefix to `/`',ephemeral=True)
-            except:
-                return await ctx.send(f"You cannot change your prefix to `/`")
-
-        if prefix is None:
-            data = await self.bot.db.fetch('SELECT prefix FROM prefixes WHERE "guild_id" = $1', ctx.guild.id)
-            prefix = data[0].get('prefix')
-
-            return await ctx.send(f'Your prefix for **{ctx.guild}** is `{prefix}`')
+        if len(prefix) > 10:
+            return await ctx.send('Prefixes must be shorter than 10 characters.',hide=True)
 
 
         data = await self.bot.db.fetch('SELECT prefix FROM prefixes WHERE "guild_id" = $1', ctx.guild.id)
@@ -268,8 +250,7 @@ class info(commands.Cog, description=":information_source: Information about mem
         cwd = get_path()
         with open(cwd+'/config/'+'tags.txt', 'r', encoding='utf8') as file:
             for line in file.read().split("\n"):
-
-                
+    
                 id = line[-51:]
                 id = id[:18]
 
@@ -280,8 +261,6 @@ class info(commands.Cog, description=":information_source: Information about mem
                         tags.append(str(tag))
                 except:
                     pass
-
-        
         
         return tags
 
@@ -290,7 +269,7 @@ class info(commands.Cog, description=":information_source: Information about mem
     @commands.command(hidden=True)
     @commands.is_owner()  
     @commands.bot_has_permissions(send_messages=True)  
-    async def tags(self, ctx):
+    async def tags(self, ctx : MyContext, per_page : int = 10):
         
         def check(m):
             return m.author == ctx.author and m.channel == ctx.channel and m.content.lower() == '?tag all --text'
@@ -300,16 +279,10 @@ class info(commands.Cog, description=":information_source: Information about mem
 
         await ctx.message.add_reaction(self.bot.check)
 
-        
-        loop = asyncio.get_running_loop()
+        result = await self.bot.loop.run_in_executor(None, self.read_tags, ctx)
 
-        result = await loop.run_in_executor(None, self.read_tags, ctx)
+        await ctx.paginate(result, per_page=per_page)
 
-        m = chunkIt(result, 10)
-
-        for i in m:
-            message = ", ".join(x for x in i)
-            await ctx.author.send(message)
 
         
         #for i in result:
@@ -363,11 +336,12 @@ class info(commands.Cog, description=":information_source: Information about mem
         await ctx.send(embed=embed)
 
 
-    @commands.command()
+    @commands.command(slash_command=True)
     @commands.bot_has_permissions(send_messages=True)
     async def uptime(self, ctx):
+        """Get the bot's uptime."""
 
-        await ctx.send(f'I have an uptime of: **{get_bot_uptime(self.bot, brief=False)}**')
+        await ctx.send(f'I have an uptime of: **{get_bot_uptime(self.bot, brief=False)}**',hide=True)
 
 
     @commands.command()
@@ -435,6 +409,8 @@ class info(commands.Cog, description=":information_source: Information about mem
                     f'\n<:mdiscord:904157585266049104> **Websocket:** | {round(self.bot.latency*1000)} ms')
 
 
+
+        
 
 
 

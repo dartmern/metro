@@ -118,7 +118,7 @@ class docs(commands.Cog, description=":books: Fuzzy search through documentation
         self._rtfm_cache = cache
 
 
-    async def do_rtfm(self, ctx, key, obj):
+    async def do_rtfm(self, ctx : MyContext, key, obj):
         page_types = {
             'latest': 'https://discordpy.readthedocs.io/en/latest',
             'python': 'https://docs.python.org/3',
@@ -129,12 +129,12 @@ class docs(commands.Cog, description=":books: Fuzzy search through documentation
         }
 
         if obj is None:
-            await ctx.send(page_types[key])
+            await ctx.defer()
+            await ctx.send(page_types[key], hide=True)
             return
 
 
         if not hasattr(self, '_rtfm_cache'):
-            await ctx.trigger_typing()
             await self.build_rtfm_lookup_table(page_types)
 
         obj = re.sub(r'^(?:discord\.(?:ext\.)?)?(?:commands\.)?(.+)', r'\1', obj)
@@ -162,7 +162,7 @@ class docs(commands.Cog, description=":books: Fuzzy search through documentation
 
 
         e.description = '\n'.join(f'[`{key}`]({url})' for key, url in matches)
-        await ctx.reply(embed=e)
+        await ctx.send(embed=e, hide=True)
 
 
 

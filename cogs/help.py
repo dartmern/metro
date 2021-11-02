@@ -468,10 +468,10 @@ class meta(commands.Cog, description='ℹ️ Get bot stats and information.'):
         bot.help_command.cog = self
 
 
-
     @commands.command(name='invite',slash_command=True)
     @commands.bot_has_permissions(send_messages=True)
     async def invite(self, ctx):
+        """Get invite links for the bot."""
 
 
         basic_button = discord.ui.Button(label='Basic Perms',url='https://discord.com/api/oauth2/authorize?client_id=788543184082698252&permissions=140663671873&scope=bot%20applications.commands')
@@ -484,10 +484,6 @@ class meta(commands.Cog, description='ℹ️ Get bot stats and information.'):
         view.add_item(admin_button)
 
         await ctx.send('Please choose a permission to invite me with below:',view=view)
-
-    
-
-
 
 
     @commands.command()

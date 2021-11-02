@@ -33,7 +33,7 @@ class TodoListSource(menus.ListPageSource):
         return embed
 
 
-class Lists(commands.Cog, description=':notepad_spiral: Manage and create notes and todo lists.'):
+class lists(commands.Cog, description=':notepad_spiral: Manage and create notes and todo lists.'):
 
     def __init__(self, bot):
         self.bot = bot
@@ -146,6 +146,9 @@ class Lists(commands.Cog, description=':notepad_spiral: Manage and create notes 
         menu = SimplePages(source=TodoListSource(entries=data, ctx=ctx), ctx=ctx)
         await menu.start()
 
+
+
+
     
 
 
@@ -156,4 +159,4 @@ class Lists(commands.Cog, description=':notepad_spiral: Manage and create notes 
 
 
 def setup(bot):
-    bot.add_cog(Lists(bot))
+    bot.add_cog(lists(bot))

@@ -3,9 +3,9 @@ from discord.ext import commands
 from utils.context import MyContext
 from utils.remind_utils import human_timedelta
 
-from utils.converters import ActionReason, MemberConverter, MemberID
+from utils.converters import ActionReason, MemberConverter, MemberID, can_execute_action
 
-from typing import Optional
+from typing import Optional, Union
 from collections import Counter
 
 import typing
@@ -15,6 +15,7 @@ import humanize
 from humanize.time import precisedelta
 
 from utils import remind_utils
+from utils.useful import Embed
 
 
 time_regex = re.compile(r"(\d{1,5}(?:[.,]?\d{1,5})?)([smhd])")
@@ -42,61 +43,115 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
     @commands.has_guild_permissions(kick_members=True)
     @commands.bot_has_permissions(send_messages=True, kick_members=True)
     async def kick_cmd(self,
-                       ctx,
+                       ctx : MyContext,
                        member : discord.Member,
                        *,
-                       reason=None  
+                       reason : Optional[str] = None  
                        ):
         """
         Kicks a member from the server.\n
         Member must be in the server at the moment of running the command
         """
+        action_converter = ActionReason()
+        converted_action = await action_converter.convert(ctx, reason)
+
+        if reason is None:
+            real_reason = ''
+        else:
+            real_reason = f'Reason: {reason}'
+
+        if member == ctx.author:
+            return await ctx.send('You cannot kick yourself.')
+
+        if not can_execute_action(ctx, ctx.author, member):
+            return await ctx.send('You are not high enough in role hierarchy to ban this member.')
+
+        embed = Embed()
+        embed.description = (
+            f'You were kicked from **{ctx.guild.name}** by {ctx.author}'
+        )
+
+        if real_reason == '':
+            pass
+        else:
+            embed.set_footer(text=real_reason)
 
         try:
-            await member.send(f"You were kicked from **{ctx.guild}** `{ctx.guild.id}`\n\nModerator: **{ctx.author}** `{ctx.author.id}`\nReason: **{reason}**")
-        except:
-            pass
-        await member.kick(reason=reason)
-        await ctx.send(f"Kicked **{member}**")
+            await member.send(embed=embed)
+            success = '✅'
+        except discord.HTTPException:
+            success = '❌'
 
+        await ctx.guild.kick(member, reason=converted_action)
+
+        embed = Embed()
+        embed.description = f'**{ctx.author.mention}** has kicked **{member}**'
+        embed.set_footer(text=f'ID: {member.id} | DM successful: {success}')
+
+        await ctx.send(embed=embed)
+        
 
     @commands.command(
         name="ban",
-        brief="Ban a member from the server.",
-        usage="<member> [reason]"
+        brief="Ban a member from the server."
     )
     @commands.has_guild_permissions(ban_members=True)
     @commands.bot_has_permissions(send_messages=True, ban_members=True)
     async def ban_cmd(
             self,
-            ctx,
-            member : discord.User,
+            ctx : MyContext,
+            member : Union[discord.Member, discord.User],
+            delete_days : Optional[int] = 0,
             *,
-            reason : str = None
+            reason : Optional[str] = None
     ):
         """
         Ban a member from the server.\n
         Member doesn't need to be in the server. Can be a mention, name or id.
         """
+        action_converter = ActionReason()
+        converted_action = await action_converter.convert(ctx, reason)
 
-        reason_1 = reason
+        if reason is None:
+            real_reason = ''
+        else:
+            real_reason = f'Reason: {reason}'
+        
+        if delete_days and 7 < delete_days < 0:
+            return await ctx.send('`delete_days` must be less than or equal to 7 days.')
 
-        reason = f"Action requested by {ctx.author} (ID: {ctx.author.id}).\nReason: {reason_1}"
+        if member == ctx.author:
+            return await ctx.send(f'{self.bot.cross} You cannot ban yourself!')
+        if isinstance(member, discord.Member):
+            if not can_execute_action(ctx, ctx.author, member):
+                return await ctx.send('You are not high enough in role hierarchy to ban this member.')
 
-        try:
-            await ctx.guild.ban(member, reason=reason)
-        except:
-            raise commands.BadArgument(f"An error occurred while invoking the `ban` command. ")
+            embed = Embed()
+            embed.description = f'You were banned from **{ctx.guild.name}** by {ctx.author}'
+
+            if real_reason == '':
+                pass
+            else:
+                embed.set_footer(text=f'Reason: {reason[0:100]}')
+            
+            try:
+                await member.send(embed=embed)
+                success = '✅'
+            except discord.HTTPException:
+                success = '❌'
+
+        else:
+            success = '❌'
 
 
-        try:
-            await member.send(
-                f"You were banned from **{ctx.guild}** `{ctx.guild.id}`\n\nModerator: **{ctx.author}** `{ctx.author.id}`\nReason: **{reason_1}**")
-        except:
-            pass
+        embed = Embed()
+        embed.description = f'**{ctx.author.mention}** has banned **{member}**\n{real_reason}'
+        embed.set_footer(text=f'ID: {member.id} | DM successful: {success}')
 
+        await ctx.guild.ban(member, reason=converted_action, delete_message_days=delete_days)
 
-        await ctx.send(f"Banned **{member}**")
+        await ctx.send(embed=embed)
+          
 
 
     @commands.command(name="unban",
@@ -125,7 +180,7 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
             "**" + member.name + "** was not a previously banned member."
         )
 
-    @commands.command(name='multiban',usage="[users]... [reason]")
+    @commands.command(name='multiban',usage="[users...] [reason]")
     @commands.has_permissions(ban_members=True)
     @commands.bot_has_permissions(send_messages=True, ban_members=True)
     async def _multiban(self, ctx, members : commands.Greedy[MemberID], *, reason : ActionReason = None):
@@ -140,7 +195,7 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
 
         total_members = len(members)
         if total_members == 0:
-            return await ctx.send('Please input member ids.')
+            return await ctx.help()
 
         confirm = await ctx.confirm(f'This will ban **{total_members}** members. Are you sure about that?',timeout=30)
 
@@ -238,7 +293,7 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
 
         to_send = '\n'.join(messages)
         if len(to_send) > 2000:
-            await ctx.send(f'Successfully removed {deleted} messages.', delete_after=10)
+            await ctx.send(f'Successfully removed {deleted} messages.', delete_after=5)
         else:
             await ctx.send(to_send, delete_after=10)
 
@@ -259,8 +314,6 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
                 await ctx.channel.edit(slowmode_delay=int(time))
                 await ctx.send(f"Set the slowmode delay to `{timeconverter}`")
 
-
-
         else:
             await ctx.channel.edit(slowmode_delay=0)
             await ctx.send(f"Removed the slowmode for this channel")
@@ -269,7 +322,7 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
     @commands.command()
     @commands.has_permissions(ban_members=True, send_messages=True)
     @commands.bot_has_permissions(ban_members=True, send_messages=True)
-    async def tempban(self, ctx, member : discord.User, duration : remind_utils.FutureTime, *, reason : ActionReason):
+    async def tempban(self, ctx, member : discord.Member, duration : remind_utils.FutureTime, *, reason : Optional[str] = None):
         """Temporarily bans a member for the specified duration.
 
         The duration can be a a short time form, e.g. 30d or a more human
@@ -278,23 +331,45 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
 
         Note that times are in UTC.
         """
+        action_converter = ActionReason()
+        converted_action = await action_converter.convert(ctx, reason)
 
         if reason is None:
-            reason = f'Action requested by: {ctx.author} (ID: {ctx.author.id})'
+            real_reason = ''
+        else:
+            real_reason = f'Reason: {reason}'
+
         
         reminder_cog = self.bot.get_cog('reminder')
         if reminder_cog is None:
             return await ctx.send('This function is not available at this time. Try again later.')
+        
+        delta = human_timedelta(duration.dt - datetime.timedelta(seconds=3))
+        until = f"for {delta}"
 
-        until = f"for {human_timedelta(duration.dt)}"
-        heads_up = f"You have been banned from {ctx.guild.name} {until}. \n{reason}"
+        if member == ctx.author:
+            return await ctx.send(f'{self.bot.cross} You cannot ban yourself!')
+        if not can_execute_action(ctx, ctx.author, member):
+            return await ctx.send(f'You are not high enough in role hierarchy to ban this member.')
+
+        embed = Embed()
+        embed.description = (f'You were tempbanned from **{ctx.guild.name}**'
+                                f'\nDuration: {delta}'
+                                f'\nAction requested by: {ctx.author} (ID: {ctx.author.id})'
+        )
+      
+        if real_reason == '':
+            pass
+        else:
+            embed.set_footer(text=f'{real_reason}')
 
         try:
-            await member.send(heads_up)
-        except (AttributeError, discord.HTTPException):
-            pass
+            await member.send(embed=embed)
+            success = '✅'
+        except discord.HTTPException:
+            success = '❌'
 
-        await ctx.guild.ban(member, reason=reason)
+        await ctx.guild.ban(member, reason=converted_action)
 
         timer = await reminder_cog.create_timer(duration.dt, 'tempban', ctx.guild.id,
                                                                     ctx.author.id,
@@ -302,16 +377,19 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
                                                                     connection=self.bot.db,
                                                                     created=ctx.message.created_at
         )
+
+        embed = Embed()
+        embed.description = f'**{ctx.author.mention}** has tempbanned **{member}**\nDuration: {delta}\n{real_reason}'
+        embed.set_footer(text=f'ID: {member.id} | DM successful: {success}')
         
-        await ctx.send(f'Tempbanned {member} {until}')
+        await ctx.send(embed=embed)
 
 
     @commands.Cog.listener()
     async def on_tempban_timer_complete(self, timer):
         guild_id, mod_id, member_id = timer.args
-        print('b4')
+
         await self.bot.wait_until_ready()
-        print('co')
 
         guild = self.bot.get_guild(guild_id)
         if guild is None:

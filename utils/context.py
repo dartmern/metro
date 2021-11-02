@@ -66,7 +66,14 @@ class MyContext(commands.Context):
         except discord.HTTPException:
             pass
 
-    async def send(self, content : str = None, embed : discord.Embed = None, **kwargs):
+    async def defer(self):
+
+        if self.interaction:
+            pass
+        else:
+            await self.trigger_typing()
+
+    async def send(self, content : str = None, embed : discord.Embed = None, hide : bool = False, **kwargs):
 
         if content: 
             content=str(content)
@@ -74,7 +81,13 @@ class MyContext(commands.Context):
             if self.bot.http.token in content:
                 content = content.replace(self.bot.http.token, "[Token Hidden]")
 
-        message = await super().send(content=content, embed=embed, **kwargs)
+        if self.interaction == None:
+            message = await super().send(content=content, embed=embed, **kwargs)
+        else:
+            if embed:
+                message = await super().send(content=content, embed=embed, ephemeral=hide, **kwargs)
+            else:
+                message = await super().send(content=content, ephemeral=hide, **kwargs)
             
         return message
           
@@ -118,3 +131,14 @@ class MyContext(commands.Context):
         menu = SimplePages(
             source=source, ctx=self)
         await menu.start()
+
+    @discord.utils.cached_property
+    def replied_reference(self):
+        ref = self.message.reference
+        if ref and isinstance(ref.resolved, discord.Message):
+            return ref.resolved.to_reference()
+        return None
+
+    
+    async def help(self):
+        await self.send_help(self.command)

@@ -295,8 +295,8 @@ class reminder(commands.Cog):
             message_id=ctx.message.id
         )
 
-        delta = human_timedelta(when.dt - datetime.timedelta(seconds=4))
-        #dunno why it's off by 4 seconds but this should fix
+        delta = human_timedelta(when.dt - datetime.timedelta(seconds=3))
+        #dunno why it's off by 3 seconds but this should fix
         await ctx.send(f'Alright, I will remind you about {when.arg} in {delta}\nTimer id: {timer.id}')
 
     @reminder.command(
@@ -331,9 +331,8 @@ class reminder(commands.Cog):
             message_id=ctx.message.id
         )
         
-        # - datetime.timedelta(seconds=4)
-        delta = human_timedelta(when.dt)
-        #dunno why it's off by 4 seconds but this should fix
+        delta = human_timedelta(when.dt - datetime.timedelta(seconds=3))
+        #dunno why it's off by 3 seconds but this should fix
         await ctx.send(f'Alright, I will remind you about {when.arg} in {delta}\nTimer id: {timer.id}')
 
     @reminder.command(
@@ -431,12 +430,6 @@ class reminder(commands.Cog):
         await self.bot.db.execute(query, author_id)
         await ctx.send(f'Successfully deleted **{total}** reminder(s)')
         
-
-            
-
-
-        
-
     
     @commands.Cog.listener()
     async def on_reminder_timer_complete(self, timer):
