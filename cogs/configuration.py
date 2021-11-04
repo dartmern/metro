@@ -570,12 +570,17 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
         await ctx.invoke(self.config_ignore_clear)
   
 
-    @config.command(
-        name='toggle'
+    @config.group(
+        name='toggle',
+        invoke_without_command=True,
+        case_insensitive=True
     )
     @commands.is_owner()
-    async def config_toggle(self, ctx : MyContext, *, command : str):
+    async def config_toggle(self, ctx : MyContext, *, command : Optional[str] = None):
         """Globally toggle a command."""
+
+        if command is None:
+            return await ctx.help()
 
         EXCEPTIONS = ['toggle']
 
@@ -593,11 +598,24 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
         await ctx.send(f'{ternary} `{cmd.qualified_name}`')
 
 
+    @config_toggle.command(
+        name='list'
+    )
+    @commands.is_owner()
+    async def config_toggle_list(self, ctx : MyContext):
+        """List all the toggle disabled commands."""
 
+        disabled_commands = []
+        for command in self.bot.walk_commands():
+            if command.enabled:
+                pass
+            else:
+                disabled_commands.append(f'`{command.qualified_name}`')
 
-        
-        
-
+        if disabled_commands:
+            await ctx.send(", ".join(disabled_commands))
+        else:
+            await ctx.send('No commands are toggled.')
 
 
     

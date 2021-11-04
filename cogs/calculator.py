@@ -4,6 +4,9 @@ from discord.ext import commands
 from utils.context import MyContext
 
 from lark import Lark, Transformer, v_args
+import time
+
+from utils.useful import Embed
 
 calc_grammar = """
     ?start: sum
@@ -62,7 +65,24 @@ class calculator(commands.Cog, description='<:calc:904080776847560714> Custom ca
     async def calculator(self, ctx : MyContext, *, equation : str):
         """Use a calculator and solve equations."""
 
-        await ctx.send(calc(equation),hide=True)
+        try:
+            start = time.perf_counter()
+            content = calc(equation)
+            end = time.perf_counter()
+        except Exception as e:
+            return await ctx.send(str(e), hide=True)
+
+        ping = (end - start) * 1000
+
+        embed = Embed()
+        embed.description = (
+            f'Input: `{equation}`'
+            f'\nOutput: `{content}`'
+        )
+        embed.set_footer(text=f'Solved in: {round(ping, 1)} ms')
+
+        await ctx.send(embed=embed,hide=True)
+        
 
     
     

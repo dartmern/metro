@@ -409,7 +409,11 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
             moderator = f'{moderator} (ID: {mod_id})'
 
         reason = f'Automatic unban from timer made on {timer.created_at} by {moderator}.'
-        await guild.unban(discord.Object(id=member_id), reason=reason)
+        try:
+            await guild.unban(discord.Object(id=member_id), reason=reason)
+        except discord.errors.NotFound:
+            pass
+
 
 
         

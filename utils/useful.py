@@ -203,8 +203,9 @@ class RoboPages(discord.ui.View):
             self.go_to_next_page.disabled = max_pages is not None and (page_number + 1) >= max_pages
             self.go_to_previous_page.disabled = page_number == 0
             return
+        
 
-        self.go_to_current_page.label = str(page_number + 1)
+        self.go_to_current_page.label = f"{str(page_number + 1)}/{(self.source.get_max_pages())}"
         self.go_to_previous_page.label = 'Back'
         self.go_to_next_page.label = 'Next'
         self.go_to_next_page.disabled = False
@@ -377,14 +378,6 @@ def clean_code(content):
     else:
         return content
 
-class Pag(Paginator):
-
-    #BTW this is very temp and rlly only for eval cmd and i'll switch it out for better paginator/buttons (new in 2.0)
-    async def teardown(self):
-        try:
-            await self.page.delete()
-        except discord.HTTPException:
-            pass
 
 class Embed(discord.Embed):
     def __init__(self, color=0x1ABC9C, fields=(), field_inline=False, **kwargs):

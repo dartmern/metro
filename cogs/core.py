@@ -42,14 +42,16 @@ class core(commands.Cog, description="Core events."):
 
         elif isinstance(error, commands.MissingRequiredArgument):
 
-            missing = f"{str(error.param).split(':')[0]}"
-            command = f"{ctx.prefix}{ctx.command} {ctx.command.signature}"
-            separator = (' ' * (len(command.split(missing)[0]) - 1))
+            missing = f"{error.param.name}"
+            command = f"{ctx.clean_prefix}{ctx.command} {ctx.command.signature}"
+            separator = (' ' * (len([item[::-1] for item in command[::-1].split(missing[::-1], 1)][::-1][0]) - 1)) + (8*' ')
             indicator = ('^' * (len(missing) + 2))
-            separator = (' '*8 + separator)
+            return await ctx.send(
+                                  f"\n```yaml\nSyntax: {command}\n{separator}{indicator}"
+                                  f'\n"{missing}" is a required argument that is missing.\n```',
+                                  embed=await ctx.bot.help_command.get_command_help(ctx.command))
 
-            await ctx.send(content=f"```yaml\nSyntax: {command}\n{separator}{indicator}\n{missing} is a required argument that is missing```",embed=await ctx.bot.help_command.get_command_help(ctx.command))
-
+            
         elif isinstance(error, commands.errors.BotMissingPermissions):
 
             missing_perms = ', '.join(error.missing_permissions)

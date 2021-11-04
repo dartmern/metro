@@ -50,7 +50,7 @@ class tags(commands.Cog, description='<:mtag:904863878792491018> Manage and crea
         """Retrive a tag by it's name."""
 
         try:
-            tag = self.fetch_tag(ctx.guild.id, name, connection=self.bot.db)
+            tag = await self.fetch_tag(ctx.guild.id, name, connection=self.bot.db)
         except RuntimeError as e:
             return await ctx.send(str(e))
 

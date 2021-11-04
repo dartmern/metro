@@ -1,3 +1,4 @@
+from typing import List, Optional, Tuple
 import discord
 from discord.ext import commands
 
@@ -21,47 +22,47 @@ p_user = info_file['postgres_user']
 p_password = info_file['postgres_password']
 token = info_file['bot_token']
 
-async def create_db_pool(database, user, password):
-    bot.db = await asyncpg.create_pool(database=database,user=user,password=password)
-    print('Connected to database.')
-
-async def get_prefix(bot, message):
-
-
-    if not message.guild:
-        if message.author.id == 525843819850104842:
-            return commands.when_mentioned_or('?','m.','')(bot, message)
-
-        return commands.when_mentioned_or('?','m.')(bot, message)
-
-    prefix = await bot.db.fetch('SELECT prefix FROM prefixes WHERE "guild_id" = $1', message.guild.id)
-    if len(prefix) == 0:
-        await bot.db.execute('INSERT into prefixes ("guild_id", prefix) VALUES ($1, $2)', message.guild.id, 'm.')
-        prefix = ['m.']
-
-    else:
-        prefix = prefix[0].get('prefix')
-
-    if message.author.id == 525843819850104842:
-
-        if bot.noprefix == True:
-        
-            return commands.when_mentioned_or(prefix, '')(bot, message)
-        return commands.when_mentioned_or(prefix)(bot, message)
-    return commands.when_mentioned_or(prefix)(bot, message)
+async def create_db_pool(database, user, password) -> asyncpg.Pool:
+    return await asyncpg.create_pool(database=database,user=user,password=password)
+    
 
       
 
 
 class MetroBot(commands.AutoShardedBot):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    PRE: tuple = ('m.',)
+
+    def __init__(self):
+        intents = discord.Intents.all()
+        intents.typing = False
+
+        allowed_mentions = discord.AllowedMentions(
+            roles=False, users=True, everyone=False, replied_user=False)
+        
+
+        super().__init__(
+            intents=intents,
+            command_prefix=self.get_pre,
+            case_insensitive=True,
+            allowed_mentions=allowed_mentions,
+            owner_id=525843819850104842,
+            chunk_guilds_at_startup=False,
+            help_command=None,
+            slash_commands=False,
+            slash_command_guilds=[812143286457729055]
+        )
         self.session = aiohttp.ClientSession()
 
         self.maintenance = False
         self.pres_views = False
 
-        self.noprefix = True
+        self.noprefix = False
+        self.started = False
+
+        self.db = asyncpg.Pool = self.loop.run_until_complete(create_db_pool(p_database, p_user, p_password))
+
+        #Cache
+        self.prefixes = {}
 
     async def on_ready(self):
 
@@ -117,11 +118,34 @@ class MetroBot(commands.AutoShardedBot):
             await self.invoke(ctx)
             return
 
-        if bot.maintenance and ctx.valid:
+        if self.maintenance and ctx.valid:
             await message.channel.send(f"The bot is currently in maintenance. Please try again later.")
             return
 
         await self.invoke(ctx)
+
+    async def get_pre(self, bot, message : discord.Message, raw_prefix : Optional[bool] = False) -> List[str]:
+        if not message:
+            return commands.when_mentioned_or(*self.PRE)(bot, message) if not raw_prefix else self.PRE
+        if not message.guild:
+            return commands.when_mentioned_or(*self.PRE)(bot, message) if not raw_prefix else self.PRE
+        try:
+            prefix = self.prefixes[message.guild.id]
+          
+        except KeyError:
+            prefix = [x['prefix'] for x in 
+                    await self.db.fetch("SELECT prefix from prefixes WHERE guild_id = $1", message.guild.id)] or self.PRE
+            self.prefixes[message.guild.id] = prefix
+        
+        if message.author.id == bot.owner_id and self.noprefix is True:
+            return commands.when_mentioned_or(*prefix, "")(bot, message) if not raw_prefix else prefix
+        return commands.when_mentioned_or(*prefix)(bot, message) if not raw_prefix else prefix
+         
+
+    async def fetch_prefixes(self, message : discord.Message):
+        return tuple([x['prefix'] for x in
+            await self.db.fetch('SELECT prefix from prefixes WHERE guild_id = $1', message.guild.id)]) or self.PRE
+
 
     async def get_or_fetch_member(self, guild, member_id):
         """Looks up a member in cache or fetches if not found.
@@ -157,12 +181,7 @@ class MetroBot(commands.AutoShardedBot):
 
 
 
-intents = discord.Intents.all()
 
-
-mentions = discord.AllowedMentions(
-    roles=False, users=True, everyone=False, replied_user=False
-)
 
 cwd = Path(__file__).parents[0]
 cwd = str(cwd)
@@ -170,19 +189,7 @@ print(f"{cwd}\n-----")
 
 
 
-bot_data = {
-    "intents" : intents,
-    "case_insensitive" : True,
-    "allowed_mentions" : mentions,
-    "help_command" : None,
-    "owner_id" : 525843819850104842,
-    "command_prefix" : get_prefix,
-    "slash_commands" : False,
-    "slash_command_guilds" : [812143286457729055],
-    'chunk_guilds_at_startup' : False
-}
-
-bot = MetroBot(**bot_data)
+bot = MetroBot()
 
 bot.check = "<:mCheck:819254444197019669>"
 bot.cross = "<:mCross:819254444217860116>"
@@ -198,7 +205,6 @@ if __name__ == "__main__":
             bot.load_extension(f"cogs.{file[:-3]}")
 
     bot.load_extension('jishaku')
-    bot.loop.run_until_complete(create_db_pool(p_database, p_user, p_password))
     bot.run(token)
 
 

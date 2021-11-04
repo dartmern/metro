@@ -13,6 +13,7 @@ from utils.useful import Embed
 
 import time
 import os
+import asyncpg
 
 from pathlib import Path
 import inspect
@@ -214,29 +215,114 @@ class info(commands.Cog, description=":information_source: Information about mem
         await ctx.send(embed=embed)
 
 
-    @commands.command(slash_command=True, message_command=True, slash_commands_guilds=[812143286457729055])
+    @commands.group(
+        name='prefix',
+        case_insensitive=True,
+        invoke_without_command=True
+    )
+    @commands.has_permissions(manage_guild=True)
     @commands.bot_has_permissions(send_messages=True)
-    async def prefix(self, ctx, prefix : str = commands.Option(description='new prefix')):
+    async def prefix(self, ctx : MyContext):
         """
-        Set the prefix for this guild.
-        (Needs `manage_guild` permission to work)
+        Manage prefixes for the bot.
         """
+        return await ctx.help()
+         
+        prefixes = await self.bot.get_pre(self.bot, ctx.message, raw_prefix=True)
+        return await ctx.send("\n".join(prefixes))
 
-        if len(prefix) > 10:
-            return await ctx.send('Prefixes must be shorter than 10 characters.',hide=True)
+
+    @prefix.command(
+        name='add'
+    )
+    @commands.has_permissions(manage_guild=True)
+    async def prefix_add(self, ctx : MyContext, prefix : str) -> discord.Message:
+        """
+        Add a prefix to the guild's prefixes.
+        Use quotes to add spaces to your prefix.
+        """
+        query = """
+                INSERT INTO prefixes(guild_id, prefix) VALUES ($1, $2)
+                """
+
+        try:
+            await self.bot.db.execute(query, ctx.guild.id, prefix)
+            self.bot.prefixes[ctx.guild.id] = await self.bot.fetch_prefixes(ctx.message)
+            
+            embed = Embed()
+            embed.colour = discord.Colour.green()
+            embed.description = f'{self.bot.check} **|** Added `{prefix}` to the guild\'s prefixes.'
+            await ctx.send(embed=embed)
+
+        except asyncpg.exceptions.UniqueViolationError:
+            embed = Embed()
+            embed.colour = discord.Colour.red()
+            embed.description = f'{self.bot.cross} **|** That is already a prefix in this guild.'
+            await ctx.send(embed=embed)
 
 
-        data = await self.bot.db.fetch('SELECT prefix FROM prefixes WHERE "guild_id" = $1', ctx.guild.id)
-        if len(data) == 0: 
-            await self.bot.db.execute('INSERT into prefixes ("guild_id", prefix) VALUES ($1, $2)', ctx.guild.id, prefix)
+    @prefix.command(name='list')
+    @commands.has_permissions(manage_guild=True)
+    async def prefix_list(self, ctx : MyContext) -> discord.Message:
+        """List all the bot's prefixes."""
 
+        prefixes = await self.bot.get_pre(self.bot, ctx.message, raw_prefix=True)
+
+        embed = Embed()
+        embed.title = 'My prefixes'
+        embed.description = (ctx.me.mention + '\n' + '\n'.join(prefixes)
+        )
+        embed.set_footer(text=f'{len(prefixes) + 1} prefixes')
+
+        await ctx.send(embed=embed)
+
+    
+    @prefix.command(name='remove')
+    @commands.has_permissions(manage_guild=True)
+    async def prefix_remove(self, ctx : MyContext, prefix : str) -> discord.Message:
+        """Remove a prefix from the bot's prefixes."""
+
+        old = list(await self.bot.get_pre(self.bot, ctx.message, raw_prefix=True))
+        if prefix in old:
+            embed = Embed()
+            embed.description = f'{self.bot.check} **|** Removed `{prefix}` from my prefixes.'
+            embed.colour = discord.Colour.green()
+            await ctx.send(embed=embed)
         else:
-            await self.bot.db.execute('UPDATE prefixes SET prefix = $1 WHERE "guild_id" = $2', prefix, ctx.guild.id)
-        
-        await ctx.send('Set the prefix for **{}** to `{}`'.format(ctx.guild.name, prefix))
+            embed = Embed()
+            embed.description = f'{self.bot.cross} **|** That is not one of my prefixes.'
+            embed.colour = discord.Colour.red()
+            return await ctx.send(embed=embed)
+
+        await self.bot.db.execute('DELETE FROM prefixes WHERE (guild_id, prefix) = ($1, $2)', ctx.guild.id, prefix)
+        self.bot.prefixes[ctx.guild.id] = await self.bot.fetch_prefixes(ctx.message)
+
+    @prefix.command(name='clear')
+    @commands.has_permissions(manage_guild=True)
+    async def prefix_clear(self, ctx : MyContext):
+        """Clears all my prefixes and resets to default."""
+
+        confirm = await ctx.confirm('Are you sure you want to clear all your prefixes?', timeout=30)
+        if confirm is None:
+            return await ctx.send('Timed out.')
+        if confirm is False:
+            return await ctx.send('Canceled.')
+
+        await self.bot.db.execute('DELETE FROM prefixes WHERE guild_id = $1', ctx.guild.id)
+        self.bot.prefixes[ctx.guild.id] = self.bot.PRE
+
+        embed = Embed()
+        embed.description = f'{self.bot.check} **|** Reset all my prefixes!'
+        embed.colour = discord.Colour.green()
+        return await ctx.send(embed=embed)
+
+
+
+    
+
 
         
-    def read_tags(self, ctx : commands.Context):
+    def read_tags(self, ctx : MyContext):
 
         DPY_GUILD = ctx.bot.get_guild(336642139381301249)
 
@@ -346,7 +432,7 @@ class info(commands.Cog, description=":information_source: Information about mem
 
     @commands.command()
     @commands.bot_has_permissions(send_messages=True, embed_links=True)
-    async def emojis(self, ctx):
+    async def emojis(self, ctx : MyContext):
 
         menu = SimplePages(source=Source(self.bot.emojis),ctx=ctx)
         await menu.start()
