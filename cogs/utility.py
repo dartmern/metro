@@ -6,6 +6,7 @@ from discord.ext import commands, menus
 
 from typing import Optional, Union
 import unicodedata
+from utils.calc_tils import NumericStringParser
 from utils.new_pages import SimplePages
 
 from utils.useful import Embed
@@ -63,7 +64,7 @@ class Source(menus.ListPageSource):
         return embed
         
 
-class info(commands.Cog, description=":information_source: Information about members, guilds, or roles."):
+class utility(commands.Cog, description=":information_source: Get utilities like prefixes, serverinfo, source, etc."):
     def __init__(self, bot):
         self.bot = bot
 
@@ -124,7 +125,7 @@ class info(commands.Cog, description=":information_source: Information about mem
         await ctx.send(msg)
 
 
-    @commands.command(aliases=['ui','whois'])
+    @commands.command(aliases=['ui','whois','info'])
     @commands.bot_has_permissions(send_messages=True)
     async def userinfo(self, ctx, member : Union[discord.Member, discord.User, None]):
         """
@@ -132,7 +133,7 @@ class info(commands.Cog, description=":information_source: Information about mem
         If user isn't specified, it defaults to the author.
         """
 
-        if ctx.guild is None:
+        if isinstance(member, discord.User):
 
             member = member or ctx.author   
 
@@ -203,7 +204,7 @@ class info(commands.Cog, description=":information_source: Information about mem
     async def roles(self, ctx):
         """
         View all the roles in the guild.
-        Ordered from top to bottom.
+        Ordered from buttom to top.
         """
 
         if not ctx.guild.roles:
@@ -262,7 +263,6 @@ class info(commands.Cog, description=":information_source: Information about mem
 
 
     @prefix.command(name='list')
-    @commands.has_permissions(manage_guild=True)
     async def prefix_list(self, ctx : MyContext) -> discord.Message:
         """List all the bot's prefixes."""
 
@@ -316,10 +316,10 @@ class info(commands.Cog, description=":information_source: Information about mem
         embed.colour = discord.Colour.green()
         return await ctx.send(embed=embed)
 
-
-
-    
-
+    @commands.command()
+    async def prefixes(self, ctx):
+        """Alias for `prefix list` (list all my prefixes)"""
+        await ctx.invoke(self.prefix_list)
 
         
     def read_tags(self, ctx : MyContext):
@@ -495,24 +495,80 @@ class info(commands.Cog, description=":information_source: Information about mem
                     f'\n<:mdiscord:904157585266049104> **Websocket:** | {round(self.bot.latency*1000)} ms')
 
 
+    @commands.command()
+    @commands.has_permissions(manage_guild=True)
+    async def kill(self, ctx : MyContext):
+        """
+        Clear all data from bot and kick myself from the server.
+        
+        You will receive confirmation and know what data will be deleted.
+        """
+        
+        message = (
+            f'**Are you sure you want to remove the bot from the server?**'
+            f'\n\n`configuration`, `prefixes`, `guild_config`, `user_data` will be removed.'
+            f'\nIf you want to remove myself from the guild click **Confirm** below.'
+        )
 
+        confirm = await ctx.confirm(message, timeout=120, delete_after=True)
+
+        if confirm is False:
+            return await ctx.send("Canceled.")
+        if confirm is None:
+            return await ctx.send('Timed out.')
+        
+        embed = Embed()
+        embed.description = 'Leaving server...'
+        await ctx.send(embed=embed)
+
+        await ctx.guild.leave()
+
+
+    @commands.command(aliases=['calc'])
+    async def calculate(self, ctx, *, formula : str):
+        """
+        Calculate an equation.
+
+        **Keys:**
+            exponentiation: `^`
+            multiplication: `x` | `*`
+            division: `/`
+            addition: `+` | `-`
+            integer: `+` | `-` `0 .. 9+`
+            constants: `PI` | `E`
+
+        **Functions:**
+            sqrt, log, sin, cos, tan, arcsin, arccos,
+            arctan, sinh, cosh, tanh, arcsinh, arccosh,
+            arctanh, abs, trunc, round, sgn
+        """
+
+        formula = formula.replace('*','x')
+        try:
+            start = time.perf_counter()
+            answer = NumericStringParser().eval(formula)
+            end = time.perf_counter()
+            await ctx.check()
+        except Exception as e:
+            return await ctx.send(str(e))
+
+        if int(answer) == answer:
+            answer = int(answer)
+
+        ping = (end - start) * 1000
+
+        embed = Embed()
+        embed.description = f'Input: `{formula}`\nOutput: `{answer}`'
+        embed.set_footer(text=f'Calculated in {round(ping, 1)}ms')
+        await ctx.send(embed=embed)
+
+        
         
 
 
 
-
-
-
-
-
-
-
-
-
-
-
 def setup(bot):
-    bot.add_cog(info(bot))
+    bot.add_cog(utility(bot))
 
 
 

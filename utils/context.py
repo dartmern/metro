@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, menus
 
 from typing import List, Optional
 
@@ -120,13 +120,16 @@ class MyContext(commands.Context):
         self,
         entries : List,
         *,
-        per_page : int = 8
+        per_page : int = 8,
+        source : Optional[menus.ListPageSource] = None
 
     ):
-        source = SimplePageSource(
+
+        default_source = SimplePageSource(
             entries=list(entries),
             per_page=per_page
         )
+        source = source or default_source
 
         menu = SimplePages(
             source=source, ctx=self)

@@ -278,6 +278,16 @@ class support(commands.Cog, description=':test_tube: Support only commands.'):
             await ctx.author.add_roles(role)
             return await ctx.message.add_reaction('<:mplus:904450883633426553>')
 
+    @commands.group(invoke_without_command=True, aliases=['ex', 'examples'])
+    @in_support()
+    async def example(self, ctx : MyContext):
+        await ctx.help()
+
+    @example.command(name='ban')
+    @in_support()
+    async def ex_ban(self, ctx):
+        await ctx.send("Examples for `ban`: `?ban @dartmern`")
+
         
 
     

@@ -1,19 +1,26 @@
 
+from re import X
 import discord
 from discord.ext import commands
 
 import asyncpg
+import json
 
 from collections import defaultdict
 
 from typing import Optional
+
+#Arg parsing stuff
+from cogs.server import Arguments
+import shlex
 
 from utils.converters import ChannelOrRoleOrMember, DiscordCommand, DiscordGuild
 from utils.new_pages import SimplePages
 from utils.useful import Embed
 from utils.context import MyContext
 
-
+class Flags(commands.FlagConverter, prefix='--', delimiter=' '):
+    reason : str
 
 class configuration(commands.Cog, description=':gear: Configure the bot/server.'):
     def __init__(self, bot):
@@ -618,28 +625,113 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
             await ctx.send('No commands are toggled.')
 
 
+    @config.group(
+        name='blacklist',
+        invoke_without_command=True,
+        case_insensitive=True
+    )
+    @commands.is_owner()
+    async def config_blacklist(self, ctx : MyContext) -> discord.Message:
+        """Manage the bot's blacklist."""
+
+        await ctx.help()
+
     
+    @config_blacklist.command(name='add')
+    @commands.is_owner()
+    async def config_blacklist_add(self, ctx : MyContext, *users : discord.User):
+        """Add a user to the bot blacklist."""
 
+        query = """
+                INSERT INTO blacklist(member_id, is_blacklisted) VALUES ($1, $2) 
+                """
 
+        failed = []
+        sucess = []
+        for x in users:
+            try:
+                await self.bot.db.execute(query, x.id, True)
+                sucess.append(f'**{x}**')
+            except asyncpg.exceptions.UniqueViolationError:
+                failed.append(f'**{x}**')
+                continue
 
+            self.bot.blacklist[x.id] = True
+
+        if failed:
+            await ctx.send(f"{self.bot.cross} The following users were already blacklisted: {', '.join(failed)}")
+        if sucess:
+            await ctx.send(f'{self.bot.check} Added **{", ".join(sucess)}** to the bot blacklist.')
+        
+
+    @config_blacklist.command(name='remove')
+    @commands.is_owner()
+    async def config_blacklist_remove(self, ctx : MyContext, *users : discord.User):
+        """Remove a user from the bot blacklist."""
+
+        query = """
+                DELETE FROM blacklist WHERE member_id = $1
+                """
+
+        success = []
+        for x in users:
+            await self.bot.db.execute(query, x.id)
+
+            self.bot.blacklist[x.id] = False
+            success.append(f'**{x}**')
+
+        await ctx.send(f'{self.bot.cross} Removed {", ".join(success)} from the bot blacklist.')
+
+    
+    @config_blacklist.command(name='list')
+    @commands.is_owner()
+    async def config_blacklist_list(self, ctx : MyContext, *, args : str = None):
+        """List all the users blacklisted from bot.
+        
+        Apply the `--cache` flag if you want me to search the cache instead of database.
+        """
+        
+        if args:
+            parser = Arguments(add_help=False, allow_abbrev=False)
+            parser.add_argument('--cache', action='store_true')
+
+            try:
+                args = parser.parse_args(shlex.split(args))
+            except Exception as e:
+                await ctx.send(str(e))
+                return
+
+            if args.cache:
+                if bool(self.bot.blacklist) == False:
+                    return await ctx.send('No users are currently blacklisted. (from cache)')
+
+                blacklist = []
+
+                for member_id, is_blacklisted in self.bot.blacklist.items():
+                    if is_blacklisted:
+                        blacklist.append(f'{member_id} (<@{member_id}>)')
+
+                try:
+                    return await ctx.paginate(blacklist, per_page=10)
+                except discord.errors.HTTPException:
+                    return await ctx.send('No users are currently blacklisted. (from cache)')
+
+        query = """
+                SELECT member_id FROM blacklist WHERE is_blacklisted = True
+                """
+
+        records = await self.bot.db.fetch(query)
+        if records:
+            blacklisted = []
+
+            for record in records:
+                blacklisted.append(f'{record["member_id"]} (<@{record["member_id"]}>)')
+
+            await ctx.paginate(blacklisted, per_page=10)
+        else:
+            await ctx.send("No users are currently blacklisted.")
 
 
             
-
-
-
-
-
-
-
-
-
-        
-
-
-
-
-
-
 def setup(bot):
     bot.add_cog(configuration(bot))

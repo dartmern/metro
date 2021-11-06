@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from utils.context import MyContext
-from utils.remind_utils import human_timedelta
+from utils.remind_utils import UserFriendlyTime, human_timedelta
 
 from utils.converters import ActionReason, MemberConverter, MemberID, can_execute_action
 
@@ -9,6 +9,7 @@ from typing import Optional, Union
 from collections import Counter
 
 import typing
+import json
 import datetime
 import re
 import humanize
@@ -204,6 +205,8 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
 
         if confirm is False:
             return await ctx.send('Canceled.')
+        
+        d = await ctx.send("Banning...")
 
         fails = 0
         for member in members:
@@ -212,6 +215,7 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
             except:
                 fails += 1
 
+        await d.delete(silent=True)
         await ctx.send(f'Banned {total_members-fails}/{total_members} members.')
 
 
@@ -219,36 +223,103 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
     @commands.command(
         name="lockdown",
         brief="Lockdown a channel.",
-        usage="[channel]",
         aliases=["lock"]
     )
     @commands.has_permissions(manage_channels=True)
     @commands.bot_has_permissions(send_messages=True, manage_channels=True)
     async def lockdown_cmd(self,
-                           ctx,
-                           channel : discord.TextChannel = None):
+                           ctx : MyContext,
+                           channel : Optional[discord.TextChannel] = None,
+                           *,
+                           duration : UserFriendlyTime(
+                               commands.clean_content, default='\u2026'
+                           ) = None):
         """
         Locks down a channel by changing permissions for the default role.
         This will not work if your server is set up improperly
         """
-
         channel = channel or ctx.channel
-        overwrite = channel.overwrites_for(ctx.guild.default_role)
-        overwrite.send_messages = False
-        await channel.set_permissions(ctx.guild.default_role, overwrite=overwrite)
-        await ctx.send(f"{self.bot.check} Locked down **{channel.name}**.")
+        await ctx.trigger_typing()
+
+        if not channel.permissions_for(ctx.guild.me).read_messages:
+            raise commands.BadArgument(
+                f"I need to be able to read messages in {channel.mention}"
+            )
+        if not channel.permissions_for(ctx.guild.me).send_messages:
+            raise commands.BadArgument(
+                f"I need to be able to send messages in {channel.mention}"
+            )
+
+        query = """
+                SELECT (id)
+                FROM reminders
+                WHERE event = 'lockdown'
+                AND EXTRA->'kwargs'->>'channel_id' = $1; 
+                """
+        data = await self.bot.db.fetchval(query, str(channel.id))
+        if data:
+            raise commands.BadArgument(f"Channel {channel.mention} is already locked.")
+        
+        overwrites = channel.overwrites_for(ctx.guild.default_role)
+        perms = overwrites.send_messages
+        if perms is False:
+            raise commands.BadArgument(f"Channel {channel.mention} is already locked.")
+
+        reminder_cog = self.bot.get_cog('reminder')
+        if not reminder_cog:
+            raise commands.BadArgument(f'This feature is currently unavailable.')
+
+        message = await ctx.send(f'Locking {channel.mention} ...')
+        bot_perms = channel.overwrites_for(ctx.guild.me)
+        if not bot_perms.send_messages:
+            bot_perms.send_messages = True
+            await channel.set_permissions(
+                ctx.guild.me, overwrite=bot_perms, reason="For channel lockdown."
+            )
+
+        endtime = duration.dt.replace(tzinfo=None) if duration and duration.dt else None
+
+        if endtime:
+
+            timer = await reminder_cog.create_timer(
+                endtime,
+                "lockdown",
+                ctx.guild.id,
+                ctx.author.id,
+                ctx.channel.id,
+                perms=perms,
+                channel_id=channel.id,
+                connection=self.bot.db,
+                created=ctx.message.created_at.replace(tzinfo=None)
+            )
+        overwrites.send_messages = False
+        reason = "Channel locked by command."
+        await channel.set_permissions(
+            ctx.guild.default_role,
+            overwrite=overwrites,
+            reason=await ActionReason().convert(ctx, reason),
+        )
+
+        if duration and duration.dt:
+            timefmt = human_timedelta(endtime)
+        else:
+            timefmt = None
+        
+        ft = f" for {timefmt}" if timefmt else ""
+        await message.edit(
+            content=f'{self.bot.check} Channel {channel.mention} locked{ft}'
+        )
 
 
     @commands.command(
         name="unlockdown",
         brief="Unlock a channel.",
-        usage="[channel]",
         aliases=["unlock"]
     )
     @commands.has_permissions(manage_channels=True)
     @commands.bot_has_permissions(send_messages=True, manage_channels=True)
     async def unlockdown_cmd(self,
-                           ctx,
+                           ctx : MyContext,
                            channel: discord.TextChannel = None):
         """
         Unlocks down a channel by changing permissions for the default role.
@@ -256,10 +327,59 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
         """
 
         channel = channel or ctx.channel
-        overwrite = channel.overwrites_for(ctx.guild.default_role)
-        overwrite.send_messages = None
-        await channel.set_permissions(ctx.guild.default_role, overwrite=overwrite)
-        await ctx.send(f"{self.bot.check} Unlocked **{channel.name}**.")
+
+        await ctx.trigger_typing()
+        if not channel.permissions_for(ctx.guild.me).read_messages:
+            raise commands.BadArgument(
+                f"I need to be able to read messages in {channel.mention}"
+            )
+        if not channel.permissions_for(ctx.guild.me).send_messages:
+            raise commands.BadArgument(
+                f"I need to be able to send messages in {channel.mention}"
+            )
+
+        query = """
+                SELECT (id, extra)
+                FROM reminders
+                WHERE event = 'lockdown'
+                AND extra->'kwargs'->>'channel_id' = $1;
+                """
+        s = await self.bot.db.fetchval(query, str(channel.id))
+        if not s:
+            overwrites = channel.overwrites_for(ctx.guild.default_role)
+            perms = overwrites.send_messages
+            if perms is True:
+                return await ctx.send(f"Channel {channel.mention} is already unlocked.")
+            else:
+                pass   
+        else:
+            pass
+           
+
+        message = await ctx.send(f"Unlocking {channel.mention} ...")
+        if s:
+            task_id = s[0]
+            args_and_kwargs = json.loads(s[1])
+            perms = args_and_kwargs["kwargs"]["perms"]
+            
+
+            query = """
+                    DELETE FROM reminders
+                    WHERE id = $1
+                    """
+            await self.bot.db.execute(query, task_id)
+        reason = "Channel unlocked by command execution."
+
+        overwrites = channel.overwrites_for(ctx.guild.default_role)
+        overwrites.send_messages = None
+        await channel.set_permissions(
+            ctx.guild.default_role,
+            overwrite=overwrites,
+            reason=await ActionReason().convert(ctx, reason),
+        )
+        await message.edit(
+            content=f"{self.bot.check} Channel {channel.mention} unlocked."
+        )
 
 
     @commands.command()
@@ -415,7 +535,44 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
             pass
 
 
+    @commands.Cog.listener()
+    async def on_lockdown_timer_complete(self, timer):
+        await self.bot.wait_until_ready()
+        guild_id, mod_id, channel_id = timer.args
+        perms = timer.kwargs["perms"]
 
+        guild = self.bot.get_guild(guild_id)
+        if guild is None:
+            # RIP
+            return
+
+        channel = self.bot.get_channel(channel_id)
+        if channel is None:
+            # RIP
+            return
+
+        moderator = guild.get_member(mod_id)
+        if moderator is None:
+            try:
+                moderator = await self.bot.fetch_user(mod_id)
+            except:
+                # request failed somehow
+                moderator = f"Mod ID {mod_id}"
+            else:
+                moderator = f"{moderator} (ID: {mod_id})"
+        else:
+            moderator = f"{moderator} (ID: {mod_id})"
+
+        reason = (
+            f"Automatic unlock from timer made on {timer.created_at} by {moderator}."
+        )
+        overwrites = channel.overwrites_for(guild.default_role)
+        overwrites.send_messages = perms
+        await channel.set_permissions(
+            guild.default_role,
+            overwrite=overwrites,
+            reason=reason,
+        )
         
 
 

@@ -183,9 +183,9 @@ class ButtonMenuSrc(menus.ListPageSource):
             footer = f'Type "{self.prefix}help [Command | Module] for more information' + " | [1/1]"
 
         if self.group.signature == '':
-            title = f'`{self.group.name}`'
+            title = f'`{self.group}`'
         else:
-            title = f"`{self.group.name}` `{self.group.signature}`"
+            title = f"`{self.group}` `{self.group.signature}`"
 
         embed = Embed(title=title, description=self.description)
 
@@ -337,10 +337,6 @@ class MetroHelp(commands.HelpCommand):
             try:
                 return await self.context.interaction.response.send_message(embed=self.get_command_help(command),ephemeral=True)
             except:
-                
-                message = getattr(self.context.message.reference, "resolved", None)
-                if message:
-                    return await message.reply(embed=await self.get_command_help(command),view=View(self.context.author))
                 return await self.context.send(embed=await self.get_command_help(command),view=View(self.context.author))
 
 
@@ -366,7 +362,7 @@ class MetroHelp(commands.HelpCommand):
         embed = Embed(
             description=
             f"**Total Commands:** {len(list(bot.walk_commands()))} | **Usable by you (here):** {len(await self.filter_commands(list(bot.walk_commands()), sort=True))}"
-            f"\n```diff\n- [] = optional argument\n- <> = required argument\n- Do not type these when using commands!\n+ Type {ctx.clean_prefix}help [Command/Module] for more help on a command```"
+            f"\n```diff\n- [] = optional argument\n- <> = required argument\n- Do not type these when using commands!\n+ Type {ctx.clean_prefix}{ctx.invoked_with} [Command/Module] for more help on a command```"
             f"[Support](https://discord.gg/2ceTMZ9qJh) | [Invite](https://discord.com/api/oauth2/authorize?client_id=788543184082698252&permissions=140663671873&scope=bot%20applications.commands) | [Donate](https://www.patreon.com/metrodiscordbot) | [Source](https://vex.wtf)"
         )
         embed.add_field(
@@ -374,9 +370,6 @@ class MetroHelp(commands.HelpCommand):
             value=f"{nl.join(cogs)}",
             inline=True
         )
-        
-        
-
         
         embed.set_author(
             name=self.context.author.name + " | Help Menu",
@@ -429,11 +422,10 @@ class MetroHelp(commands.HelpCommand):
             
             commands = await self.filter_commands(self.context.bot.commands)
             
-            menu = ExtraPages(source=HelpSource(tuple(commands), prefix=self.context.prefix))
-            await menu.start(self.context)
+            menu = SimplePages(source=HelpSource(tuple(commands), prefix=self.context.prefix), ctx=self.context)
+            await menu.start()
             return
 
-            
 
         return f"No command/category called `{command}` found."
 
@@ -441,14 +433,8 @@ class MetroHelp(commands.HelpCommand):
         if error is None:
             return
 
-        try:
-            return await ctx.interaction.response.send_message(error, ephemeral=True)
-        except:
-            return await ctx.send(error)
+        return await ctx.send(error, hide=True)
        
-
-
-
 
 
 class meta(commands.Cog, description='ℹ️ Get bot stats and information.'):
@@ -490,11 +476,7 @@ class meta(commands.Cog, description='ℹ️ Get bot stats and information.'):
     @commands.bot_has_permissions(send_messages=True, embed_links=True)
     async def support(self, ctx):
 
-        await ctx.reply(embed=Embed
-            (description=
-             f'Join my support server for help:'
-             f'\nhttps://discord.gg/2ceTMZ9qJh')
-                        )
+        await ctx.reply(ctx.bot.invite)
 
 
 

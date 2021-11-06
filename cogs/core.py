@@ -12,6 +12,18 @@ from utils.useful import Cooldown, Embed
 class core(commands.Cog, description="Core events."):
     def __init__(self, bot):
         self.bot = bot
+        self.cooldown_mapping = commands.CooldownMapping.from_cooldown(3, 7, commands.BucketType.member)
+
+
+    async def blacklist(self, user):
+        query = """
+                INSERT INTO blacklist(member_id, is_blacklisted) VALUES ($1, $2) 
+                """
+
+        await self.bot.db.execute(query, user.id, True)
+
+        self.bot.blacklist[user.id] = True
+
 
 
     @commands.Cog.listener()
@@ -48,8 +60,8 @@ class core(commands.Cog, description="Core events."):
             indicator = ('^' * (len(missing) + 2))
             return await ctx.send(
                                   f"\n```yaml\nSyntax: {command}\n{separator}{indicator}"
-                                  f'\n"{missing}" is a required argument that is missing.\n```',
-                                  embed=await ctx.bot.help_command.get_command_help(ctx.command))
+                                  f'\n{missing} is a required argument that is missing.\n```',
+                                  embed=await self.bot.help_command.get_command_help(ctx.command))
 
             
         elif isinstance(error, commands.errors.BotMissingPermissions):
@@ -99,10 +111,6 @@ class core(commands.Cog, description="Core events."):
 
         elif isinstance(error, commands.CommandOnCooldown):
 
-            if ctx.channel.id == 895082808161226803:
-                await ctx.reinvoke()
-                return
-
             command = ctx.command
             default = discord.utils.find(
                 lambda c: isinstance(c, Cooldown), command.checks
@@ -118,12 +126,24 @@ class core(commands.Cog, description="Core events."):
                             + cooldowns
             )
             em.set_footer(text='Spamming commands may result in a blacklist.')
-            return await ctx.send(embed=em)
+
+            
+            bucket = self.cooldown_mapping.get_bucket(ctx.message)
+            retry_after = bucket.update_rate_limit()
+            
+            if retry_after:
+                await self.blacklist(ctx.author)
+                return await ctx.reply(f"You have been blacklisted for spamming commands.\nJoin my support server for a appeal: {self.bot.support}")
+            else:
+                return await ctx.send(embed=em)
 
         elif isinstance(error, commands.errors.DisabledCommand):
             return await ctx.send(
                 f"This command is globally disabled."
             )
+
+        elif isinstance(error, commands.errors.BadUnionArgument):
+            return await ctx.send(str(error))
         else:
             raise error
 

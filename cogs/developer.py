@@ -322,12 +322,12 @@ class developer(commands.Cog, description="Developer commands."):
         """Toggle on/off no prefix for developers."""
 
         if self.bot.noprefix == True:
-            self.bot.noprefix == False
-            return await ctx.send('No prefix turned off')
+            self.bot.noprefix = False
+            return await ctx.send(f'{self.bot.cross} No prefix turned off')
 
         else:
-            self.bot.noprefix == True
-            return await ctx.send('No prefix turned on')
+            self.bot.noprefix = True
+            return await ctx.send(f'{self.bot.check} No prefix turned on')
 
     @developer_cmds.command()
     @commands.is_owner()
@@ -440,14 +440,14 @@ class developer(commands.Cog, description="Developer commands."):
             message = getattr(ctx.message.reference, "resolved", None)
         
         if message.author != ctx.me:
-            return await ctx.send('I can only delete **my** messages.')
+            return await ctx.send('I can only delete **my** messages.',delete_after=3)
 
         else:
 
             try:
                 await message.delete()
-            except:
-                return await ctx.send('Failed to delete that message, try again later.')
+            except discord.errors.HTTPException:
+                return await ctx.send('Failed to delete that message, try again later.', delete_after=5)
 
 
     @commands.command(slash_command=False)

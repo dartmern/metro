@@ -9,7 +9,7 @@ import aiohttp
 
 from utils.useful import Cooldown
 from utils.json_loader import read_json
-
+from utils import errors
 from utils.context import MyContext
 
 os.environ["JISHAKU_NO_UNDERSCORE"] = "True"
@@ -26,11 +26,34 @@ async def create_db_pool(database, user, password) -> asyncpg.Pool:
     return await asyncpg.create_pool(database=database,user=user,password=password)
     
 
-      
+async def load_blacklist():
+    await bot.wait_until_ready()
+
+    query = """
+            SELECT member_id FROM blacklist WHERE is_blacklisted = True
+            """
+
+    records = await bot.db.fetch(query)
+    if records:
+        for record in records:
+            bot.blacklist[record["member_id"]] = True
 
 
 class MetroBot(commands.AutoShardedBot):
     PRE: tuple = ('m.',)
+
+    def user_blacklisted(self, ctx : MyContext):
+        try:
+            is_blacklisted = self.blacklist[ctx.author.id]
+        except KeyError:
+            is_blacklisted = False
+        if ctx.author.id == self.owner_id:
+            is_blacklisted = False
+        
+        if is_blacklisted is False:
+            return True
+        else:
+            raise errors.UserBlacklisted
 
     def __init__(self):
         intents = discord.Intents.all()
@@ -49,12 +72,18 @@ class MetroBot(commands.AutoShardedBot):
             chunk_guilds_at_startup=False,
             help_command=None,
             slash_commands=False,
-            slash_command_guilds=[812143286457729055]
+            slash_command_guilds=[812143286457729055],
+            strip_after_prefix=True
         )
         self.session = aiohttp.ClientSession()
 
+        self.add_check(self.user_blacklisted)
+
         self.maintenance = False
         self.pres_views = False
+
+        self.invite = 'https://discord.com/api/oauth2/authorize?client_id=788543184082698252&permissions=0&scope=applications.commands%20bot'
+        self.support = 'https://discord.gg/2ceTMZ9qJh'
 
         self.noprefix = False
         self.started = False
@@ -63,6 +92,7 @@ class MetroBot(commands.AutoShardedBot):
 
         #Cache
         self.prefixes = {}
+        self.blacklist = {}
 
     async def on_ready(self):
 
@@ -205,6 +235,7 @@ if __name__ == "__main__":
             bot.load_extension(f"cogs.{file[:-3]}")
 
     bot.load_extension('jishaku')
+    bot.loop.create_task(load_blacklist())
     bot.run(token)
 
 

@@ -135,6 +135,7 @@ class docs(commands.Cog, description=":books: Fuzzy search through documentation
 
 
         if not hasattr(self, '_rtfm_cache'):
+            await ctx.defer()
             await self.build_rtfm_lookup_table(page_types)
 
         obj = re.sub(r'^(?:discord\.(?:ext\.)?)?(?:commands\.)?(.+)', r'\1', obj)
