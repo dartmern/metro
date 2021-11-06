@@ -1,4 +1,5 @@
 import discord
+from discord import errors
 from discord.ext import commands
 
 import humanize
@@ -46,8 +47,7 @@ class core(commands.Cog, description="Core events."):
                         f"I am missing permissions to do that!"
                     )
             else:
-                print(error)
-                return
+                raise error
 
         elif isinstance(error, commands.BadArgument):
             await ctx.send(str(error))
@@ -135,7 +135,7 @@ class core(commands.Cog, description="Core events."):
                 await self.blacklist(ctx.author)
                 return await ctx.reply(f"You have been blacklisted for spamming commands.\nJoin my support server for a appeal: {self.bot.support}")
             else:
-                return await ctx.send(embed=em)
+                return #await ctx.send(embed=em)
 
         elif isinstance(error, commands.errors.DisabledCommand):
             return await ctx.send(
