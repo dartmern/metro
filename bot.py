@@ -6,6 +6,7 @@ from pathlib import Path
 import os
 import asyncpg
 import aiohttp
+from utils.checks import check_dev
 
 from utils.useful import Cooldown
 from utils.json_loader import read_json
@@ -68,7 +69,8 @@ class MetroBot(commands.AutoShardedBot):
             command_prefix=self.get_pre,
             case_insensitive=True,
             allowed_mentions=allowed_mentions,
-            owner_id=525843819850104842,
+            #owner_id=525843819850104842,
+            owner_ids=[525843819850104842, 844635601113579521],
             chunk_guilds_at_startup=False,
             help_command=None,
             slash_commands=False,
@@ -167,7 +169,7 @@ class MetroBot(commands.AutoShardedBot):
                     await self.db.fetch("SELECT prefix from prefixes WHERE guild_id = $1", message.guild.id)] or self.PRE
             self.prefixes[message.guild.id] = prefix
         
-        if message.author.id == bot.owner_id and self.noprefix is True:
+        if check_dev(bot, message.author) and self.noprefix is True:
             return commands.when_mentioned_or(*prefix, "")(bot, message) if not raw_prefix else prefix
         return commands.when_mentioned_or(*prefix)(bot, message) if not raw_prefix else prefix
          

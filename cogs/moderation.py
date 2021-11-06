@@ -3,7 +3,8 @@ from discord.ext import commands
 from utils.context import MyContext
 from utils.remind_utils import UserFriendlyTime, human_timedelta
 
-from utils.converters import ActionReason, MemberConverter, MemberID, can_execute_action
+from utils.converters import ActionReason, MemberConverter, MemberID
+from utils.checks import can_execute_action
 
 from typing import Optional, Union
 from collections import Counter

@@ -5,33 +5,11 @@ from discord.ext import commands
 from utils.context import MyContext
 from utils.converters import BotUser
 from utils.useful import Embed
-
-
-import datetime
-import asyncio
+from utils.checks import in_support, is_dev
 
 SUPPORT_GUILD = 812143286457729055
 TESTER_ROLE = 861141649265262592
-
-def in_support():
-    def predicate(ctx):
-        return ctx.guild.id == SUPPORT_GUILD
-    return commands.check(predicate)
-
-def is_tester():
-    def predicate(ctx):
-        try:
-            role = ctx.guild.get_role(861141649265262592)
-        except:
-            raise commands.BadArgument(f"You must have the tester role to use this command.\nJoin my support server (run `{ctx.prefix}support`) and type !tester for this to work.")
-        if role in ctx.author.roles:
-            return True
-        else:
-            raise commands.BadArgument(f'You must have the tester role to use this command.\nType `!tester` to get the role.')
-
-    return commands.check(predicate)
-        
-
+ 
 class RoleView(discord.ui.View):
     def __init__(self, bot) -> None:
         super().__init__(timeout=None)
@@ -167,10 +145,8 @@ class support(commands.Cog, description=':test_tube: Support only commands.'):
 
     @commands.command(hidden=True)
     @commands.is_owner()
+    @is_dev()
     async def support_roles(self, ctx : MyContext):
-
-        if ctx.author.id != self.bot.owner_id:
-            return 
 
         await ctx.message.delete(silent=True)
 
@@ -259,9 +235,6 @@ class support(commands.Cog, description=':test_tube: Support only commands.'):
 
 
 
-
-
-
     @commands.command(
         name='tester'
     )
@@ -278,17 +251,6 @@ class support(commands.Cog, description=':test_tube: Support only commands.'):
             await ctx.author.add_roles(role)
             return await ctx.message.add_reaction('<:mplus:904450883633426553>')
 
-    @commands.group(invoke_without_command=True, aliases=['ex', 'examples'])
-    @in_support()
-    async def example(self, ctx : MyContext):
-        await ctx.help()
-
-    @example.command(name='ban')
-    @in_support()
-    async def ex_ban(self, ctx):
-        await ctx.send("Examples for `ban`: `?ban @dartmern`")
-
-        
 
     
 def setup(bot):

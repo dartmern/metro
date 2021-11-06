@@ -13,6 +13,7 @@ from typing import Optional
 #Arg parsing stuff
 from cogs.server import Arguments
 import shlex
+from utils.checks import check_dev, is_dev
 
 from utils.converters import ChannelOrRoleOrMember, DiscordCommand, DiscordGuild
 from utils.new_pages import SimplePages
@@ -123,7 +124,7 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
         if ctx.guild is None:
             return True  # Do not restrict in DMs.
 
-        if ctx.author.id == ctx.bot.owner_id:
+        if check_dev(ctx.bot, ctx.author):
             return True  # Bot devs are immune.
 
         if isinstance(ctx.author, discord.Member):
@@ -582,7 +583,7 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
         invoke_without_command=True,
         case_insensitive=True
     )
-    @commands.is_owner()
+    @is_dev()
     async def config_toggle(self, ctx : MyContext, *, command : Optional[str] = None):
         """Globally toggle a command."""
 
@@ -608,7 +609,7 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
     @config_toggle.command(
         name='list'
     )
-    @commands.is_owner()
+    @is_dev()
     async def config_toggle_list(self, ctx : MyContext):
         """List all the toggle disabled commands."""
 
@@ -630,7 +631,7 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
         invoke_without_command=True,
         case_insensitive=True
     )
-    @commands.is_owner()
+    @is_dev()
     async def config_blacklist(self, ctx : MyContext) -> discord.Message:
         """Manage the bot's blacklist."""
 
@@ -638,7 +639,7 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
 
     
     @config_blacklist.command(name='add')
-    @commands.is_owner()
+    @is_dev()
     async def config_blacklist_add(self, ctx : MyContext, *users : discord.User):
         """Add a user to the bot blacklist."""
 
@@ -661,11 +662,11 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
         if failed:
             await ctx.send(f"{self.bot.cross} The following users were already blacklisted: {', '.join(failed)}")
         if sucess:
-            await ctx.send(f'{self.bot.check} Added **{", ".join(sucess)}** to the bot blacklist.')
+            await ctx.send(f'{self.bot.check} Added {", ".join(sucess)} to the bot blacklist.')
         
 
     @config_blacklist.command(name='remove')
-    @commands.is_owner()
+    @is_dev()
     async def config_blacklist_remove(self, ctx : MyContext, *users : discord.User):
         """Remove a user from the bot blacklist."""
 
@@ -684,7 +685,7 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
 
     
     @config_blacklist.command(name='list')
-    @commands.is_owner()
+    @is_dev()
     async def config_blacklist_list(self, ctx : MyContext, *, args : str = None):
         """List all the users blacklisted from bot.
         

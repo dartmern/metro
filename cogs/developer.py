@@ -25,6 +25,7 @@ from jishaku.codeblocks import Codeblock, codeblock_converter
 from jishaku.features.baseclass import Feature
 from jishaku.paginators import WrappedPaginator
 import jishaku.modules
+from utils.checks import is_dev
 from utils.context import MyContext
 from utils.json_loader import read_json, write_json
 
@@ -451,14 +452,10 @@ class developer(commands.Cog, description="Developer commands."):
 
 
     @commands.command(slash_command=False)
+    @is_dev()
     async def eval(self, ctx, *, body : str):
         """Evaluate python code."""
 
-        if ctx.author.id != 525843819850104842:
-            try:
-                return await ctx.interaction.response.send_message('You must own this bot to use this command.',ephemeral=True)
-            except:
-                return await ctx.send('You must own this bot to use this command.')
 
         env = {
             'bot': self.bot,

@@ -7,7 +7,7 @@ from discord.ext.commands.cooldowns import BucketType
 import re
 import asyncio
 
-from utils.checks import can_execute_action
+from utils.checks import can_execute_action, check_dev
 
 from discord.ext.buttons import Paginator
 from typing import Dict, Any, Optional
@@ -235,7 +235,7 @@ class RoboPages(discord.ui.View):
             pass
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if interaction.user and interaction.user.id in (self.ctx.bot.owner_id, self.ctx.author.id):
+        if interaction.user.id == self.ctx.author.id:
             return True
         await interaction.response.send_message('This pagination menu cannot be controlled by you, sorry!', ephemeral=True)
         return False
@@ -408,7 +408,7 @@ class Cooldown:
         ctx.bucket = self.default_mapping.get_bucket(ctx.message)
         retry_after = ctx.bucket.update_rate_limit()
         if retry_after:
-            if ctx.author.id == 525843819850104842:
+            if check_dev(ctx.bot, ctx.author):
                 return True
             raise commands.CommandOnCooldown(ctx.bucket,retry_after,BucketType.user)
         return True

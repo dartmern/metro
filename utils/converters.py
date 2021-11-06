@@ -14,12 +14,7 @@ def is_admin(ctx):
 
 SNOWFLAKE_REGEX = re.compile(r"([0-9]{15,21})$")
   
-def can_execute_action(ctx, user, target):
-    return (
-        user.id == ctx.bot.owner_id
-        or user == ctx.guild.owner
-        or user.top_role > target.top_role
-    )
+
 
 class BoolConverter(commands.Converter):
     async def convert(self, ctx, argument):

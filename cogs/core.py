@@ -7,6 +7,7 @@ import humanize
 import datetime as dt
 
 from utils.useful import Cooldown, Embed
+from utils.checks import check_dev
 
 
 
@@ -78,7 +79,7 @@ class core(commands.Cog, description="Core events."):
 
         elif isinstance(error, commands.errors.MissingPermissions):
 
-            if ctx.author.id == ctx.bot.owner_id:
+            if check_dev(ctx.bot, ctx.author):
                 await ctx.reinvoke()
                 return
 
@@ -135,7 +136,7 @@ class core(commands.Cog, description="Core events."):
                 await self.blacklist(ctx.author)
                 return await ctx.reply(f"You have been blacklisted for spamming commands.\nJoin my support server for a appeal: {self.bot.support}")
             else:
-                return #await ctx.send(embed=em)
+                return await ctx.send(embed=em)
 
         elif isinstance(error, commands.errors.DisabledCommand):
             return await ctx.send(
