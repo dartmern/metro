@@ -574,6 +574,20 @@ class utility(commands.Cog, description=":information_source: Get utilities like
         embed.set_footer(text=f'Calculated in {round(ping, 1)}ms')
         await ctx.send(embed=embed)
 
+    @commands.command(aliases=['shard'])
+    async def whatshard(self, ctx, guild_id : Optional[int] = None):
+        if guild_id is None:
+            guild_id = ctx.guild.id
+            ternary = 'This'
+        else:
+            ternary = 'That'
+
+        guild = self.bot.get_guild(guild_id)
+        if guild is None:
+            raise commands.BadArgument("I am not in that guild or that guild id is invaild.")
+        shard_id = guild.shard_id
+        await ctx.send(f"{ternary} guild is on `Shard {shard_id}`")
+
         
         
 
