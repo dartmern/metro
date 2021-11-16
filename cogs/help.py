@@ -9,13 +9,8 @@ import contextlib
 
 import asyncio
 
-
-from utils.context import MyContext
-
+from utils.custom_context import MyContext
 from utils.useful import Embed, Cooldown, OldRoboPages
-
-
-
 
 
 class View(discord.ui.View):
@@ -225,8 +220,6 @@ class ButtonMenuSrc(menus.ListPageSource):
 
 class MetroHelp(commands.HelpCommand):
 
-
-
     @staticmethod
     def get_doc(command):
         _help = command.help or "This command has no description"
@@ -334,9 +327,9 @@ class MetroHelp(commands.HelpCommand):
         with contextlib.suppress(commands.CommandError):
             if not await command.can_run(self.context):
                 raise commands.CommandError
-            try:
+            if self.context.interaction:
                 return await self.context.interaction.response.send_message(embed=self.get_command_help(command),ephemeral=True)
-            except:
+            else:
                 return await self.context.send(embed=await self.get_command_help(command),view=View(self.context.author))
 
 
@@ -409,8 +402,10 @@ class MetroHelp(commands.HelpCommand):
 
     async def send_cog_help(self, cog):
         entries = await self.filter_commands(cog.get_commands())
+        #entries = cog.get_commands() 
+        # No filters
 
-        menu = SimplePages(GroupHelpPageSource(cog, entries, prefix=self.context.prefix), ctx=self.context)
+        menu = SimplePages(GroupHelpPageSource(cog, entries, prefix=self.context.prefix), ctx=self.context, hide=True)
         await menu.start()
 
 

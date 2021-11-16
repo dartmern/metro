@@ -18,7 +18,7 @@ from utils.checks import check_dev, is_dev
 from utils.converters import ChannelOrRoleOrMember, DiscordCommand, DiscordGuild
 from utils.new_pages import SimplePages
 from utils.useful import Embed
-from utils.context import MyContext
+from utils.custom_context import MyContext
 
 class Flags(commands.FlagConverter, prefix='--', delimiter=' '):
     reason : str

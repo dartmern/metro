@@ -1,14 +1,15 @@
 import asyncio
 import discord
-
 from discord.ext import commands, menus
-
 
 from typing import Optional, Union
 import unicodedata
-from utils.calc_tils import NumericStringParser
-from utils.new_pages import SimplePages
 
+from utils.calc_tils import NumericStringParser
+from utils.checks import check_dev
+from utils.new_pages import SimplePages
+from utils.custom_context import MyContext
+from utils.useful import Embed, get_bot_uptime
 from utils.useful import Embed
 
 
@@ -18,13 +19,6 @@ import asyncpg
 
 from pathlib import Path
 import inspect
-
-from utils.context import MyContext
-
-
-from utils.useful import Embed, get_bot_uptime
-
-
 
 
 def get_path():
@@ -351,7 +345,6 @@ class utility(commands.Cog, description=":information_source: Get utilities like
         return tags
 
 
-
     @commands.command(hidden=True)
     @commands.is_owner()  
     @commands.bot_has_permissions(send_messages=True)  
@@ -368,8 +361,6 @@ class utility(commands.Cog, description=":information_source: Get utilities like
         result = await self.bot.loop.run_in_executor(None, self.read_tags, ctx)
 
         await ctx.paginate(result, per_page=per_page)
-
-
         
         #for i in result:
             #await ctx.author.send(str(i))
@@ -383,6 +374,13 @@ class utility(commands.Cog, description=":information_source: Get utilities like
         """
         Links to the bot's source code, or a specific command's
         """
+        if check_dev(self.bot, ctx.author):
+            pass
+        else:
+            return await ctx.send(
+                f"I am close sourced."
+            )
+
         source_url = 'https://github.com/dartmern/metro'
         branch = 'master'
 
@@ -485,14 +483,22 @@ class utility(commands.Cog, description=":information_source: Get utilities like
         end = time.perf_counter()
 
         database_ping = (end - start) * 1000
-        await asyncio.sleep(.2)
+        await asyncio.sleep(.1)
 
         typing_emoji = self.bot.get_emoji(904156199967158293)
+
+        if ctx.guild is None:
+            mess = "`Note that my messages are on shard 0 so it isn't guaranteed your server is online.`" 
+            shard = self.bot.get_shard(0)
+        else:
+            mess = ""
+            shard = self.bot.get_shard(ctx.guild.shard_id)
 
         await message.edit(
             content=f'{typing_emoji} **Typing:** | {round(typing_ping, 1)} ms'
                     f'\n<:msql:904157158608867409> **Database:** | {round(database_ping, 1)} ms'
-                    f'\n<:mdiscord:904157585266049104> **Websocket:** | {round(self.bot.latency*1000)} ms')
+                    f'\n<:mdiscord:904157585266049104> **Websocket:** | {round(self.bot.latency*1000)} ms'
+                    f'\n:infinity: **Shard Latency:** | {round(shard.latency *1000)} ms \n{mess}')
 
 
     @commands.command()
@@ -516,9 +522,15 @@ class utility(commands.Cog, description=":information_source: Get utilities like
             return await ctx.send("Canceled.")
         if confirm is None:
             return await ctx.send('Timed out.')
+
+        await asyncio.sleep(.5)
         
         embed = Embed()
         embed.description = 'Leaving server...'
+        await ctx.send(embed=embed)
+
+        embed = Embed()
+        embed.description = f"You can always invite me here:\n{self.bot.invite}"
         await ctx.send(embed=embed)
 
         await ctx.guild.leave()

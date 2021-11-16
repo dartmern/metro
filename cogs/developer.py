@@ -7,7 +7,7 @@ from typing import Optional, Union
 
 
 import traceback
-
+import time
 import os
 import io
 import datetime
@@ -19,14 +19,11 @@ import argparse, shlex
 import textwrap
 from contextlib import redirect_stdout
 
+import jishaku 
+from jishaku.paginators import WrappedPaginator
 
-from jishaku.paginators import WrappedPaginator
-from jishaku.codeblocks import Codeblock, codeblock_converter
-from jishaku.features.baseclass import Feature
-from jishaku.paginators import WrappedPaginator
-import jishaku.modules
 from utils.checks import is_dev
-from utils.context import MyContext
+from utils.custom_context import MyContext
 from utils.json_loader import read_json, write_json
 
 
@@ -218,7 +215,7 @@ class developer(commands.Cog, description="Developer commands."):
         if not search:
             paginator = commands.Paginator(prefix=None, suffix=None, max_size=500)
             for guild in sorted(self.bot.guilds, key=lambda guild: len(guild.members), reverse=True):
-                summary = f"GUILD: {guild.name} [{guild.id}]\nOWNER: {guild.owner} [{guild.owner_id}]\nMEMBERS: {len(guild.members)}\n"
+                summary = f"GUILD: {guild.name} [{guild.id}]\nOWNER: {guild.owner} [{guild.owner_id}]\nMEMBERS: {len(guild.members)}\nSHARD_ID: {guild.shard_id}\n"
                 paginator.add_line(summary)
 
             menu = BaseMenu(source=show_result(paginator.pages))
@@ -289,13 +286,15 @@ class developer(commands.Cog, description="Developer commands."):
                 return await ctx.send(str(e))
 
             if args.dm:
+                mess = 0
                 await ctx.check()
 
                 async for message in ctx.channel.history(limit=amount):
                     if message.author == ctx.bot.user:
                         await message.delete()
+                        mess +=1
 
-                return await ctx.send("Purged {} message(s) sent by me.".format(amount), delete_after=3)
+                return await ctx.send("Purged {} message(s) sent by me.".format(mess), delete_after=3)
 
             else:
                 return await ctx.send("That is not a vaild flag.")
@@ -403,7 +402,22 @@ class developer(commands.Cog, description="Developer commands."):
         )
         restart_program()
 
+    @developer_cmds.command(name='cache')
+    @is_dev()
+    async def dev_cache(self, ctx):
+        await ctx.send(f"I have cached `{len(self.bot.cached_messages)}/5000` messages.")
 
+
+    @developer_cmds.command(name='clearcache')
+    @is_dev()
+    async def dev_clearcache(self, ctx):
+        """Clear the bot's cache."""
+
+        self.bot.blacklist = {}
+        self.bot.prefixes = {}
+
+        return await ctx.send("All my caches have been cleared.")
+        
 
 
     
@@ -594,12 +608,6 @@ class developer(commands.Cog, description="Developer commands."):
     @commands.is_owner()
     async def sql(self, ctx, *, query: str):
         """Run some SQL."""
-        # the imports are here because I imagine some people would want to use
-        # this cog as a base for their other cog, and since this one is kinda
-        # odd and unnecessary for most people, I will make it easy to remove
-        # for those people.
-        
-        import time
 
         query = self.cleanup_code(query)
 
@@ -634,12 +642,20 @@ class developer(commands.Cog, description="Developer commands."):
         else:
             await ctx.send(fmt)
 
-        
+
+    @commands.command(name='input')
+    async def input(self, ctx, *, input_message : str):
+        """
+        Ask for input through console.
+        """
+        await ctx.check()
+        result = await self.bot.loop.run_in_executor(None, input, (f"{input_message}: "))
+        try:
+            await ctx.send(result)     
+        except discord.HTTPException:
+            await ctx.send("Cannot send an empty message!")   
 
         
-
-
-
 
 def setup(bot):
     bot.add_cog(developer(bot))

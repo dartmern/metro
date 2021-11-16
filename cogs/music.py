@@ -5,7 +5,7 @@ import discord
 import youtube_dl
 
 from discord.ext import commands
-from utils.context import MyContext
+from utils.custom_context import MyContext
 
 
 # Suppress noise about console usage from errors

@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from utils.context import MyContext
+from utils.custom_context import MyContext
 from utils.remind_utils import UserFriendlyTime, human_timedelta
 
 from utils.converters import ActionReason, MemberConverter, MemberID

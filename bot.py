@@ -6,16 +6,19 @@ from pathlib import Path
 import os
 import asyncpg
 import aiohttp
+import logging
 from utils.checks import check_dev
 
 from utils.useful import Cooldown
 from utils.json_loader import read_json
 from utils import errors
-from utils.context import MyContext
+from utils.custom_context import MyContext
 
 os.environ["JISHAKU_NO_UNDERSCORE"] = "True"
 
 info_file = read_json('info')
+
+logging.basicConfig(level=logging.INFO)
 
 
 p_database = info_file['postgres_database']
@@ -24,6 +27,13 @@ p_password = info_file['postgres_password']
 token = info_file['bot_token']
 
 async def create_db_pool(database, user, password) -> asyncpg.Pool:
+    print("------")
+    print("Creating database connection...")
+    print('------')
+    print(f"Database: {len(p_database) * '*'}")
+    print(f"User: {len(p_user) * '*'}")
+    print(f"Password: {len(p_password) * '*'}")
+    print('------')
     return await asyncpg.create_pool(database=database,user=user,password=password)
     
 
@@ -41,7 +51,8 @@ async def load_blacklist():
 
 
 class MetroBot(commands.AutoShardedBot):
-    PRE: tuple = ('m.',)
+#class MetroBot(commands.Bot):
+    PRE: tuple = ('m.', '?')
 
     def user_blacklisted(self, ctx : MyContext):
         try:
@@ -75,7 +86,9 @@ class MetroBot(commands.AutoShardedBot):
             help_command=None,
             slash_commands=False,
             slash_command_guilds=[812143286457729055],
-            strip_after_prefix=True
+            strip_after_prefix=True,
+            shard_count=10,
+            max_messages=5000
         )
         self.session = aiohttp.ClientSession()
 
@@ -166,7 +179,7 @@ class MetroBot(commands.AutoShardedBot):
           
         except KeyError:
             prefix = [x['prefix'] for x in 
-                    await self.db.fetch("SELECT prefix from prefixes WHERE guild_id = $1", message.guild.id)] or self.PRE
+                    await self.db.fetch("SELECT prefix FROM prefixes WHERE guild_id = $1", message.guild.id)] or self.PRE
             self.prefixes[message.guild.id] = prefix
         
         if check_dev(bot, message.author) and self.noprefix is True:

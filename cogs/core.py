@@ -1,3 +1,4 @@
+from typing import List
 import discord
 from discord import errors
 from discord.ext import commands
@@ -5,9 +6,11 @@ from discord.ext import commands
 import humanize
 
 import datetime as dt
+from utils.errors import UserBlacklisted
 
 from utils.useful import Cooldown, Embed
 from utils.checks import check_dev
+from utils.custom_context import MyContext
 
 
 
@@ -15,7 +18,7 @@ class core(commands.Cog, description="Core events."):
     def __init__(self, bot):
         self.bot = bot
         self.cooldown_mapping = commands.CooldownMapping.from_cooldown(3, 7, commands.BucketType.member)
-
+        self.blacklist_message_sent : List = []
 
     async def blacklist(self, user):
         query = """
@@ -145,6 +148,16 @@ class core(commands.Cog, description="Core events."):
 
         elif isinstance(error, commands.errors.BadUnionArgument):
             return await ctx.send(str(error))
+
+        elif isinstance(error, UserBlacklisted):
+            print('h')
+            if ctx.author.id in self.blacklist_message_sent:
+                return
+            else:
+                self.blacklist_message_sent.append(ctx.author.id)
+                return await ctx.send(
+                    f"You are blacklisted from using Metro.\nJoin my support server to appeal: {self.bot.support}"
+                )
         else:
             raise error
 

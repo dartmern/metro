@@ -2,10 +2,14 @@ import discord
 from discord.ext import commands
 
 
-from utils.context import MyContext
+from utils.custom_context import MyContext
 from utils.converters import BotUser
 from utils.useful import Embed
 from utils.checks import in_support, is_dev
+
+
+import typing
+import asyncio
 
 SUPPORT_GUILD = 812143286457729055
 TESTER_ROLE = 861141649265262592
@@ -240,6 +244,7 @@ class support(commands.Cog, description=':test_tube: Support only commands.'):
     )
     @in_support()
     async def tester(self, ctx : MyContext):
+        """Toggle the tester role for yourself."""
 
         role = ctx.guild.get_role(TESTER_ROLE)
 
@@ -251,7 +256,7 @@ class support(commands.Cog, description=':test_tube: Support only commands.'):
             await ctx.author.add_roles(role)
             return await ctx.message.add_reaction('<:mplus:904450883633426553>')
 
-
+    
     
 def setup(bot):
     bot.add_cog(support(bot))

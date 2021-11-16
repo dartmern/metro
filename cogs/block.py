@@ -9,8 +9,7 @@ from utils.remind_utils import human_timedelta
 
 
 from utils import remind_utils
-
-from utils.context import MyContext
+from utils.custom_context import MyContext
 
 
 def can_block():
@@ -38,8 +37,6 @@ class block(commands.Cog, description=":mute: Manage your server by blocking/tem
         
         if member.top_role >= ctx.author.top_role:
             return
-
-
 
         reason = f'Blocked by {ctx.author} (ID: {ctx.author.id})'
 

@@ -19,7 +19,10 @@ def check_dev(bot, user):
 
 def in_support():
     def predicate(ctx):
-        return ctx.guild.id == SUPPORT_GUILD
+        try:
+            return ctx.guild.id == SUPPORT_GUILD
+        except:
+            return False
     return commands.check(predicate)
 
 def is_dev():

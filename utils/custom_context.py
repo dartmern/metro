@@ -121,7 +121,8 @@ class MyContext(commands.Context):
         entries : List,
         *,
         per_page : int = 8,
-        source : Optional[menus.ListPageSource] = None
+        source : Optional[menus.ListPageSource] = None,
+        hide : bool = False
 
     ):
 
@@ -132,7 +133,7 @@ class MyContext(commands.Context):
         source = source or default_source
 
         menu = SimplePages(
-            source=source, ctx=self)
+            source=source, ctx=self, hide=hide)
         await menu.start()
 
     @discord.utils.cached_property
@@ -145,3 +146,16 @@ class MyContext(commands.Context):
     
     async def help(self):
         await self.send_help(self.command)
+
+    async def get_message(self, id : int, channel : Optional[discord.TextChannel] = None):
+        channel = channel or self.channel
+
+        message = discord.utils.get(self.bot.cached_messages, id=id)
+        if message:
+            return message
+        else:
+            if channel:
+                return await channel.fetch_message(id)
+            else:
+                return None
+                
