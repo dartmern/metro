@@ -14,8 +14,6 @@ def is_admin(ctx):
 
 SNOWFLAKE_REGEX = re.compile(r"([0-9]{15,21})$")
   
-
-
 class BoolConverter(commands.Converter):
     async def convert(self, ctx, argument):
         lookup = {

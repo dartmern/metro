@@ -11,7 +11,7 @@ from collections import defaultdict
 from typing import Optional
 
 #Arg parsing stuff
-from cogs.server import Arguments
+from cogs.moderation import Arguments
 import shlex
 from utils.checks import check_dev, is_dev
 
@@ -647,23 +647,28 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
                 INSERT INTO blacklist(member_id, is_blacklisted) VALUES ($1, $2) 
                 """
 
+        issue = []
         failed = []
         sucess = []
         for x in users:
-            try:
-                await self.bot.db.execute(query, x.id, True)
-                sucess.append(f'**{x}**')
-            except asyncpg.exceptions.UniqueViolationError:
-                failed.append(f'**{x}**')
-                continue
+            if x.id in self.bot.owner_ids:
+                issue.append(f'**{x}**')
+            else:
+                try:
+                    await self.bot.db.execute(query, x.id, True)
+                    sucess.append(f'**{x}**')
+                except asyncpg.exceptions.UniqueViolationError:
+                    failed.append(f'**{x}**')
+                    continue
 
-            self.bot.blacklist[x.id] = True
+                self.bot.blacklist[x.id] = True
 
         if failed:
             await ctx.send(f"{self.bot.cross} The following users were already blacklisted: {', '.join(failed)}")
         if sucess:
             await ctx.send(f'{self.bot.check} Added {", ".join(sucess)} to the bot blacklist.')
-        
+        if issue:
+            await ctx.send(f"{self.bot.cross} I have been hard configured to not blacklist these users: {', '.join(issue)}")
 
     @config_blacklist.command(name='remove')
     @is_dev()

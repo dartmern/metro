@@ -87,7 +87,7 @@ class MetroBot(commands.AutoShardedBot):
             slash_commands=False,
             slash_command_guilds=[812143286457729055],
             strip_after_prefix=True,
-            shard_count=10,
+            #shard_count=10,
             max_messages=5000
         )
         self.session = aiohttp.ClientSession()
@@ -99,6 +99,7 @@ class MetroBot(commands.AutoShardedBot):
 
         self.invite = 'https://discord.com/api/oauth2/authorize?client_id=788543184082698252&permissions=0&scope=applications.commands%20bot'
         self.support = 'https://discord.gg/2ceTMZ9qJh'
+        self.donate = 'https://www.patreon.com/metrodiscordbot'
 
         self.noprefix = False
         self.started = False
@@ -111,7 +112,7 @@ class MetroBot(commands.AutoShardedBot):
 
     async def on_ready(self):
 
-        await bot.wait_until_ready()
+        await self.wait_until_ready()
 
         from cogs.support_views import RoleView, TesterButton, AllRoles
 
@@ -130,7 +131,11 @@ class MetroBot(commands.AutoShardedBot):
         data = read_json('restart')
         
         channel = self.get_channel(data["channel_id"])
-        message = channel.get_partial_message(data["message_id"])
+        try:
+            message = channel.get_partial_message(data["message_id"])
+        except:
+            user = self.get_user(525843819850104842)
+            return await user.send("Restart completed!")
 
         try:
             await message.edit(content=f'{self.check} Back online!')

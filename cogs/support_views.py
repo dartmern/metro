@@ -178,7 +178,7 @@ class support(commands.Cog, description=':test_tube: Support only commands.'):
 
 
 
-    @commands.command()
+    @commands.command(hidden=True)
     @in_support()
     async def addbot(
         self, 
@@ -230,7 +230,7 @@ class support(commands.Cog, description=':test_tube: Support only commands.'):
             await ctx.send('Your bot request has been submitted to the moderators. I will DM you about the status of your request.')
 
 
-    @commands.command()
+    @commands.command(hidden=True)
     @commands.is_owner()
     async def approve(self, ctx, user : discord.Member, bot : int):
 
@@ -240,7 +240,8 @@ class support(commands.Cog, description=':test_tube: Support only commands.'):
 
 
     @commands.command(
-        name='tester'
+        name='tester',
+        hidden=True
     )
     @in_support()
     async def tester(self, ctx : MyContext):

@@ -195,7 +195,7 @@ class ButtonMenuSrc(menus.ListPageSource):
         )
         embed.add_field(
             name="Aliases",
-            value=f"```{','.join(self.group.aliases) or 'No aliases'}```",
+            value=f"```{', '.join(self.group.aliases) or 'No aliases'}```",
             inline=False
         )
 
@@ -298,7 +298,7 @@ class MetroHelp(commands.HelpCommand):
         # Aliases
         em.add_field(
             name="Aliases",
-            value=f"```{','.join(command.aliases) or 'No aliases'}```",
+            value=f"```{', '.join(command.aliases) or 'No aliases'}```",
             inline=False
         )
 
@@ -343,7 +343,7 @@ class MetroHelp(commands.HelpCommand):
 
         nl = '\n'
         cogs = []
-        bl_cogs = ['jishaku','developer','core']
+        bl_cogs = ['jishaku', 'developer', 'core', 'support']
         for cog in bot.cogs:
             if cog.lower() in bl_cogs:
                 pass
@@ -356,7 +356,7 @@ class MetroHelp(commands.HelpCommand):
             description=
             f"**Total Commands:** {len(list(bot.walk_commands()))} | **Usable by you (here):** {len(await self.filter_commands(list(bot.walk_commands()), sort=True))}"
             f"\n```diff\n- [] = optional argument\n- <> = required argument\n- Do not type these when using commands!\n+ Type {ctx.clean_prefix}{ctx.invoked_with} [Command/Module] for more help on a command```"
-            f"[Support](https://discord.gg/2ceTMZ9qJh) | [Invite](https://discord.com/api/oauth2/authorize?client_id=788543184082698252&permissions=140663671873&scope=bot%20applications.commands) | [Donate](https://www.patreon.com/metrodiscordbot) | [Source](https://vex.wtf)"
+            f"[Support]({ctx.bot.invite}) | [Invite]({ctx.bot.invite}) | [Donate]({ctx.bot.donate})"
         )
         embed.add_field(
             name=f"**Modules: [{len(cogs)}]**",
@@ -368,21 +368,9 @@ class MetroHelp(commands.HelpCommand):
             name=self.context.author.name + " | Help Menu",
             icon_url=self.context.author.avatar.url,
         )
-        embed.set_footer(text='Clicking on the support button will instantly join the server!')
-        
 
         channel = self.get_destination()
-
-        item = discord.ui.Button(label="Invite",emoji='\U00002795',url='https://discord.com/oauth2/authorize?client_id=788543184082698252&scope=bot&permissions=1077234753')
-        item2 = discord.ui.Button(label='Support',emoji='\U0001f6e0',url='https://discord.gg/2ceTMZ9qJh')
-        view = discord.ui.View()
-        view.add_item(item)
-        view.add_item(item2)
-
-        try:
-            await ctx.interaction.response.send_message(embed=embed, view=view, ephemeral=True)
-        except:
-            await channel.send(embed=embed,view=view)
+        await channel.send(embed=embed, hide=True)
 
 
     async def send_command_help(self, command):
@@ -413,8 +401,6 @@ class MetroHelp(commands.HelpCommand):
     # Error handlers
     async def command_not_found(self, command):
         if command.lower() == "all":
-
-            
             commands = await self.filter_commands(self.context.bot.commands)
             
             menu = SimplePages(source=HelpSource(tuple(commands), prefix=self.context.prefix), ctx=self.context)

@@ -8,7 +8,7 @@ from utils.useful import Embed
 import discord
 from discord.ext import commands, menus
 
-from utils.remind_utils import HumanTime, UserFriendlyTime
+from utils.remind_utils import UserFriendlyTime
 
 import datetime
 import asyncio
@@ -22,8 +22,7 @@ from utils.custom_context import MyContext
 
 from datetime import timedelta
 
-from utils.remind_utils import format_relative, human_timedelta
-from dateutil.relativedelta import relativedelta
+from utils.remind_utils import human_timedelta
 
 from utils.pages import ExtraPages
 
@@ -295,7 +294,7 @@ class reminder(commands.Cog):
             message_id=ctx.message.id
         )
 
-        delta = human_timedelta(when.dt - datetime.timedelta(seconds=3))
+        delta = human_timedelta(when.dt - datetime.timedelta(seconds=2))
         #dunno why it's off by 3 seconds but this should fix
         await ctx.send(f'Alright, I will remind you about {when.arg} in {delta}\nTimer id: {timer.id}')
 
@@ -331,7 +330,7 @@ class reminder(commands.Cog):
             message_id=ctx.message.id
         )
         
-        delta = human_timedelta(when.dt - datetime.timedelta(seconds=3))
+        delta = human_timedelta(when.dt - datetime.timedelta(seconds=2))
         #dunno why it's off by 3 seconds but this should fix
         await ctx.send(f'Alright, I will remind you about {when.arg} in {delta}\nTimer id: {timer.id}')
 
