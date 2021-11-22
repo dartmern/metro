@@ -220,7 +220,8 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
         name='disable',
         invoke_without_command=True,
         case_insensitive=True,
-        usage='[entity] [commands...]'
+        usage='[entity] [commands...]',
+        extras={'examples' : '[p]config disable #general help\n[p]config disable @muted help about info\n[p]config disable ~ info'}
     )
     @commands.has_permissions(manage_guild=True)
     async def config_disable(
@@ -401,7 +402,8 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
     @config.group(
         name='enable',
         invoke_without_command=True,
-        case_insensitive=True
+        case_insensitive=True,
+        extras={"examples" : "[p]config enable #general help\n[p]config enable @muted help about info\n[p]config enable ~ info"}
     )
     @commands.has_permissions(manage_guild=True)
     async def config_enable(
@@ -439,7 +441,8 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
         name='ignore',
         invoke_without_command=True,
         case_insensitive=True,
-        usage = '[entities...]'
+        usage = '[entities...]',
+        extras = {"examples" : "[p]config ignore #general\n[p]config ignore #support @dartmern @muted\n[p]config ignore ~"}
     )
     @commands.has_permissions(manage_guild=True)
     async def config_ignore(self, ctx : MyContext, *entities : ChannelOrRoleOrMember):
@@ -542,7 +545,8 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
 
 
     @config.group(
-        name='unignore'
+        name='unignore',
+        extras = {"examples" : "[p]config unignore #general\n[p]config unignore #support @dartmern @muted\n[p]config unignore ~"}
     )
     @commands.has_permissions(manage_guild=True)
     async def config_unignore(self, ctx : MyContext, *entities : ChannelOrRoleOrMember):
@@ -634,7 +638,6 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
     @is_dev()
     async def config_blacklist(self, ctx : MyContext) -> discord.Message:
         """Manage the bot's blacklist."""
-
         await ctx.help()
 
     

@@ -159,10 +159,10 @@ class ButtonMenuSrc(menus.ListPageSource):
         self.group = group
         self.prefix = prefix
         self.description = self.group.help  
+        self.extras = self.group.extras
         
 
     async def format_page(self, menu, commands):
-
 
         maximum = self.get_max_pages()
         if maximum > 1:
@@ -173,8 +173,7 @@ class ButtonMenuSrc(menus.ListPageSource):
                 )
             except KeyError:
                 footer = f'Type "{self.prefix}help [Command | Module]" for more information' + f" | [{menu.current_page + 1}/{maximum}]"
-        else:
-            
+        else:   
             footer = f'Type "{self.prefix}help [Command | Module] for more information' + " | [1/1]"
 
         if self.group.signature == '':
@@ -186,8 +185,7 @@ class ButtonMenuSrc(menus.ListPageSource):
 
         cooldown = discord.utils.find(lambda x: isinstance(x, Cooldown), self.group.checks) or Cooldown(1, 3, 1, 1,
                                                                                                      discord.ext.commands.BucketType.user)
-        default_cooldown = cooldown.default_mapping._cooldown.per
-        
+        default_cooldown = cooldown.default_mapping._cooldown.per     
 
         embed.add_field(
             name="Cooldowns",
@@ -208,9 +206,16 @@ class ButtonMenuSrc(menus.ListPageSource):
             else:
                 signature = f"`{command.name} {command.signature}` {command.short_doc}"
             sub_commands.append(signature)
-
         
         embed.add_field(name='Subcommands',value='\n'.join(sub_commands),inline=False)
+
+        if self.extras:
+            examples = self.extras['examples'].replace("[p]", self.prefix)
+            embed.add_field(
+                name='Examples/Usage',
+                value=examples,
+                inline=False
+            )
 
         embed.set_footer(
             text=footer
