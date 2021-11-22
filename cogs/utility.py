@@ -473,7 +473,6 @@ class utility(commands.Cog, description=":information_source: Get utilities like
         end = time.perf_counter()
 
         database_ping = (end - start) * 1000
-        await asyncio.sleep(.1)
 
         typing_emoji = self.bot.get_emoji(904156199967158293)
 
