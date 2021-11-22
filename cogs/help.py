@@ -272,6 +272,7 @@ class MetroHelp(commands.HelpCommand):
     async def get_command_help(self, command) -> Embed:
 
         ctx = self.context
+        command_extras = command.extras
         # Base
         if command.signature == "":
             em = Embed(
@@ -301,6 +302,13 @@ class MetroHelp(commands.HelpCommand):
             value=f"```{', '.join(command.aliases) or 'No aliases'}```",
             inline=False
         )
+        if command_extras:
+            examples = command_extras['examples'].replace("[p]", ctx.prefix)
+            em.add_field(
+                name='Examples/Usage',
+                value=examples,
+                inline=False
+            )
 
         if not isinstance(command, commands.Group):
             return em
@@ -426,7 +434,8 @@ class meta(commands.Cog, description='ℹ️ Get bot stats and information.'):
             'description' : 'Show bot help or help for a command',
             'aliases' : ['h','command'],
             'slash_command' : True,
-            'message_command' : True
+            'message_command' : True,
+            'extras' : {'examples' : "[p]help ban\n[p]help config enable\n[p]help invite"}
         }
 
         self.bot = bot
@@ -457,13 +466,8 @@ class meta(commands.Cog, description='ℹ️ Get bot stats and information.'):
     @commands.bot_has_permissions(send_messages=True, embed_links=True)
     async def support(self, ctx):
 
-        await ctx.reply(ctx.bot.invite)
-
+        await ctx.reply(ctx.bot.support)
 
 
 def setup(bot):
     bot.add_cog(meta(bot))
-
-
-
-

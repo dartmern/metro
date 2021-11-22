@@ -233,9 +233,6 @@ class utility(commands.Cog, description=":information_source: Get utilities like
         Manage prefixes for the bot.
         """
         return await ctx.help()
-         
-        prefixes = await self.bot.get_pre(self.bot, ctx.message, raw_prefix=True)
-        return await ctx.send("\n".join(prefixes))
 
 
     @prefix.command(
@@ -366,7 +363,7 @@ class utility(commands.Cog, description=":information_source: Get utilities like
     @commands.command(aliases=['sourcecode', 'code'],
                       )
     @commands.bot_has_permissions(send_messages=True, embed_links=True)
-    async def source(self, ctx, *, command: str = None):
+    async def source(self, ctx, command: str = None, *, args : str = None):
         """
         Links to the bot's source code, or a specific command's
         """
@@ -376,44 +373,49 @@ class utility(commands.Cog, description=":information_source: Get utilities like
             return await ctx.send(
                 f"I am close sourced."
             )
+        
+        if args is None:
 
-        source_url = 'https://github.com/dartmern/metro'
-        branch = 'master'
+            source_url = 'https://github.com/dartmern/metro'
+            branch = 'master'
 
-        if command is None:
-            embed = Embed(description=f"Take the [**entire reposoitory**]({source_url})")
-            embed.set_footer(text='Please make sure you follow the license.')
-            return await ctx.send(embed=embed)
-
-        if command == 'help':
-            src = type(self.bot.help_command)
-            module = src.__module__
-            filename = inspect.getsourcefile(src)
-        else:
-            obj = self.bot.get_command(command.replace('.', ' '))
-            if obj is None:
+            if command is None:
                 embed = Embed(description=f"Take the [**entire reposoitory**]({source_url})")
                 embed.set_footer(text='Please make sure you follow the license.')
                 return await ctx.send(embed=embed)
 
-            src = obj.callback.__code__
-            module = obj.callback.__module__
-            filename = src.co_filename
+            if command == 'help':
+                src = type(self.bot.help_command)
+                module = src.__module__
+                filename = inspect.getsourcefile(src)
+            else:
+                obj = self.bot.get_command(command.replace('.', ' '))
+                if obj is None:
+                    embed = Embed(description=f"Take the [**entire reposoitory**]({source_url})")
+                    embed.set_footer(text='Please make sure you follow the license.')
+                    return await ctx.send(embed=embed)
 
-        lines, firstlineno = inspect.getsourcelines(src)
-        if not module.startswith('discord'):
-            # not a built-in command
-            location = os.path.relpath(filename).replace('\\', '/')
+                src = obj.callback.__code__
+                module = obj.callback.__module__
+                filename = src.co_filename
+
+            lines, firstlineno = inspect.getsourcelines(src)
+            if not module.startswith('discord'):
+                # not a built-in command
+                location = os.path.relpath(filename).replace('\\', '/')
+            else:
+                location = module.replace('.', '/') + '.py'
+                source_url = 'https://github.com/Rapptz/discord.py'
+                branch = 'master'
+
+            final_url = f'<{source_url}/blob/{branch}/{location}#L{firstlineno}-L{firstlineno + len(lines) - 1}>'
+            embed = Embed(color=ctx.me.color,
+                                description=f"Source code for [`{obj.qualified_name}`]({final_url})")
+            embed.set_footer(text='Please make sure you follow the license.')
+            await ctx.send(embed=embed)
+
         else:
-            location = module.replace('.', '/') + '.py'
-            source_url = 'https://github.com/Rapptz/discord.py'
-            branch = 'master'
-
-        final_url = f'<{source_url}/blob/{branch}/{location}#L{firstlineno}-L{firstlineno + len(lines) - 1}>'
-        embed = Embed(color=ctx.me.color,
-                              description=f"Source code for [`{obj.qualified_name}`]({final_url})")
-        embed.set_footer(text='Please make sure you follow the license.')
-        await ctx.send(embed=embed)
+            parser = inspect.Arguments
 
 
     @commands.command(slash_command=True)
@@ -528,6 +530,7 @@ class utility(commands.Cog, description=":information_source: Get utilities like
         embed.set_footer(text=f'Calculated in {round(ping, 1)}ms')
         await ctx.send(embed=embed)
 
+
     async def github_request(self, method, url, *, params=None, data=None, headers=None):
         hdrs = {
             'Accept': 'application/vnd.github.inertia-preview+json',
@@ -583,10 +586,10 @@ class utility(commands.Cog, description=":information_source: Get utilities like
 
     @commands.command()
     @commands.cooldown(1, 30, commands.cooldowns.BucketType.user)
-    async def gist(self, ctx : MyContext, *, content : str):
+    async def gist(self, ctx : MyContext, filename : str, *, content : str):
         """Create and post a gist online."""
 
-        link = await self.create_gist(content=content)
+        link = await self.create_gist(content, filename=filename)
         await ctx.send(f"Created new gist.\n<{link}>")
 
 

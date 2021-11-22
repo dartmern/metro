@@ -149,6 +149,9 @@ class core(commands.Cog, description="Core events."):
         elif isinstance(error, commands.errors.BadUnionArgument):
             return await ctx.send(str(error))
 
+        elif isinstance(error, commands.CommandError):
+            return await ctx.send(str(error))
+
         elif isinstance(error, UserBlacklisted):
             print('h')
             if ctx.author.id in self.blacklist_message_sent:
