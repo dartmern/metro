@@ -1012,19 +1012,10 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
         except:
             pass  
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+        
+    @commands.command()
+    async def test(self, ctx):
+        print(j)
 
 
 def setup(bot):

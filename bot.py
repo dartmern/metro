@@ -69,7 +69,6 @@ class MetroBot(commands.AutoShardedBot):
 
     def __init__(self):
         intents = discord.Intents.all()
-        intents.typing = False
 
         allowed_mentions = discord.AllowedMentions(
             roles=False, users=True, everyone=False, replied_user=False)
@@ -82,7 +81,7 @@ class MetroBot(commands.AutoShardedBot):
             allowed_mentions=allowed_mentions,
             #owner_id=525843819850104842,
             owner_ids=[525843819850104842, 844635601113579521],
-            chunk_guilds_at_startup=False,
+            #chunk_guilds_at_startup=False,
             help_command=None,
             slash_commands=False,
             slash_command_guilds=[812143286457729055],

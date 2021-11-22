@@ -200,26 +200,6 @@ class DiscordGuild(commands.Converter):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 class BotUser(commands.Converter):
     async def convert(self, ctx, argument):
         if not argument.isdigit():

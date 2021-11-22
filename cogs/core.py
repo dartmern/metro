@@ -1,9 +1,11 @@
+import io
 from typing import List
 import discord
 from discord import errors
 from discord.ext import commands
 
 import humanize
+import traceback
 
 import datetime as dt
 from utils.errors import UserBlacklisted
@@ -51,6 +53,52 @@ class core(commands.Cog, description="Core events."):
                         f"I am missing permissions to do that!"
                     )
             else:
+                error_id = f"{ctx.message.channel.id}-{ctx.message.id}"
+                view = discord.ui.View()
+                button = discord.ui.Button(url=self.bot.support, emoji='🛠️', label='Support Server')
+                view.add_item(button)
+                await ctx.send(f"An error occurred!\nJoin my support server for more information.\n\nError ID: {error_id}", view=view)
+
+                channel = self.bot.get_channel(912447757212606494)
+
+                traceback_string = "".join(traceback.format_exception(
+                    etype=None, value=error, tb=error.__traceback__))
+
+                if ctx.guild:
+                    command_info = f"```yaml\nby: {ctx.author} (id: {ctx.author.id})" \
+                                    f"\ncommand: {ctx.message.content[0:1700]}" \
+                                    f"\nguild_id: {ctx.guild.id} - channel_id: {ctx.channel.id}"\
+                                    f"\nis bot admin: {'✅' if ctx.me.guild_permissions.administrator else '❌'}"\
+                                    f"\ntop role pos: {ctx.me.top_role.position}\n```"
+                else:
+                    command_info = f"by: {ctx.author} (id: {ctx.author.id})"\
+                                    f"command: {ctx.message.content[0:1700]}" \
+                                    f"this command was executed in dms"
+
+                send = f"\n{command_info}\nerror_id: `{error_id}`\n**Command raised an error:**\n```py\n{traceback_string}\n```\n"
+                if len(send) < 2000:
+                    try:
+                        await channel.send(send)
+                    except (discord.Forbidden, discord.HTTPException):
+                        await channel.send(
+                            f"\n{command_info}\n\nCommand raised an error:\n",
+                            file=discord.File(io.StringIO(traceback_string), filename='traceback.py')
+                        )
+                
+                else:
+                    await channel.send(
+                            f"\n{command_info}\n\nCommand raised an error:\n",
+                            file=discord.File(io.StringIO(traceback_string), filename='traceback.py'),
+                    )
+                            
+
+
+                print("----------------------------")
+                print("ERROR!")
+                print("USER ID: {}".format(ctx.author.id))
+                print("ERROR ID: {}".format(error_id))
+                print("----------------------------")
+                
                 raise error
 
         elif isinstance(error, commands.BadArgument):
@@ -98,6 +146,11 @@ class core(commands.Cog, description="Core events."):
 
         elif isinstance(error, commands.CheckFailure):
             return
+
+        elif isinstance(error, commands.MessageNotFound):
+            return await ctx.send(
+                f"Message not found!"
+            )
 
         elif isinstance(error, commands.MemberNotFound):
             return await ctx.send(
@@ -161,7 +214,63 @@ class core(commands.Cog, description="Core events."):
                     f"You are blacklisted from using Metro.\nJoin my support server to appeal: {self.bot.support}"
                 )
         else:
-            raise error
+                error_id = f"{ctx.message.channel.id}-{ctx.message.id}"
+                view = discord.ui.View()
+                button = discord.ui.Button(url=self.bot.support, emoji='🛠️', label='Support Server')
+                view.add_item(button)
+                await ctx.send(f"An error occurred!\nJoin my support server for more information.\n\nError ID: {error_id}", view=view)
+
+                channel = self.bot.get_channel(912447757212606494)
+
+                traceback_string = "".join(traceback.format_exception(
+                    etype=None, value=error, tb=error.__traceback__))
+
+                if ctx.guild:
+                    command_info = f"```yaml\nby: {ctx.author} (id: {ctx.author.id})" \
+                                    f"\ncommand: {ctx.message.content[0:1700]}" \
+                                    f"\nguild_id: {ctx.guild.id} - channel_id: {ctx.channel.id}"\
+                                    f"\nis bot admin: {'✅' if ctx.me.guild_permissions.administrator else '❌'}"\
+                                    f"\ntop role pos: {ctx.me.top_role.position}\n```"
+                else:
+                    command_info = f"by: {ctx.author} (id: {ctx.author.id})"\
+                                    f"command: {ctx.message.content[0:1700]}" \
+                                    f"this command was executed in dms"
+
+                send = f"\n{command_info}\nerror_id: `{error_id}`\n**Command raised an error:**\n```py\n{traceback_string}\n```\n"
+                if len(send) < 2000:
+                    try:
+                        await channel.send(send)
+                    except (discord.Forbidden, discord.HTTPException):
+                        await channel.send(
+                            f"\n{command_info}\n\nCommand raised an error:\n",
+                            file=discord.File(io.StringIO(traceback_string), filename='traceback.py')
+                        )
+                
+                else:
+                    await channel.send(
+                            f"\n{command_info}\n\nCommand raised an error:\n",
+                            file=discord.File(io.StringIO(traceback_string), filename='traceback.py'),
+                    )
+                            
+
+
+                print("----------------------------")
+                print("ERROR!")
+                print("USER ID: {}".format(ctx.author.id))
+                print("ERROR ID: {}".format(error_id))
+                print("----------------------------")
+                
+                raise error
+
+    @commands.command(aliases=['dbe'])
+    @commands.is_owner()
+    async def debug_error(self, ctx, error_id : str):
+
+        message = await commands.MessageConverter().convert(ctx, error_id)
+        if message is None:
+            raise commands.MessageNotFound('Message not found!')
+
+        await ctx.send(f"Message Link: {message.jump_url}\nMessage Guild ID: {message.guild.id}\nMessage Author ID: {message.author.id}\n\nMessage Content: {message.content}")
 
 
     
