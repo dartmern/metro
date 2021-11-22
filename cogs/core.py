@@ -153,7 +153,6 @@ class core(commands.Cog, description="Core events."):
             return await ctx.send(str(error))
 
         elif isinstance(error, UserBlacklisted):
-            print('h')
             if ctx.author.id in self.blacklist_message_sent:
                 return
             else:

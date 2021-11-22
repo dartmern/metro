@@ -386,40 +386,11 @@ class developer(commands.Cog, description="Developer commands."):
 
         await ctx.send(embed=embed)
 
-    @developer_cmds.command(
-        name='restart'
-    )
-    @commands.is_owner()
-    async def dev_restart(self, ctx):
-        """Restart the bot."""
-
-        message = await ctx.send('Restarting...')
-
-        write_json(
-            {
-                "message_id" : message.id,
-                "channel_id" : message.channel.id
-            }, 'restart'
-        )
-        restart_program()
 
     @developer_cmds.command(name='cache')
     @is_dev()
     async def dev_cache(self, ctx):
         await ctx.send(f"I have cached `{len(self.bot.cached_messages)}/5000` messages.")
-
-
-    @developer_cmds.command(name='clearcache')
-    @is_dev()
-    async def dev_clearcache(self, ctx):
-        """Clear the bot's cache."""
-
-        self.bot.blacklist = {}
-        self.bot.prefixes = {}
-
-        return await ctx.send("All my caches have been cleared.")
-        
-
 
     
     @commands.command(aliases=['save'])
