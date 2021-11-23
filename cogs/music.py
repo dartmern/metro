@@ -298,6 +298,7 @@ class music(commands.Cog, description=':musical_note: Make your server enjoy mus
 
         try:
             ctx.voice_state.voice = await destination.connect()
+            await ctx.guild.change_voice_state(channel=destination, self_deaf=True) 
         except discord.errors.ClientException as e:
             return await ctx.send(str(e))
 
@@ -319,6 +320,7 @@ class music(commands.Cog, description=':musical_note: Make your server enjoy mus
             await ctx.send(embed=em)
 
         ctx.voice_state.voice = await destination.connect()
+        await ctx.guild.change_voice_state(channel=destination, self_deaf=True)
         em = discord.Embed(title=f":zzz: Summoned in {destination}", color = ctx.author.color)
         em.set_footer(text=f"Requested by {ctx.author.name}")
         await ctx.send(embed=em)
@@ -543,6 +545,17 @@ class music(commands.Cog, description=':musical_note: Make your server enjoy mus
         if ctx.voice_client:
             if ctx.voice_client.channel != ctx.author.voice.channel:
                 raise commands.CommandError("I'm already in a voice channel.")
+
+    @commands.Cog.listener()
+    async def on_voice_state_update(self, member : discord.Member, before : discord.VoiceState, after : discord.VoiceState):
+
+        if member != self.bot.user:
+            return
+
+        if after.self_deaf is False:
+            await asyncio.sleep(1)
+            await member.guild.change_voice_state(channel=after.channel, self_deaf=True) 
+        
 
 
 def setup(bot):

@@ -1013,10 +1013,6 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
             pass  
 
         
-    @commands.command()
-    async def test(self, ctx):
-        print(j)
-
 
 def setup(bot):
     bot.add_cog(moderation(bot))

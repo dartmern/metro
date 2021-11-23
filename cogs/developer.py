@@ -410,7 +410,7 @@ class developer(commands.Cog, description="Developer commands."):
         # Resort message
         content = message.content or "_No content_"
         em = Embed(title="You archived a message!", url=message.jump_url, description=content, timestamp=discord.utils.utcnow())
-        em.set_author(name=message.author, icon_url=message.author.avatar.url)
+        em.set_author(name=message.author, icon_url=message.author.display_avatar.url)
         try:
             msg = await ctx.author.send(embed=em)
             await msg.pin()

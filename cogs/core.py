@@ -21,6 +21,7 @@ class core(commands.Cog, description="Core events."):
         self.bot = bot
         self.cooldown_mapping = commands.CooldownMapping.from_cooldown(3, 7, commands.BucketType.member)
         self.blacklist_message_sent : List = []
+        self.error_channel = 912447757212606494
 
     async def blacklist(self, user):
         query = """
@@ -59,7 +60,7 @@ class core(commands.Cog, description="Core events."):
                 view.add_item(button)
                 await ctx.send(f"An error occurred!\nJoin my support server for more information.\n\nError ID: {error_id}", view=view)
 
-                channel = self.bot.get_channel(912447757212606494)
+                channel = self.bot.get_channel(self.error_channel)
 
                 traceback_string = "".join(traceback.format_exception(
                     etype=None, value=error, tb=error.__traceback__))
@@ -68,7 +69,7 @@ class core(commands.Cog, description="Core events."):
                     command_info = f"```yaml\nby: {ctx.author} (id: {ctx.author.id})" \
                                     f"\ncommand: {ctx.message.content[0:1700]}" \
                                     f"\nguild_id: {ctx.guild.id} - channel_id: {ctx.channel.id}"\
-                                    f"\nis bot admin: {'✅' if ctx.me.guild_permissions.administrator else '❌'}"\
+                                    f"\nis bot admin: {await ctx.emojify(ctx.me.guild_permissions.administrator, False)}"\
                                     f"\ntop role pos: {ctx.me.top_role.position}\n```"
                 else:
                     command_info = f"by: {ctx.author} (id: {ctx.author.id})"\
@@ -78,18 +79,21 @@ class core(commands.Cog, description="Core events."):
                 send = f"\n{command_info}\nerror_id: `{error_id}`\n**Command raised an error:**\n```py\n{traceback_string}\n```\n"
                 if len(send) < 2000:
                     try:
-                        await channel.send(send)
+                        m = await channel.send(send)
                     except (discord.Forbidden, discord.HTTPException):
-                        await channel.send(
+                        m = await channel.send(
                             f"\n{command_info}\n\nCommand raised an error:\n",
                             file=discord.File(io.StringIO(traceback_string), filename='traceback.py')
                         )
                 
                 else:
-                    await channel.send(
+                    m = await channel.send(
                             f"\n{command_info}\n\nCommand raised an error:\n",
                             file=discord.File(io.StringIO(traceback_string), filename='traceback.py'),
                     )
+
+                await m.add_reaction("🗑")
+
                             
 
 
@@ -220,7 +224,7 @@ class core(commands.Cog, description="Core events."):
                 view.add_item(button)
                 await ctx.send(f"An error occurred!\nJoin my support server for more information.\n\nError ID: {error_id}", view=view)
 
-                channel = self.bot.get_channel(912447757212606494)
+                channel = self.bot.get_channel(self.error_channel)
 
                 traceback_string = "".join(traceback.format_exception(
                     etype=None, value=error, tb=error.__traceback__))
@@ -229,7 +233,7 @@ class core(commands.Cog, description="Core events."):
                     command_info = f"```yaml\nby: {ctx.author} (id: {ctx.author.id})" \
                                     f"\ncommand: {ctx.message.content[0:1700]}" \
                                     f"\nguild_id: {ctx.guild.id} - channel_id: {ctx.channel.id}"\
-                                    f"\nis bot admin: {'✅' if ctx.me.guild_permissions.administrator else '❌'}"\
+                                    f"\nis bot admin: {await ctx.emojify(ctx.me.guild_permissions.administrator, False)}"\
                                     f"\ntop role pos: {ctx.me.top_role.position}\n```"
                 else:
                     command_info = f"by: {ctx.author} (id: {ctx.author.id})"\
@@ -260,7 +264,27 @@ class core(commands.Cog, description="Core events."):
                 print("ERROR ID: {}".format(error_id))
                 print("----------------------------")
                 
+
                 raise error
+
+    @commands.Cog.listener()
+    async def on_raw_reaction_add(self, payload : discord.RawReactionActionEvent):
+        if payload.member == self.bot.user:
+            return
+        if payload.channel_id == self.error_channel:
+            if str(payload.emoji) == '🗑':
+                message = await self.bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
+                if not message.author == self.bot.user:
+                    return
+                old_content = message.content
+                embed = Embed()
+                embed.description = f"{self.bot.check} Error was resolved by the developers."
+                
+                await message.edit(content=old_content, embed=embed)
+                await message.clear_reactions()
+            
+            
+        
 
     @commands.command(aliases=['dbe'])
     @commands.is_owner()

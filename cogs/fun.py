@@ -39,11 +39,11 @@ class fun(commands.Cog, description=":smile: Fun commands!"):
         """
 
         i = link.replace("<", "").replace(">", "")
-        if "https://" in link:
+        if "https://" or "http://" in link:
             if await detect().find(i):
-                await ctx.reply("Rickroll detected :eyes:")
+                return await ctx.reply("Rickroll detected :eyes:")
             else:
-                await ctx.reply("That website is safe :)")
+                return await ctx.reply("That website is safe :)")
         else:
             await ctx.send(link + " is not a valid URL...")
 

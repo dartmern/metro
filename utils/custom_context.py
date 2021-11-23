@@ -158,4 +158,20 @@ class MyContext(commands.Context):
                 return await channel.fetch_message(id)
             else:
                 return None
+
+    async def emojify(self, object, custom_emojis : bool = True):
+        if bool(object) is True:
+            if custom_emojis is True:
+                return self.bot.check
+            else:
+                return '✅'
+        if bool(object) is False:
+            if custom_emojis is True:
+                return self.bot.cross
+            else:
+                return '❌'
+
+        
+        
+
                 
