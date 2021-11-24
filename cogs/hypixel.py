@@ -34,7 +34,7 @@ class hypixel(commands.Cog, description='<:hypixel:912575998380355626> Get stats
             return res["id"]
 
     @commands.command(name='mc_uuid', aliases=['uuid'])
-    @commands.check(Cooldown(1, 3, 1, 1, commands.cooldowns.BucketType.default))
+    @commands.check(Cooldown(2, 5, 3, 5, commands.cooldowns.BucketType.default))
     async def mc_uuid(self, ctx : MyContext, *, username : str):
         """Get the UUID and avatar of a minecraft username from Minecraft API"""
 
@@ -47,6 +47,7 @@ class hypixel(commands.Cog, description='<:hypixel:912575998380355626> Get stats
 
 
     @commands.command(aliases=['bz'])
+    @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.user))
     async def bazzar(self, ctx : MyContext, *, item : str):
         """
         Get item data of an item in the bazzar.
@@ -96,6 +97,7 @@ class hypixel(commands.Cog, description='<:hypixel:912575998380355626> Get stats
 
 
     @commands.command()
+    @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.user))
     async def profiles(self, ctx : MyContext, *, username : str):
         """
         Get all the profiles of a username.
@@ -133,6 +135,7 @@ class hypixel(commands.Cog, description='<:hypixel:912575998380355626> Get stats
 
 
     @commands.command()
+    @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.user))
     async def profile(self, ctx : MyContext, username : str, profile : str):
         """
         View profile stats of a minecraft user.
