@@ -8,7 +8,7 @@ from cogs.utility import utility
 from utils.custom_context import MyContext
 from utils.json_loader import read_json, write_json
 from bot import MetroBot
-from utils.useful import Embed
+from utils.useful import Cooldown, Embed
 
 info_file = read_json('info')
 hypixel_api_key = info_file["hypixel_api_key"]
@@ -34,7 +34,7 @@ class hypixel(commands.Cog, description='<:hypixel:912575998380355626> Get stats
             return res["id"]
 
     @commands.command(name='mc_uuid', aliases=['uuid'])
-    @commands.cooldown(1, 5, commands.cooldowns.BucketType.default)
+    @commands.check(Cooldown(1, 3, 1, 1, commands.cooldowns.BucketType.default))
     async def mc_uuid(self, ctx : MyContext, *, username : str):
         """Get the UUID and avatar of a minecraft username from Minecraft API"""
 

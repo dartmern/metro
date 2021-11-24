@@ -8,7 +8,7 @@ from utils.calc_tils import NumericStringParser
 from utils.checks import check_dev
 from utils.json_loader import read_json
 from utils.custom_context import MyContext
-from utils.useful import Embed, get_bot_uptime
+from utils.useful import Cooldown, Embed, get_bot_uptime
 from utils.useful import Embed
 from utils.new_pages import SimplePages
 
@@ -584,7 +584,7 @@ class utility(commands.Cog, description=":information_source: Get utilities like
 
 
     @commands.command()
-    @commands.cooldown(1, 30, commands.cooldowns.BucketType.user)
+    @commands.check(Cooldown(1, 30, 1, 15, commands.cooldowns.BucketType.user))
     async def gist(self, ctx : MyContext, filename : str, *, content : str):
         """Create and post a gist online."""
 

@@ -184,12 +184,19 @@ class ButtonMenuSrc(menus.ListPageSource):
         embed = Embed(title=title, description=self.description)
 
         cooldown = discord.utils.find(lambda x: isinstance(x, Cooldown), self.group.checks) or Cooldown(1, 3, 1, 1,
-                                                                                                     discord.ext.commands.BucketType.user)
-        default_cooldown = cooldown.default_mapping._cooldown.per     
+                                                                                                     commands.BucketType.user)
+
+        default_cooldown_per = cooldown.default_mapping._cooldown.per
+        altered_cooldown_per = cooldown.altered_mapping._cooldown.per
+
+        default_cooldown_rate = cooldown.default_mapping._cooldown.rate
+        altered_cooldown_rate = cooldown.altered_mapping._cooldown.rate
 
         embed.add_field(
             name="Cooldowns",
-            value=f"Can be used `1` time every `{default_cooldown}` seconds",
+            value=f"Default: `{default_cooldown_rate}` time(s) every `{default_cooldown_per}` seconds"\
+                    f"\nTester: `{altered_cooldown_rate}` time(s) every `{altered_cooldown_per}` seconds",
+                    inline=False
         )
         embed.add_field(
             name="Aliases",
@@ -294,11 +301,17 @@ class MetroHelp(commands.HelpCommand):
         cooldown = discord.utils.find(lambda x: isinstance(x, Cooldown), command.checks) or Cooldown(1, 3, 1, 1,
                                                                                                      commands.BucketType.user)
 
-        default_cooldown = cooldown.default_mapping._cooldown.per
+        default_cooldown_per = cooldown.default_mapping._cooldown.per
+        altered_cooldown_per = cooldown.altered_mapping._cooldown.per
+
+        default_cooldown_rate = cooldown.default_mapping._cooldown.rate
+        altered_cooldown_rate = cooldown.altered_mapping._cooldown.rate
 
         em.add_field(
             name="Cooldowns",
-            value=f"Can be used `1` time every `{default_cooldown}` seconds",
+            value=f"Default: `{default_cooldown_rate}` time(s) every `{default_cooldown_per}` seconds"\
+                    f"\nTester: `{altered_cooldown_rate}` time(s) every `{altered_cooldown_per}` seconds",
+                    inline=False
         )
 
         # Aliases
