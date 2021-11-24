@@ -18,8 +18,13 @@ os.environ["JISHAKU_NO_UNDERSCORE"] = "True"
 
 info_file = read_json('info')
 
-logging.basicConfig(level=logging.INFO)
 
+
+logger = logging.getLogger('discord')
+logger.setLevel(logging.DEBUG)
+handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+logger.addHandler(handler)
 
 p_database = info_file['postgres_database']
 p_user = info_file['postgres_user']

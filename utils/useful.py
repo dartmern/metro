@@ -212,8 +212,6 @@ class Cooldown:
         ctx.bucket = self.default_mapping.get_bucket(ctx.message)
         retry_after = ctx.bucket.update_rate_limit()
         if retry_after:
-            if check_dev(ctx.bot, ctx.author):
-                return True
             raise commands.CommandOnCooldown(ctx.bucket,retry_after,BucketType.user)
         return True
 
