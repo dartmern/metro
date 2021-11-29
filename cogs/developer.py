@@ -110,7 +110,6 @@ def restart_program():
     os.execl(python, python, * sys.argv)
 
 
-
 class Arguments(argparse.ArgumentParser):
     def error(self, message):
         raise RuntimeError(message)
@@ -713,6 +712,10 @@ class developer(commands.Cog, description="Developer commands."):
             )
         await ctx.paginate(to_paginate, per_page=4)
 
+
+    @commands.command()
+    async def test(self, ctx):
+        await self.bot.help_command.command_callback(ctx, command=str(ctx.command))
 
         
 

@@ -19,12 +19,12 @@ os.environ["JISHAKU_NO_UNDERSCORE"] = "True"
 info_file = read_json('info')
 
 
-
-logger = logging.getLogger('discord')
-logger.setLevel(logging.DEBUG)
-handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
-handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
-logger.addHandler(handler)
+logging.basicConfig(level=logging.INFO)
+#logger = logging.getLogger('discord')
+#logger.setLevel(logging.DEBUG)
+#handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+#handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+#logger.addHandler(handler)
 
 p_database = info_file['postgres_database']
 p_user = info_file['postgres_user']
@@ -88,7 +88,7 @@ class MetroBot(commands.AutoShardedBot):
             owner_ids=[525843819850104842, 844635601113579521],
             #chunk_guilds_at_startup=False,
             help_command=None,
-            slash_commands=False,
+            slash_commands=True,
             slash_command_guilds=[812143286457729055],
             strip_after_prefix=True,
             #shard_count=10,

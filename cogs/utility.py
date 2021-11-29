@@ -91,6 +91,18 @@ class utility(commands.Cog, description=":information_source: Get utilities like
         self.bot = bot
         self._req_lock = asyncio.Lock(loop=self.bot.loop)
 
+    async def from_permission(self, permission : int):
+
+        allowed, denied = [], []
+        for name, value in discord.Permissions(permission):
+            name = name.replace("_", " ").replace('guild', 'server').title()
+            if value:
+                allowed.append(name)
+            else:
+                denied.append(name)
+
+        return {"allowed" : allowed, "denied" : denied}
+
     async def say_permissions(self, ctx, member, channel):
         permissions = channel.permissions_for(member)
         e = discord.Embed(colour=member.colour)

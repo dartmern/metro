@@ -238,7 +238,7 @@ class MetroHelp(commands.HelpCommand):
         return _help
 
 
-    async def command_callback(self, ctx, *, command=None):
+    async def command_callback(self, ctx, *, command : str =None):
         await self.prepare_help_command(ctx, command)
         bot = ctx.bot
 
@@ -400,15 +400,14 @@ class MetroHelp(commands.HelpCommand):
 
 
     async def send_command_help(self, command):
-        await self.handle_help(command)
+        return await self.context.send(embed=await self.get_command_help(command),view=View(self.context.author), hide=True)
 
     async def send_group_help(self, group):
         
         entries = await self.filter_commands(group.commands)
         
         if int(len(group.commands)) == 0 or len(entries) == 0:
-            await self.handle_help(group)
-            return
+            return await self.context.send(embed=await self.get_command_help(group),view=View(self.context.author), hide=True)
 
         menu = SimplePages(ButtonMenuSrc(group, entries, prefix=self.context.clean_prefix),ctx=self.context)
         await menu.start()
@@ -439,7 +438,6 @@ class MetroHelp(commands.HelpCommand):
     async def send_error_message(self, ctx, error):
         if error is None:
             return
-
         return await ctx.send(error, hide=True)
        
 
