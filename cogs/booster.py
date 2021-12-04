@@ -3,6 +3,7 @@ from typing import Optional
 import discord
 import bisect
 from discord.ext import commands
+from discord.member import M
 
 from bot import MetroBot
 from utils.custom_context import MyContext
@@ -23,6 +24,12 @@ class boosts(commands.Cog, description='<:booster:916183319144710154> Get booste
             720 : "<:boost9:916198948383891466>",  
         }
 
+    @commands.Cog.listener()
+    async def on_message(self, message : discord.Message):
+        
+        if message.guild:
+            if message.type in ['MessageType.premium_guild_subscription', 'MessageType.premium_guild_tier_1', 'MessageType.premium_guild_tier_2', 'MessageType.premium_guild_tier_3']:
+                await self.bot.dispatch('boost', message)
 
     @commands.command()
     async def boosters(self, ctx : MyContext):
