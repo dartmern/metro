@@ -391,35 +391,10 @@ class developer(commands.Cog, description="Developer commands."):
     async def dev_cache(self, ctx):
         await ctx.send(f"I have cached `{len(self.bot.cached_messages)}/5000` messages.")
 
-    
-    @commands.command(aliases=['save'])
-    @commands.bot_has_permissions(send_messages=True, read_message_history=True)
-    async def archive(self, ctx, *, message : Optional[discord.Message]):
-        """
-        Archive a message by replying or passing in a message link / message id.
-        I will pin the message content in our dms for later reference.
-        """
-
-        if not message:
-            message = getattr(ctx.message.reference, "resolved", None)
-
-        if not message:
-            raise commands.BadArgument(f"You must either reply to a message, or pass in a message ID/jump url")
-
-        # Resort message
-        content = message.content or "_No content_"
-        em = Embed(title="You archived a message!", url=message.jump_url, description=content, timestamp=discord.utils.utcnow())
-        em.set_author(name=message.author, icon_url=message.author.display_avatar.url)
-        try:
-            msg = await ctx.author.send(embed=em)
-            await msg.pin()
-            await ctx.send(f"Archived the message in your DMs!\n{msg.jump_url}")
-        except discord.Forbidden:
-            await ctx.send("Oops! I couldn't send you a message. Are you sure your DMs are on?")
-
 
     @commands.command(name='delete',aliases=['d'])
     @commands.bot_has_permissions(send_messages=True)
+    @commands.is_owner()
     async def delete_message(self, ctx, *, message : Optional[discord.Message]):
 
         if not message:
@@ -615,6 +590,7 @@ class developer(commands.Cog, description="Developer commands."):
 
 
     @commands.command(name='input')
+    @commands.is_owner()
     async def input(self, ctx, *, input_message : str):
         """
         Ask for input through console.
@@ -713,11 +689,7 @@ class developer(commands.Cog, description="Developer commands."):
         await ctx.paginate(to_paginate, per_page=4)
 
 
-    @commands.command()
-    async def test(self, ctx):
-        await self.bot.help_command.command_callback(ctx, command=str(ctx.command))
-
-        
+    
 
 def setup(bot):
     bot.add_cog(developer(bot))

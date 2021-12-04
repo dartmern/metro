@@ -1,3 +1,5 @@
+import itertools
+from discord.ext.commands.core import command
 from utils.new_pages import SimplePages
 from utils.pages import ExtraPages
 import discord
@@ -184,7 +186,7 @@ class ButtonMenuSrc(menus.ListPageSource):
         embed = Embed(title=title, description=self.description)
 
         cooldown = discord.utils.find(lambda x: isinstance(x, Cooldown), self.group.checks) or Cooldown(1, 3, 1, 1,
-                                                                                                     commands.BucketType.user)
+                                                                                                     discord.ext.commands.BucketType.user)
 
         default_cooldown_per = cooldown.default_mapping._cooldown.per
         altered_cooldown_per = cooldown.altered_mapping._cooldown.per
@@ -367,17 +369,17 @@ class MetroHelp(commands.HelpCommand):
         ctx = self.context
         bot = ctx.bot
 
-        nl = '\n'
-        cogs = []
-        bl_cogs = ['jishaku', 'developer', 'core', 'support']
-        for cog in bot.cogs:
-            if cog.lower() in bl_cogs:
-                pass
-            else:
-                cog_object = bot.get_cog(cog)
-                cogs.append(f'• **{cog.capitalize()}** - {cog_object.description}')
+        to_append = []
 
-    
+        def get_category(command, *, no_category : str ='**•** No Category - :black_small_square: Commands without categories'):
+            cog = command.cog
+            return '**•** **' + cog.qualified_name.capitalize() + '** - ' + cog.description if cog is not None else no_category
+        filtered = await self.filter_commands(bot.commands, sort=True, key=get_category)
+        to_iterate = itertools.groupby(filtered, key=get_category)
+
+        for category, commands in to_iterate:
+            to_append.append(category)
+        
         embed = Embed(
             description=
             f"**Total Commands:** {len(list(bot.walk_commands()))} | **Usable by you (here):** {len(await self.filter_commands(list(bot.walk_commands()), sort=True))}"
@@ -385,8 +387,8 @@ class MetroHelp(commands.HelpCommand):
             f"[Support]({ctx.bot.invite}) | [Invite]({ctx.bot.invite}) | [Donate]({ctx.bot.donate})"
         )
         embed.add_field(
-            name=f"**Modules: [{len(cogs)}]**",
-            value=f"{nl.join(cogs)}",
+            name=f"**Modules: [{len(to_append)}]**",
+            value='\n'.join(to_append),
             inline=True
         )
         
@@ -398,6 +400,15 @@ class MetroHelp(commands.HelpCommand):
         channel = self.get_destination()
         await channel.send(embed=embed, hide=True)
 
+    async def send_missing_required_argument(self, ctx, error):
+        missing = f"{error.param.name}"
+        command = f"{ctx.clean_prefix}{ctx.command} {ctx.command.signature}"
+        separator = (' ' * (len([item[::-1] for item in command[::-1].split(missing[::-1], 1)][::-1][0]) - 1)) + (8*' ')
+        indicator = ('^' * (len(missing) + 2))
+        return await ctx.send(
+                                  f"\n```yaml\nSyntax: {command}\n{separator}{indicator}"
+                                  f'\n{missing} is a required argument that is missing.\n```',
+                                  embed=await self.get_command_help(ctx.command))
 
     async def send_command_help(self, command):
         return await self.context.send(embed=await self.get_command_help(command),view=View(self.context.author), hide=True)
@@ -481,7 +492,6 @@ class meta(commands.Cog, description='ℹ️ Get bot stats and information.'):
     @commands.command()
     @commands.bot_has_permissions(send_messages=True, embed_links=True)
     async def support(self, ctx):
-
         await ctx.reply(ctx.bot.support)
 
 

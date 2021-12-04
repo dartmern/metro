@@ -20,12 +20,25 @@ import yarl
 from pathlib import Path
 import inspect
 import unicodedata
+from itertools import islice
+
 
 class GithubError(commands.CommandError):
     pass
 
 info_file = read_json('info')
 github_token = info_file["github_token"]
+
+def chunkIt(seq, num):
+    avg = len(seq) / float(num)
+    out = []
+    last = 0.0
+
+    while last < len(seq):
+        out.append(seq[int(last):int(last + avg)])
+        last += avg
+
+    return out
 
 class TodoListSource(menus.ListPageSource):
     def __init__(self, entries, ctx : MyContext):
@@ -337,11 +350,9 @@ class utility(commands.Cog, description=":information_source: Get utilities like
 
         
     def read_tags(self, ctx : MyContext):
+        ids, tags = [], []
+
         DPY_GUILD = ctx.bot.get_guild(336642139381301249)
-
-        ids = []
-        tags = []
-
         for member in DPY_GUILD.humans:
             ids.append(member.id)
         
@@ -349,19 +360,17 @@ class utility(commands.Cog, description=":information_source: Get utilities like
         with open(cwd+'/config/'+'tags.txt', 'r', encoding='utf8') as file:
             for line in file.read().split("\n"):
     
-                id = line[-51:]
-                id = id[:18]
-
+                id = line[-52:-32]
+  
                 try:
                     if int(id) not in ids:
                         tag = line[10:112]
-                        tag = tag.strip()
+                        
                         tags.append(str(tag))
                 except:
-                    pass
+                    continue
         
         return tags
-
 
     @commands.command(hidden=True)
     @commands.is_owner()  
@@ -370,6 +379,15 @@ class utility(commands.Cog, description=":information_source: Get utilities like
         await ctx.check()
         result = await self.bot.loop.run_in_executor(None, self.read_tags, ctx)
         await ctx.paginate(result, per_page=per_page)
+
+        m = chunkIt(result, 5)
+
+        for i in m:
+            e = Embed()
+            e.description = ', '.join(i)
+            
+            await ctx.author.send(embed=e)
+        
         
 
     @commands.command(aliases=['sourcecode', 'code'],
@@ -719,6 +737,30 @@ class utility(commands.Cog, description=":information_source: Get utilities like
         menu = SimplePages(source=TodoListSource(entries=data, ctx=ctx), ctx=ctx, hide=True)
         await menu.start()
         
+    @commands.command(aliases=['save'])
+    @commands.bot_has_permissions(send_messages=True, read_message_history=True)
+    async def archive(self, ctx, *, message : Optional[discord.Message]):
+        """
+        Archive a message by replying or passing in a message link / message id.
+        I will pin the message content in our dms for later reference.
+        """
+
+        if not message:
+            message = getattr(ctx.message.reference, "resolved", None)
+
+        if not message:
+            raise commands.BadArgument(f"You must either reply to a message, or pass in a message ID/jump url")
+
+        # Resort message
+        content = message.content or "_No content_"
+        em = Embed(title="You archived a message!", url=message.jump_url, description=content, timestamp=discord.utils.utcnow())
+        em.set_author(name=message.author, icon_url=message.author.display_avatar.url)
+        try:
+            msg = await ctx.author.send(embed=em)
+            await msg.pin()
+            await ctx.send(f"Archived the message in your DMs!\n{msg.jump_url}")
+        except discord.Forbidden:
+            await ctx.send("Oops! I couldn't send you a message. Are you sure your DMs are on?")
 
 
         

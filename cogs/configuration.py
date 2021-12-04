@@ -34,7 +34,6 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
         self.command_config = defaultdict(list)
 
 
-
     async def load_plonks(self):
         await self.bot.wait_until_ready()
         query = """
@@ -210,6 +209,7 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
         invoke_without_command=True,
         case_insensitive=True
     )
+    @commands.has_permissions(manage_guild=True)
     async def config(self, ctx):
         """Handle the server or channel permission configuration for the bot."""
 

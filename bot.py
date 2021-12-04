@@ -168,7 +168,7 @@ class MetroBot(commands.AutoShardedBot):
             return
 
         ctx = await self.get_context(message)
-        if message.author.id == 525843819850104842:
+        if check_dev(ctx.bot, ctx.author):
             await self.invoke(ctx)
             return
 

@@ -9,6 +9,7 @@ import humanize
 import traceback
 
 import datetime as dt
+from bot import MetroBot
 from utils.errors import UserBlacklisted
 
 from utils.useful import Cooldown, Embed
@@ -18,7 +19,7 @@ from utils.custom_context import MyContext
 
 
 class core(commands.Cog, description="Core events."):
-    def __init__(self, bot):
+    def __init__(self, bot : MetroBot):
         self.bot = bot
         self.cooldown_mapping = commands.CooldownMapping.from_cooldown(3, 7, commands.BucketType.member)
         self.blacklist_message_sent : List = []
@@ -110,17 +111,8 @@ class core(commands.Cog, description="Core events."):
             await ctx.send(str(error))
 
         elif isinstance(error, commands.MissingRequiredArgument):
+            return await self.bot.help_command.send_missing_required_argument(ctx, error)
 
-            missing = f"{error.param.name}"
-            command = f"{ctx.clean_prefix}{ctx.command} {ctx.command.signature}"
-            separator = (' ' * (len([item[::-1] for item in command[::-1].split(missing[::-1], 1)][::-1][0]) - 1)) + (8*' ')
-            indicator = ('^' * (len(missing) + 2))
-            return await ctx.send(
-                                  f"\n```yaml\nSyntax: {command}\n{separator}{indicator}"
-                                  f'\n{missing} is a required argument that is missing.\n```',
-                                  embed=await self.bot.help_command.command_callback(ctx, command=ctx.command.name))
-
-            
         elif isinstance(error, commands.errors.BotMissingPermissions):
 
             missing_perms = ', '.join(error.missing_permissions)
