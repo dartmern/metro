@@ -397,12 +397,6 @@ class utility(commands.Cog, description=":information_source: Get utilities like
         """
         Links to the bot's source code, or a specific command's
         """
-        if check_dev(self.bot, ctx.author):
-            pass
-        else:
-            return await ctx.send(
-                f"I am close sourced."
-            )
         
         if args is None:
 

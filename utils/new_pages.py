@@ -100,10 +100,10 @@ class RoboPages(discord.ui.View):
             self.go_to_last_page.disabled = (page_number + 1) >= max_pages
             if (page_number + 1) >= max_pages:
                 self.go_to_next_page.disabled = True
-                self.go_to_next_page.label = '…'
+                self.go_to_next_page.label = 'Next'
             if page_number == 0:
                 self.go_to_previous_page.disabled = True
-                self.go_to_previous_page.label = '…'
+                self.go_to_previous_page.label = 'Back'
 
     async def show_checked_page(self, interaction: discord.Interaction, page_number: int) -> None:
         max_pages = self.source.get_max_pages()
@@ -205,7 +205,7 @@ class RoboPages(discord.ui.View):
                 await msg.delete(silent=True)
                 await self.show_checked_page(interaction, page - 1)
 
-    @discord.ui.button(label='Quit', style=discord.ButtonStyle.red)
+    @discord.ui.button(emoji='🗑️', style=discord.ButtonStyle.red)
     async def stop_pages(self, button: discord.ui.Button, interaction: discord.Interaction):
         """stops the pagination session."""
         await interaction.response.defer()
@@ -223,7 +223,7 @@ class SimplePages(RoboPages):
 
     def __init__(self, source : menus.ListPageSource, *, ctx: commands.Context, hide : bool = False):
         super().__init__(source, ctx=ctx, hide=hide)
-        self.embed = discord.Embed(colour=discord.Colour.blurple())
+        self.embed = discord.Embed(colour=0x1ABC9C)
 
 
 class SimplePageSource(menus.ListPageSource):
