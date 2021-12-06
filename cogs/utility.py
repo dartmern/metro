@@ -97,7 +97,9 @@ class Source(menus.ListPageSource):
 
         embed.set_footer(text=f'[{menu.current_page + 1}/{maximum}]')
         return embed
-        
+
+class CustomPermissions:
+    pass
 
 class utility(commands.Cog, description=":information_source: Get utilities like prefixes, serverinfo, source, etc."):
     def __init__(self, bot):
@@ -113,8 +115,11 @@ class utility(commands.Cog, description=":information_source: Get utilities like
                 allowed.append(name)
             else:
                 denied.append(name)
-
-        return {"allowed" : allowed, "denied" : denied}
+        permission = CustomPermissions()
+        permission.allowed = allowed
+        permission.denied = denied
+        return permission
+        
 
     async def say_permissions(self, ctx, member, channel):
         permissions = channel.permissions_for(member)
@@ -455,8 +460,10 @@ class utility(commands.Cog, description=":information_source: Get utilities like
     async def linecount(self, ctx):
         """
         Get the linecount + code stats for Metro.
-        """
 
+        Taken from `?tag linecount`
+        """
+        
         import pathlib
 
         p = pathlib.Path('./')
