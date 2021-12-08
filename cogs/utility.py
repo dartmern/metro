@@ -3,6 +3,7 @@ import discord
 from discord.ext import commands, menus
 
 from typing import Optional, Union
+from bot import MetroBot
 
 from utils.calc_tils import NumericStringParser
 from utils.checks import check_dev
@@ -102,7 +103,7 @@ class CustomPermissions:
     pass
 
 class utility(commands.Cog, description=":information_source: Get utilities like prefixes, serverinfo, source, etc."):
-    def __init__(self, bot):
+    def __init__(self, bot : MetroBot):
         self.bot = bot
         self._req_lock = asyncio.Lock(loop=self.bot.loop)
 
@@ -141,6 +142,17 @@ class utility(commands.Cog, description=":information_source: Get utilities like
         e.add_field(name='Allowed', value='\n'.join(allowed))
         e.add_field(name='Denied', value='\n'.join(denied))
         await ctx.send(embed=e)
+
+    async def post_mystbin(self, data : str, encoding : str = 'utf-8'):
+        to_post = bytes(data, encoding)
+
+        async with self.bot.session.post(f"https://mystb.in/documents", data=data) as s:
+            res = await s.json()
+            url_key = res['key']
+        
+        return f"https://mystb.in/{url_key}"
+
+        
 
     @commands.command(name='permissions',brief="Shows a member's permissions in a specific channel.")
     @commands.guild_only()

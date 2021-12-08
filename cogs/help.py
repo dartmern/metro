@@ -359,8 +359,6 @@ class MetroHelp(commands.HelpCommand):
                 return await self.context.interaction.response.send_message(embed=self.get_command_help(command),ephemeral=True)
             else:
                 return await self.context.send(embed=await self.get_command_help(command),view=View(self.context.author))
-
-
         raise commands.BadArgument("You do not have the permissions to view this command's help.")
 
 

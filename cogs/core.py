@@ -17,6 +17,34 @@ from utils.checks import check_dev
 from utils.custom_context import MyContext
 
 
+class ErrorView(discord.ui.View):
+    def __init__(self, ctx : MyContext, traceback_string : str):
+        super().__init__(timeout=None)
+        self.ctx = ctx
+        self.traceback_string = traceback_string
+
+        self.add_item(discord.ui.Button(label='Support Server', url='https://discord.gg/2ceTMZ9qJh'))
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id == self.ctx.author.id:
+            return True
+        await interaction.response.send_message('This menu cannot be controlled by you, sorry!', ephemeral=True)
+        return False
+
+    @discord.ui.button(label='View Traceback', style=discord.ButtonStyle.blurple)
+    async def view_traceback(self, button : discord.ui.Button, interaction : discord.Interaction):
+
+        embed = Embed()
+        embed.title = 'Full Traceback'
+        embed.description = f'```py\n{self.traceback_string}\n```'
+
+        try:
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        except (discord.HTTPException, discord.Forbidden):
+            await interaction.channel.send('Full traceback was too long:',file=discord.File(io.StringIO(traceback_string)), filename='traceback.py')
+        
+
+
 
 class core(commands.Cog, description="Core events."):
     def __init__(self, bot : MetroBot):
@@ -56,57 +84,40 @@ class core(commands.Cog, description="Core events."):
                         f"I am missing permissions to do that!"
                     )
             else:
-                error_id = f"{ctx.message.channel.id}-{ctx.message.id}"
-                view = discord.ui.View()
-                button = discord.ui.Button(url=self.bot.support, emoji='🛠️', label='Support Server')
-                view.add_item(button)
-                await ctx.send(f"An error occurred!\nJoin my support server for more information.\n\nError ID: {error_id}", view=view)
-
-                channel = self.bot.get_channel(self.error_channel)
-
                 traceback_string = "".join(traceback.format_exception(
                     etype=None, value=error, tb=error.__traceback__))
 
+                view = ErrorView(ctx, traceback_string)
+                await ctx.send(':warning: **An error occurred!**', view=view)
+
+                channel = self.bot.get_channel(self.error_channel)
+
+                embeds = []
+                embed = Embed()
+                embed.title = 'An error occurred.'
                 if ctx.guild:
-                    command_info = f"```yaml\nby: {ctx.author} (id: {ctx.author.id})" \
-                                    f"\ncommand: {ctx.message.content[0:1700]}" \
-                                    f"\nguild_id: {ctx.guild.id} - channel_id: {ctx.channel.id}"\
-                                    f"\nis bot admin: {await ctx.emojify(ctx.me.guild_permissions.administrator, False)}"\
-                                    f"\ntop role pos: {ctx.me.top_role.position}\n```"
+                    embed.description = f'```yaml\nby: {ctx.author} (id: {ctx.author.id})'\
+                                        f'\nguild_id: {ctx.guild.id}'\
+                                        f'\nchannel_id: {ctx.channel.id}'\
+                                        f'\nmessage_id: {ctx.message.id}'\
+                                        f'\ncommand: {ctx.message.content[0:1500]}'\
+                                        f'\nis bot admin: {await ctx.emojify(ctx.me.guild_permissions.administrator, False)}\n```'
                 else:
-                    command_info = f"by: {ctx.author} (id: {ctx.author.id})"\
-                                    f"command: {ctx.message.content[0:1700]}" \
-                                    f"this command was executed in dms"
+                    embed.description = f'```yaml\nby: {ctx.author} (id: {ctx.author.id})'\
+                                        f'\ncommand: {ctx.message.content[0:1500]}\n```'  
 
-                send = f"\n{command_info}\nerror_id: `{error_id}`\n**Command raised an error:**\n```py\n{traceback_string}\n```\n"
-                if len(send) < 2000:
-                    try:
-                        m = await channel.send(send)
-                    except (discord.Forbidden, discord.HTTPException):
-                        m = await channel.send(
-                            f"\n{command_info}\n\nCommand raised an error:\n",
-                            file=discord.File(io.StringIO(traceback_string), filename='traceback.py')
-                        )
+                traceback_embed = Embed(color=discord.Colour.red())
+                traceback_embed.title = 'Full Traceback'
+                traceback_embed.description = f'```py\n{traceback_string}\n```'  
                 
-                else:
-                    m = await channel.send(
-                            f"\n{command_info}\n\nCommand raised an error:\n",
-                            file=discord.File(io.StringIO(traceback_string), filename='traceback.py'),
-                    )
-
-                await m.add_reaction("🗑")
-
-                            
-
-
-                print("----------------------------")
-                print("ERROR!")
-                print("USER ID: {}".format(ctx.author.id))
-                print("ERROR ID: {}".format(error_id))
-                print("----------------------------")
+                embeds.append(embed)
+                embeds.append(traceback_embed)
                 
-                raise error
-
+                try:
+                    await channel.send(embeds=embeds)
+                except (discord.Forbidden, discord.HTTPException):
+                    await channel.send(content='Traceback string was too long to output.', embed=embed, file=discord.File(io.StringIO(traceback_string)))
+                
         elif isinstance(error, commands.BadArgument):
             await ctx.send(str(error))
 

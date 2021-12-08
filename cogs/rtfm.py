@@ -129,13 +129,13 @@ class docs(commands.Cog, description=":books: Fuzzy search through documentation
         }
 
         if obj is None:
-            await ctx.defer()
+            await ctx.defer(ephemeral=True)
             await ctx.send(page_types[key], hide=True)
             return
 
 
         if not hasattr(self, '_rtfm_cache'):
-            await ctx.defer()
+            await ctx.defer(ephemeral=True)
             await self.build_rtfm_lookup_table(page_types)
 
         obj = re.sub(r'^(?:discord\.(?:ext\.)?)?(?:commands\.)?(.+)', r'\1', obj)

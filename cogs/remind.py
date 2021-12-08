@@ -217,8 +217,6 @@ class reminder(commands.Cog):
         except KeyError:
             now = discord.utils.utcnow()
 
-
-
         # Remove timezone information since the database does not deal with it
         when = when.astimezone(datetime.timezone.utc).replace(tzinfo=None)
         now = now.astimezone(datetime.timezone.utc).replace(tzinfo=None)

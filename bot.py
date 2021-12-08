@@ -89,7 +89,7 @@ class MetroBot(commands.AutoShardedBot):
             #chunk_guilds_at_startup=False,
             help_command=None,
             slash_commands=True,
-            slash_command_guilds=[812143286457729055],
+            slash_command_guilds=[812143286457729055, 917580286898888715],
             strip_after_prefix=True,
             #shard_count=10,
             max_messages=5000
@@ -107,6 +107,9 @@ class MetroBot(commands.AutoShardedBot):
 
         self.noprefix = False
         self.started = False
+
+        self.owner = 'dartmern#7563'
+        #This is just a temp fix for something. I'll make this a user object later
 
         self.db = asyncpg.Pool = self.loop.run_until_complete(create_db_pool(p_database, p_user, p_password))
 
@@ -153,7 +156,7 @@ class MetroBot(commands.AutoShardedBot):
         super().add_command(command)
         command.cooldown_after_parsing = True
 
-        command.checks.append(Cooldown(1, 1.5, 1, 1, commands.BucketType.user))
+        command.checks.append(Cooldown(3, 7, 4, 7, commands.BucketType.user))
 
     async def get_context(self, message, *, cls=MyContext):
         """Making our custom context"""
