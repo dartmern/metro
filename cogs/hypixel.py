@@ -1,4 +1,5 @@
 import asyncio
+from os import terminal_size
 import re
 from typing import Optional
 from aiohttp.client_reqrep import ClientResponse
@@ -51,18 +52,26 @@ class View(discord.ui.View):
             
     @discord.ui.button(label='Raw JSON Data', emoji='\U0001f4ce')
     async def raw_json_data(self, button : discord.ui.Button, interaction : discord.Interaction):
-
+        if not self.ctx.author.id in self.ctx.bot.owner_ids:
+            return await interaction.response.send_message('This feature is not for public use due to risk of being abused.', ephemeral=True)
         await interaction.response.defer()
 
-        utility = self.ctx.bot.get_cog('utility')
-        link = await utility.post_mystbin(str(self.data), 'py')
+        utility = self.ctx.bot.get_cog("utility")
+        link = await utility.create_gist(str(self.data), filename='raw_data.py')
 
         embed = Embed()
         embed.title = 'Raw JSON Data'
-        embed.description = link
+        embed.description = str(link)
 
         if interaction.response.is_done():
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=False)
+
+    @discord.ui.button(emoji='🗑️', style=discord.ButtonStyle.red)
+    async def stop_pages(self, button: discord.ui.Button, interaction: discord.Interaction):
+        """stops the pagination session."""
+        await interaction.response.defer()
+        await interaction.delete_original_message()
+        self.stop()
 
         
 

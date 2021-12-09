@@ -5,6 +5,7 @@ from discord.ext import commands
 from pathlib import Path
 import os
 import asyncpg
+import mystbin
 import aiohttp
 import logging
 from utils.checks import check_dev
@@ -95,6 +96,7 @@ class MetroBot(commands.AutoShardedBot):
             max_messages=5000
         )
         self.session = aiohttp.ClientSession()
+        self.mystbin_client = mystbin.Client()
 
         self.add_check(self.user_blacklisted)
 
