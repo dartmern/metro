@@ -8,7 +8,6 @@
 import discord
 from discord.ext import commands, menus
 
-
 from typing import Optional, Union, Dict, Any
 import asyncio
 
@@ -185,12 +184,10 @@ class RoboPages(discord.ui.View):
 
         async with self.input_lock:
             channel = self.message.channel
-            author_id = interaction.user and interaction.user.id
             await interaction.response.send_message('What page do you want to go to?', ephemeral=True)
 
-            def message_check(m):
-                return m.author.id == author_id and channel == m.channel and m.content.isdigit()
-
+            def message_check(m : discord.Message):
+                return m.author.id == interaction.user.id and channel == m.channel 
             try:
                 msg = await self.ctx.bot.wait_for('message', check=message_check, timeout=30.0)
             except asyncio.TimeoutError:
@@ -207,7 +204,13 @@ class RoboPages(discord.ui.View):
 
     @discord.ui.button(emoji='🗑️', style=discord.ButtonStyle.red)
     async def stop_pages(self, button: discord.ui.Button, interaction: discord.Interaction):
-        """stops the pagination session."""
+        """
+        Stop the pagination session. 
+        Unless this pagination menu was invoked with a slash command
+        """
+        if self.ctx.interaction:
+            return await interaction.response.send_message(f"This pagination menu was invoked with a slash command. \nPlease click *dismiss message* to quit.", ephemeral=True)
+
         await interaction.response.defer()
         await interaction.delete_original_message()
         self.stop()

@@ -1,3 +1,4 @@
+from typing import Literal, Optional
 import discord
 from discord.ext import commands
 
@@ -9,6 +10,7 @@ import os
 import zlib
 
 from utils.custom_context import MyContext
+
 
 class SphinxObjectFileReader:
     # Inspired by Sphinx's InventoryFileReader
@@ -120,10 +122,10 @@ class docs(commands.Cog, description=":books: Fuzzy search through documentation
 
     async def do_rtfm(self, ctx : MyContext, key, obj):
         page_types = {
-            'latest': 'https://discordpy.readthedocs.io/en/latest',
+            'discord.py': 'https://discordpy.readthedocs.io/en/latest',
             'python': 'https://docs.python.org/3',
-            'master': 'https://discordpy.readthedocs.io/en/master',
-            'edpy' : 'https://enhanced-dpy.readthedocs.io/en/latest',
+            'discord.py-2.0': 'https://discordpy.readthedocs.io/en/master',
+            'enhanced-discord.py' : 'https://enhanced-dpy.readthedocs.io/en/latest',
             'aiohttp' : 'https://docs.aiohttp.org/en/stable/'
             
         }
@@ -166,7 +168,24 @@ class docs(commands.Cog, description=":books: Fuzzy search through documentation
         await ctx.send(embed=e, hide=True)
 
 
+    @commands.command(name='rtfm_rewrite', message_command=False, usage='<documentation> [query]')
+    async def rtfm_slash(
+        self, 
+        ctx : MyContext, 
+        docs : Literal['enhanced-discord.py', 'discord.py', 'discord.py-2.0', 'aiohttp', 'python'] = commands.Option(description='Documentation you wish to search on.'),
+        query : Optional[str] = commands.Option(default=None, description='Query to search for.')
+        ):
+        """
+        Search for a documentation link for a documention you wish.
+        Events, objects, and functions are all supported through a
+        a cruddy fuzzy algorithm.
 
+        If a desired documention is not listed please send `dartmern#7563` a message.
+        """
+        
+        await self.do_rtfm(ctx, docs, query)
+        
+    
     @commands.group(name="rtfm",invoke_without_command=True, case_insensitive=True, slash_command=True, aliases=['rtfd'])
     @commands.bot_has_permissions(send_messages=True)
     async def rtfm(self, ctx, *, obj : str = None):

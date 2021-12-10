@@ -98,9 +98,9 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
         if ctx.guild is None:
             return True  # Do not restrict in DMs.
 
-        if isinstance(ctx.author, discord.Member):
-            if ctx.author.guild_permissions.manage_guild:
-                return True  # Manage guild is immune.
+        #if isinstance(ctx.author, discord.Member):
+            #if ctx.author.guild_permissions.manage_guild:
+                #return True  # Manage guild is immune.
 
         # Now check channels, roles, and users.
         if ctx.channel.id in self.ignored[ctx.guild.id]:
@@ -123,12 +123,12 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
         if ctx.guild is None:
             return True  # Do not restrict in DMs.
 
-        if check_dev(ctx.bot, ctx.author):
-            return True  # Bot devs are immune.
+        #if check_dev(ctx.bot, ctx.author):
+            #return True  # Bot devs are immune.
 
-        if isinstance(ctx.author, discord.Member):
-            if ctx.author.guild_permissions.manage_guild:
-                return True  # Manage guild is immune.
+        #if isinstance(ctx.author, discord.Member):
+            #if ctx.author.guild_permissions.manage_guild:
+                #return True  # Manage guild is immune.
 
 
         if str(ctx.command) in self.command_config[ctx.guild.id]:

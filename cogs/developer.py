@@ -550,7 +550,7 @@ class developer(commands.Cog, description="Developer commands."):
             await ctx.send(page)
 
 
-    @commands.command(hidden=True)
+    @commands.command()
     @commands.is_owner()
     async def sql(self, ctx, *, query: str):
         """Run some SQL."""

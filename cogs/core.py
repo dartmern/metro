@@ -49,8 +49,8 @@ class ErrorView(discord.ui.View):
 class core(commands.Cog, description="Core events."):
     def __init__(self, bot : MetroBot):
         self.bot = bot
-        self.cooldown_mapping = commands.CooldownMapping.from_cooldown(3, 7, commands.BucketType.member)
-        self.blacklist_message_sent : List = []
+        self.cooldown_mapping = commands.CooldownMapping.from_cooldown(3, 7, commands.BucketType.user)
+        self.blacklist_message_sent = []
         self.error_channel = 912447757212606494
 
     async def blacklist(self, user):
@@ -69,7 +69,6 @@ class core(commands.Cog, description="Core events."):
 
         if ctx.command and ctx.command.has_error_handler():
             return
-
 
         if isinstance(error, commands.CommandInvokeError):
             
@@ -214,7 +213,7 @@ class core(commands.Cog, description="Core events."):
 
         elif isinstance(error, commands.errors.DisabledCommand):
             return await ctx.send(
-                f"This command is globally disabled."
+                str(error)
             )
 
         elif isinstance(error, commands.errors.BadUnionArgument):
@@ -222,6 +221,9 @@ class core(commands.Cog, description="Core events."):
 
         elif isinstance(error, commands.CommandError):
             return await ctx.send(str(error))
+        
+        elif isinstance(error, UserBlacklisted):
+                return await ctx.send(f"You are blacklisted from using my commands.")
 
         elif isinstance(error, UserBlacklisted):
             if ctx.author.id in self.blacklist_message_sent:

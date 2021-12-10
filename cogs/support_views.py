@@ -4,7 +4,7 @@ from discord.ext import commands
 
 from utils.custom_context import MyContext
 from utils.converters import BotUser
-from utils.useful import Embed
+from utils.useful import Cooldown, Embed
 from utils.checks import in_support, is_dev
 
 
@@ -179,6 +179,7 @@ class support(commands.Cog, description=':test_tube: Support only commands.'):
 
 
     @commands.command(hidden=True)
+    @commands.check(Cooldown(1, 10, 1, 10, bucket=commands.BucketType.member))
     @in_support()
     async def addbot(
         self, 
@@ -237,7 +238,9 @@ class support(commands.Cog, description=':test_tube: Support only commands.'):
         await user.send(f'Your bot (<@{bot}>) was added to {ctx.guild.name}')
         await ctx.check()
 
-
+    @commands.command()
+    async def foo(self, ctx : MyContext, args : typing.Literal[1,2,3]):
+        await ctx.send(args, hide=True)
 
     @commands.command(
         name='tester',
