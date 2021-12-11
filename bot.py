@@ -165,18 +165,16 @@ class MetroBot(commands.AutoShardedBot):
             f"-----\nLogged in as: {self.user.name} : {self.user.id}\n-----\nMy current default prefix is: m.\n-----")
 
         data = read_json('restart')
-        
+        user = self.get_user(525843819850104842)
         channel = self.get_channel(data["channel_id"])
-        try:
-            message = channel.get_partial_message(data["message_id"])
-        except:
-            user = self.get_user(525843819850104842)
-            return await user.send("Restart completed!")
+        message = channel.get_partial_message(data["message_id"])
 
         try:
             await message.edit(content=f'{self.check} Back online!')
-        except:
-            pass
+        except discord.NotFound:
+            await user.send("Restart complete!")
+
+        self.owner = user
 
 
     def add_command(self, command):
