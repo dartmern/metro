@@ -8,7 +8,8 @@ import json
 
 from collections import defaultdict
 
-from typing import Optional
+from typing import Optional, Union
+from bot import MetroBot
 
 #Arg parsing stuff
 from cogs.moderation import Arguments
@@ -24,7 +25,7 @@ class Flags(commands.FlagConverter, prefix='--', delimiter=' '):
     reason : str
 
 class configuration(commands.Cog, description=':gear: Configure the bot/server.'):
-    def __init__(self, bot):
+    def __init__(self, bot : MetroBot):
         self.bot = bot
 
         bot.loop.create_task(self.load_command_config())
@@ -98,9 +99,9 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
         if ctx.guild is None:
             return True  # Do not restrict in DMs.
 
-        #if isinstance(ctx.author, discord.Member):
-            #if ctx.author.guild_permissions.manage_guild:
-                #return True  # Manage guild is immune.
+        if isinstance(ctx.author, discord.Member):
+            if ctx.author.guild_permissions.manage_guild:
+                return True  # Manage guild is immune.
 
         # Now check channels, roles, and users.
         if ctx.channel.id in self.ignored[ctx.guild.id]:
@@ -123,12 +124,12 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
         if ctx.guild is None:
             return True  # Do not restrict in DMs.
 
-        #if check_dev(ctx.bot, ctx.author):
-            #return True  # Bot devs are immune.
+        if check_dev(ctx.bot, ctx.author):
+            return True  # Bot devs are immune.
 
-        #if isinstance(ctx.author, discord.Member):
-            #if ctx.author.guild_permissions.manage_guild:
-                #return True  # Manage guild is immune.
+        if isinstance(ctx.author, discord.Member):
+            if ctx.author.guild_permissions.manage_guild:
+                return True  # Manage guild is immune.
 
 
         if str(ctx.command) in self.command_config[ctx.guild.id]:
@@ -643,55 +644,18 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
     
     @config_blacklist.command(name='add')
     @is_dev()
-    async def config_blacklist_add(self, ctx : MyContext, *users : discord.User):
+    async def config_blacklist_add(
+        self, ctx : MyContext, user : Union[discord.Member, discord.User], *, reason : str = None):
         """Add a user to the bot blacklist."""
-
-        query = """
-                INSERT INTO blacklist(member_id, is_blacklisted) VALUES ($1, $2) 
-                """
-
-        issue = []
-        failed = []
-        sucess = []
-        for x in users:
-            if x.id in self.bot.owner_ids:
-                issue.append(f'**{x}**')
-            else:
-                try:
-                    await self.bot.db.execute(query, x.id, True)
-                    sucess.append(f'**{x}**')
-                except asyncpg.exceptions.UniqueViolationError:
-                    failed.append(f'**{x}**')
-                    continue
-
-                self.bot.blacklist[x.id] = True
-
-        if failed:
-            await ctx.send(f"{self.bot.cross} The following users were already blacklisted: {', '.join(failed)}")
-        if sucess:
-            await ctx.send(f'{self.bot.check} Added {", ".join(sucess)} to the bot blacklist.')
-        if issue:
-            await ctx.send(f"{self.bot.cross} I have been hard configured to not blacklist these users: {', '.join(issue)}")
-
+        await self.bot.add_to_blacklist(ctx, user, reason)
+        
     @config_blacklist.command(name='remove')
     @is_dev()
-    async def config_blacklist_remove(self, ctx : MyContext, *users : discord.User):
+    async def config_blacklist_remove(self, ctx : MyContext, user : Union[discord.Member, discord.User]):
         """Remove a user from the bot blacklist."""
+        await self.bot.remove_from_blacklist(ctx, user)
 
-        query = """
-                DELETE FROM blacklist WHERE member_id = $1
-                """
 
-        success = []
-        for x in users:
-            await self.bot.db.execute(query, x.id)
-
-            self.bot.blacklist[x.id] = False
-            success.append(f'**{x}**')
-
-        await ctx.send(f'{self.bot.cross} Removed {", ".join(success)} from the bot blacklist.')
-
-    
     @config_blacklist.command(name='list')
     @is_dev()
     async def config_blacklist_list(self, ctx : MyContext, *, args : str = None):

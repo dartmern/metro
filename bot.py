@@ -1,10 +1,11 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 import discord
 from discord.ext import commands
 
 from pathlib import Path
 import os
 import asyncpg
+from discord.ext.commands.core import check
 import mystbin
 import aiohttp
 import logging
@@ -12,7 +13,7 @@ from utils.checks import check_dev
 
 from utils.useful import Cooldown
 from utils.json_loader import read_json
-from utils import errors
+from utils.errors import UserBlacklisted
 from utils.custom_context import MyContext
 
 os.environ["JISHAKU_NO_UNDERSCORE"] = "True"
@@ -71,7 +72,7 @@ class MetroBot(commands.AutoShardedBot):
         if is_blacklisted is False:
             return True
         else:
-            raise errors.UserBlacklisted
+            raise UserBlacklisted
 
     def __init__(self):
         intents = discord.Intents.all()
@@ -118,6 +119,31 @@ class MetroBot(commands.AutoShardedBot):
         #Cache
         self.prefixes = {}
         self.blacklist = {}
+
+    async def add_to_blacklist(self, ctx : MyContext, member : Union[discord.Member, discord.User], reason : str = None, *, silent : bool = False):
+        if check_dev(self, member):
+            raise commands.BadArgument("I have been hard configured to not blacklist this user.")
+
+        query = """
+                INSERT INTO blacklist(member_id, is_blacklisted, reason) VALUES ($1, $2, $3) 
+                """
+        try:
+            await self.db.execute(query, member.id, True, reason)
+        except asyncpg.exceptions.UniqueViolationError:
+            raise commands.BadArgument(f"This user is already blacklisted.")
+        self.bot.blacklist[member.id] = True
+
+        if silent is True:
+            await ctx.send(f"{self.check} Added **{member}** to the bot blacklist.")
+
+    async def remove_from_blacklist(self, ctx : MyContext, member : Union[discord.Member, discord.User]):
+        query = """
+                DELETE FROM blacklist WHERE member_id = $1
+                """
+        await self.db.execute(query, member.id)
+
+        await ctx.send(f"{self.bot.check} Removed **{member}** from the bot blacklist.")
+
 
     async def on_ready(self):
 

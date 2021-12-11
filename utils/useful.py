@@ -9,7 +9,7 @@ import asyncio
 
 from utils.checks import can_execute_action, check_dev, check_tester
 
-from discord.ext.buttons import Paginator
+
 from typing import Dict, Any, Optional
 
 
