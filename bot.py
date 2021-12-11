@@ -6,6 +6,7 @@ from pathlib import Path
 import os
 import asyncpg
 from discord.ext.commands.core import check
+from discord.ext.commands.flags import F
 import mystbin
 import aiohttp
 import logging
@@ -87,7 +88,7 @@ class MetroBot(commands.AutoShardedBot):
             case_insensitive=True,
             allowed_mentions=allowed_mentions,
             #owner_id=525843819850104842,
-            owner_ids=[525843819850104842, 844635601113579521],
+            owner_ids=[525843819850104842],
             #chunk_guilds_at_startup=False,
             help_command=None,
             slash_commands=True,
@@ -131,9 +132,9 @@ class MetroBot(commands.AutoShardedBot):
             await self.db.execute(query, member.id, True, reason)
         except asyncpg.exceptions.UniqueViolationError:
             raise commands.BadArgument(f"This user is already blacklisted.")
-        self.bot.blacklist[member.id] = True
+        self.blacklist[member.id] = True
 
-        if silent is True:
+        if silent is False:
             await ctx.send(f"{self.check} Added **{member}** to the bot blacklist.")
 
     async def remove_from_blacklist(self, ctx : MyContext, member : Union[discord.Member, discord.User]):
@@ -141,8 +142,8 @@ class MetroBot(commands.AutoShardedBot):
                 DELETE FROM blacklist WHERE member_id = $1
                 """
         await self.db.execute(query, member.id)
-
-        await ctx.send(f"{self.bot.check} Removed **{member}** from the bot blacklist.")
+        self.blacklist[member.id] = False
+        await ctx.send(f"{self.check} Removed **{member}** from the bot blacklist.")
 
 
     async def on_ready(self):

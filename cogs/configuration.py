@@ -9,6 +9,8 @@ import json
 from collections import defaultdict
 
 from typing import Optional, Union
+
+from discord.ext.commands.core import is_owner
 from bot import MetroBot
 
 #Arg parsing stuff
@@ -655,6 +657,24 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
         """Remove a user from the bot blacklist."""
         await self.bot.remove_from_blacklist(ctx, user)
 
+    @config_blacklist.command(name='info')
+    @is_dev()
+    async def config_blacklist_info(self, ctx : MyContext, user : Union[discord.Member, discord.User]):
+        """Check information on a user's blacklist."""
+
+        query = """
+                SELECT reason FROM blacklist WHERE member_id = $1
+                """
+        data = await self.bot.db.fetchrow(query, user.id)
+        if not data:
+            return await ctx.send("This user is not blacklisted.")
+
+        await ctx.send(
+            f"\nUser: {user.mention}"
+            f"\nReason: {data['reason']}",
+            allowed_mentions=discord.AllowedMentions(users=False)
+        )
+
 
     @config_blacklist.command(name='list')
     @is_dev()
@@ -662,6 +682,7 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
         """List all the users blacklisted from bot.
         
         Apply the `--cache` flag if you want me to search the cache instead of database.
+        Note: Searching the cache does not give the reason for blacklist.
         """
         
         if args:
@@ -690,7 +711,7 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
                     return await ctx.send('No users are currently blacklisted. (from cache)')
 
         query = """
-                SELECT member_id FROM blacklist WHERE is_blacklisted = True
+                SELECT member_id, reason FROM blacklist WHERE is_blacklisted = True
                 """
 
         records = await self.bot.db.fetch(query)
@@ -698,7 +719,7 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
             blacklisted = []
 
             for record in records:
-                blacklisted.append(f'{record["member_id"]} (<@{record["member_id"]}>)')
+                blacklisted.append(f'{record["member_id"]} (<@{record["member_id"]}>) {record["reason"] if record["reason"] else ""}')
 
             await ctx.paginate(blacklisted, per_page=10)
         else:

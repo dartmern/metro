@@ -1,53 +1,18 @@
 from typing import Optional
 import discord
 from discord.ext import commands
+from bot import MetroBot
 
 from utils.useful import Embed
 
-import aiohttp
-import re
 import random
 
 from utils.custom_context import MyContext
 
-def admins():
-    def predicate(ctx):
-        stilau = 163612264446820352
-        stilauJob = 771644796778709013
-        return ctx.message.author.id in ctx.bot.owner_ids
-    return commands.check(predicate)
-
-class detect(aiohttp.ClientSession):
-    async def find(self, url):
-        source = str(await (await super().get(url)).content.read()).lower()
-        phrases = ["rickroll", "rick roll", "rick astley", "never gonna give you up", "rickrolled"]
-        await super().close()
-        return bool(re.findall("|".join(phrases), source, re.MULTILINE))
-
 
 class fun(commands.Cog, description=":smile: Fun commands!"):
-    def __init__(self, bot):
+    def __init__(self, bot : MetroBot):
         self.bot = bot
-
-
-    @commands.command()
-    @commands.bot_has_permissions(send_messages=True)
-    async def rickroll(self, ctx, *, link):
-        """
-        Detects if a link is a rickroll
-        (Must start with https://)
-        """
-
-        i = link.replace("<", "").replace(">", "")
-        if "https://" or "http://" in link:
-            if await detect().find(i):
-                return await ctx.reply("Rickroll detected :eyes:")
-            else:
-                return await ctx.reply("That website is safe :)")
-        else:
-            await ctx.send(link + " is not a valid URL...")
-
-
 
     @commands.command()
     @commands.bot_has_permissions(send_messages=True)

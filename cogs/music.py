@@ -431,7 +431,7 @@ class music(commands.Cog, description=':musical_note: Make your server enjoy mus
         if ctx.author.voice.channel != ctx.guild.me.voice.channel:
             return await ctx.send("You aren't in my voice channel.")
 
-        em = discord.Embed(title=f":zzz: Alright, i'll stop the current song.", color = ctx.author.color)
+        em = discord.Embed(title=f":zzz: Alright, I'll stop the current song.", color = ctx.author.color)
         em.set_footer(text=f"Stopped by {ctx.author.name}", icon_url=f"{ctx.author.avatar.url}")
         await ctx.send(embed=em)
         voice = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)

@@ -1,3 +1,4 @@
+import re
 import discord
 from discord.ext import commands
 
@@ -261,6 +262,16 @@ class support(commands.Cog, description=':test_tube: Support only commands.'):
             return await ctx.message.add_reaction('<:mplus:904450883633426553>')
 
     
+    @commands.Cog.listener()
+    async def on_message(self, message : discord.Message):
+        
+        if not message.guild:
+            return
+        if not message.guild.id == SUPPORT_GUILD:
+            return
+
+        if 525843819850104842 in map(int, message.mentions):
+            await message.add_reaction(self.bot.cross)
     
 def setup(bot):
     bot.add_cog(support(bot))

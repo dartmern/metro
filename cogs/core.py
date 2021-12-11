@@ -3,6 +3,7 @@ import re
 from typing import List
 import discord
 from discord import errors
+from discord import interactions
 from discord.ext import commands
 
 import humanize
@@ -54,12 +55,15 @@ class core(commands.Cog, description="Core events."):
         self.error_channel = 912447757212606494
 
     @commands.Cog.listener()
-    async def on_command_error(self, ctx, error):
+    async def on_command_error(self, ctx : MyContext, error):
 
         if ctx.command and ctx.command.has_error_handler():
             return
 
         elif isinstance(error, errors.UserBlacklisted):
+            if ctx.interaction:
+                info = await self.bot.db.fetchval('SELECT reason FROM blacklist WHERE member_id = $1', ctx.author.id) 
+                return await ctx.interaction.response.send_message(f"You are blacklisted from Metro" + (f" for {info}" if info else ""), ephemeral=True)
             if ctx.author.id in self.blacklist_message_sent:
                 #AKA This user haven't been reminded they are blacklisted.
                 #Of course this is like a cache and isn't filled on startup but it can't really be spammed.
@@ -207,9 +211,8 @@ class core(commands.Cog, description="Core events."):
             retry_after = bucket.update_rate_limit()
             
             if retry_after:
-                current_time = dt.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-                await self.bot.add_to_blacklist(ctx, ctx.author, f'Spamming Commands (auto-ban) {current_time}', silent=True)
-                return await ctx.reply(f"You have been blacklisted for spamming commands.\nJoin my support server for a appeal: {self.bot.support}")
+                await self.bot.add_to_blacklist(ctx, ctx.author, f'Spamming Commands (auto-ban)', silent=True)
+                await ctx.send("You have been blacklisted for spamming commands. (auto-ban)")
             else:
                 await ctx.send(embed=em)
 
