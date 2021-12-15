@@ -5,6 +5,7 @@ import math
 import random
 from typing import Union
 import urllib
+from urllib.parse import quote_plus
 import discord
 from humanize.time import precisedelta
 import youtube_dl
@@ -13,6 +14,13 @@ from discord.ext import commands
 import re
 import humanize
 import datetime
+from bot import MetroBot
+
+from utils.custom_context import MyContext
+from utils.json_loader import read_json
+
+data = read_json('info')
+token = data['openrobot_api_key']
 
 
 youtube_dl.utils.bug_reports_message = lambda: ''
@@ -186,7 +194,7 @@ class SongQueue(asyncio.Queue):
 
 
 class VoiceState:
-    def __init__(self, bot: commands.Bot, ctx: commands.Context):
+    def __init__(self, bot: MetroBot, ctx: commands.Context):
         self.bot = bot
         self._ctx = ctx
 
@@ -263,7 +271,7 @@ class VoiceState:
 
 
 class music(commands.Cog, description=':musical_note: Make your server enjoy music within discord!'):
-    def __init__(self, bot):
+    def __init__(self, bot : MetroBot):
         self.bot = bot
         self.voice_states = {}
 
@@ -556,6 +564,7 @@ class music(commands.Cog, description=':musical_note: Make your server enjoy mus
             await asyncio.sleep(1)
             await member.guild.change_voice_state(channel=after.channel, self_deaf=True) 
         
+
 
 
 def setup(bot):

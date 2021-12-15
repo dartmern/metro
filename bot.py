@@ -1,3 +1,4 @@
+import collections
 from typing import List, Optional, Tuple, Union
 import discord
 from discord.ext import commands
@@ -60,7 +61,7 @@ async def load_blacklist():
 
 class MetroBot(commands.AutoShardedBot):
 #class MetroBot(commands.Bot):
-    PRE: tuple = ('m.', '?')
+    PRE: tuple = ('m.', '?', 'm?')
 
     def user_blacklisted(self, ctx : MyContext):
         try:
@@ -121,6 +122,10 @@ class MetroBot(commands.AutoShardedBot):
         self.prefixes = {}
         self.blacklist = {}
 
+        #Tracking
+        self.message_stats = collections.Counter()
+
+
     async def add_to_blacklist(self, ctx : MyContext, member : Union[discord.Member, discord.User], reason : str = None, *, silent : bool = False):
         if check_dev(self, member):
             raise commands.BadArgument("I have been hard configured to not blacklist this user.")
@@ -147,7 +152,6 @@ class MetroBot(commands.AutoShardedBot):
 
 
     async def on_ready(self):
-
         await self.wait_until_ready()
 
         from cogs.support_views import RoleView, TesterButton, AllRoles
@@ -162,18 +166,23 @@ class MetroBot(commands.AutoShardedBot):
         self.uptime = discord.utils.utcnow()
 
         print(
-            f"-----\nLogged in as: {self.user.name} : {self.user.id}\n-----\nMy current default prefix is: m.\n-----")
+            f"-----\nLogged in as: {self.user.name} : {self.user.id}\n-----\nMy default prefix{'es are' if len(self.PRE) >= 2 else ' is'}: {', '.join(self.PRE) if len(self.PRE) >= 2 else self.PRE[0]}\n-----")
 
         data = read_json('restart')
         user = self.get_user(525843819850104842)
-        channel = self.get_channel(data["channel_id"])
-        message = channel.get_partial_message(data["message_id"])
 
-        try:
-            await message.edit(content=f'{self.check} Back online!')
-        except discord.NotFound:
+        if data['dms']:
             await user.send("Restart complete!")
-
+        else:
+            channel = self.get_channel(data["channel_id"])
+            if not channel is None:
+                message = channel.get_partial_message(data["message_id"])
+                try:
+                    await message.edit(content=f'{self.check} Back online!')
+                except discord.NotFound:
+                    await user.send("Restart complete!")
+            else:
+                pass
         self.owner = user
 
 

@@ -328,7 +328,7 @@ class hypixel(commands.Cog, description='<:hypixel:912575998380355626> Get stats
         
         async with self.bot.session.get(f"https://sky.shiiyu.moe/api/v2/profile/{username}") as s:
             res = await s.json()
-
+            await self.bot.mystbin_client.post(res, syntax='python')
             try:
                 raise commands.BadArgument(res['error'])
             except KeyError:
@@ -360,8 +360,6 @@ class hypixel(commands.Cog, description='<:hypixel:912575998380355626> Get stats
             stat_dict['attack_speed'] = res['profiles'][profile]['data']['stats']['bonus_attack_speed']
             stat_dict.pop('bonus_attack_speed')
 
-            write_json(res, 'request')
-            
             for stat in list(stat_dict.keys()):
                 stats_to_append.append(f"{self.stat_emojis[stat]} {stat.replace('_', ' ').capitalize()}: {res['profiles'][profile]['data']['stats'][stat]} \u2800\u2800")
 
@@ -390,6 +388,7 @@ class hypixel(commands.Cog, description='<:hypixel:912575998380355626> Get stats
             
             embed.set_footer(text='This data is cached and can take up to 5 minutes to refresh.')
 
+        
         return await ctx.send(embed=embed, view=View(ctx, res, profile, username.lower(), profile_str))
                         
 

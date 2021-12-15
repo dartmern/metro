@@ -1,5 +1,11 @@
 <<<<<<< HEAD
 config/info.json
+cogs/__pycache__
+__pycache
+venv
+.idea
+discord.txt
+request.txt
 =======
 # Byte-compiled / optimized / DLL files
 __pycache__/

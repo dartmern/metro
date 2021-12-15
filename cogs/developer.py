@@ -602,6 +602,14 @@ class developer(commands.Cog, description="Developer commands."):
         except discord.HTTPException:
             await ctx.send("Cannot send an empty message!")   
 
+    @commands.command()
+    @is_dev()
+    async def inspect(self, ctx : MyContext, *, object : str):
+        """
+        Get source code of an object.
+        """
+        command = self.bot.get_command('eval')
+        await command(ctx, body=f'import inspect\nreturn inspect.getsource({object})')
 
     @commands.command()
     @is_dev()
@@ -615,81 +623,29 @@ class developer(commands.Cog, description="Developer commands."):
             return await ctx.send("Timed out.")
         
         message = await ctx.send("Rebooting...")
-
-        write_json(
-            {
-                "message_id" : message.id,
-                "channel_id" : message.channel.id
-            },
-            'restart'
-        )
-        restart_program()
-
-    @commands.group(
-        name='shard',
-        case_insensitive=True,
-        invoke_without_command=True
-    )
-    @is_dev()
-    async def shard(self, ctx):
-        """Manage sharding and shard information."""
-        await ctx.help()
-
-    @shard.command(name='restart')
-    @is_dev()
-    async def shard_restart(self, ctx : MyContext, shard_id : Optional[int] = None):
-        """Restart a shard with an id."""
-
-        if shard_id is None:
-            confirm = await ctx.confirm("Are you sure you want to reboot all my shards?", timeout=30)
-            if confirm is False:
-                return await ctx.send("Canceled.")
-            if confirm is None:
-                return await ctx.send("Timed out.")
-                
-            await ctx.send("Restarting all shards...")
-
-            status = []
-            for id, shard in self.bot.shards.items():
-                try:
-                    await shard.reconnect()
-                    status.append(f"Shard #{id}: {self.bot.check}")
-                except Exception as e:
-                    status.append(f"Shard #{id}: {self.bot.cross} - {e}")
-
-            await ctx.send(f"{self.bot.check} Restarted all shards. Below is a report on the status of the restart.")
-            await ctx.paginate(status, per_page=8)
-            return
-            
-
-        shard = self.bot.get_shard(shard_id)
-        if shard is None:
-            raise commands.BadArgument("Invaild shard_id.")
-        await ctx.send(f'Restarting `Shard #{shard_id}`')
-        await shard.reconnect()
-        await ctx.send(f"Finished restarting `Shard #{shard_id}`")
-
-
-    @shard.command(name='list')
-    @is_dev()
-    async def shard_list(self, ctx : MyContext):
-        """List all the shards."""
-
-        shards = self.bot.shards
-
-        to_paginate = []
-        for id, shard in shards.items():
-            to_paginate.append(
-                f'**Shard #{shard.id}**'
-                f'\n- Latency: {round(shard.latency*1000, 1)}ms'
-                f'\n- Is closed: {self.bot.check if shard.is_closed() else self.bot.cross}'
-                f'\n- Is ratelimited: {self.bot.check if shard.is_ws_ratelimited() else self.bot.cross}'
-
+        if ctx.guild:
+            write_json(
+                {
+                    "message_id" : message.id,
+                    "channel_id" : message.channel.id,
+                    "dms" : False
+                },
+                'restart'
             )
-        await ctx.paginate(to_paginate, per_page=4)
+            restart_program()
+        else:
+            write_json(
+                {
+                    "message_id" : message.id,
+                    "channel_id" : message.channel.id,
+                    "dms" : True
+                },
+                'restart'
+            )
+            restart_program()
 
 
-    
+
 
 def setup(bot):
     bot.add_cog(developer(bot))

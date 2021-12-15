@@ -1,3 +1,4 @@
+import asyncio
 import io
 import re
 from typing import List
@@ -42,7 +43,8 @@ class ErrorView(discord.ui.View):
         try:
             await interaction.response.send_message(embed=embed, ephemeral=True)
         except (discord.HTTPException, discord.Forbidden):
-            await interaction.channel.send('Full traceback was too long:',file=discord.File(io.StringIO(traceback_string)), filename='traceback.py')
+            await interaction.response.defer(ephemeral=False)
+            await self.ctx.message.reply    ('Full traceback was too long:',file=discord.File(io.StringIO(self.traceback_string), filename='traceback.py'))
         
 
 
@@ -215,6 +217,7 @@ class core(commands.Cog, description="Core events."):
                 await ctx.send("You have been blacklisted for spamming commands. (auto-ban)")
             else:
                 await ctx.send(embed=em)
+                await asyncio.sleep(1.5)
 
         elif isinstance(error, commands.errors.DisabledCommand):
             return await ctx.send(
