@@ -194,9 +194,7 @@ class docs(commands.Cog, description=":books: Fuzzy search through documentation
         a cruddy fuzzy algorithm.
         """
 
-        await self.do_rtfm(ctx, 'edpy', obj)
-
-
+        await self.do_rtfm(ctx, 'enhanced-discord.py', obj)
 
     @rtfm.command(name="python",aliases=["py"],slash_command=True)
     @commands.bot_has_permissions(send_messages=True)
@@ -210,7 +208,7 @@ class docs(commands.Cog, description=":books: Fuzzy search through documentation
     async def rtfm_master(self, ctx, *, object : str = commands.Option(default=None,description='Object to search for')):
         """Gives you a documentation link for a discord.py entity. (master branch)"""
 
-        await self.do_rtfm(ctx, "master", object)
+        await self.do_rtfm(ctx, "discord.py-2.0", object)
 
 
     @rtfm.command(name='dpy',aliases=['discordpy', 'discord.py'],slash_command=True)
@@ -218,7 +216,7 @@ class docs(commands.Cog, description=":books: Fuzzy search through documentation
     async def rtfm_dpy(self, ctx, *, object : str = commands.Option(default=None,description='Object to search for')):
         """Gives you a documentation link for a discord.py entity."""
 
-        await self.do_rtfm(ctx, "latest", object)
+        await self.do_rtfm(ctx, "discord.py", object)
 
 
     @rtfm.command(name='edpy',slash_command=True)
@@ -226,7 +224,7 @@ class docs(commands.Cog, description=":books: Fuzzy search through documentation
     async def rtfm_edpy(self, ctx, *, object : str = commands.Option(default=None,description='Object to search for')):
         """Gives you a documentation link for a ed-py entity."""
 
-        await self.do_rtfm(ctx, 'edpy', object)
+        await self.do_rtfm(ctx, 'enhanced-discord.py', object)
 
     @rtfm.command(name='aiohttp',slash_command=True)
     @commands.bot_has_permissions(send_messages=True)
