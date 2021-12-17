@@ -128,6 +128,8 @@ class MetroBot(commands.AutoShardedBot):
 
     async def add_to_blacklist(self, ctx : MyContext, member : Union[discord.Member, discord.User], reason : str = None, *, silent : bool = False):
         if check_dev(self, member):
+            if silent is True:
+                return
             raise commands.BadArgument("I have been hard configured to not blacklist this user.")
 
         query = """

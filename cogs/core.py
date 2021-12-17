@@ -214,7 +214,10 @@ class core(commands.Cog, description="Core events."):
             
             if retry_after:
                 await self.bot.add_to_blacklist(ctx, ctx.author, f'Spamming Commands (auto-ban)', silent=True)
-                await ctx.send("You have been blacklisted for spamming commands. (auto-ban)")
+                if not check_dev(self.bot, ctx.author):
+                    await ctx.send("You have been blacklisted for spamming commands. (auto-ban)")
+                else:
+                    return
             else:
                 await ctx.send(embed=em)
                 await asyncio.sleep(1.5)
