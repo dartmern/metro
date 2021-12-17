@@ -1,15 +1,45 @@
-from typing import Literal, Optional
+from typing import Dict, Literal, Optional
 import discord
 from discord.ext import commands
+from bot import MetroBot
 
-from utils.useful import Embed, fuzzy
+from utils.useful import Cooldown, Embed, fuzzy
 
 import io
 import re
 import os
 import zlib
+import yarl
 
 from utils.custom_context import MyContext
+from utils.json_loader import read_json
+
+data = read_json('info')
+id_token = data['id_token']
+
+# Parts of rtfs code is from BOB
+# https://github.com/IAmTomahawkx/bob/blob/7f97c7b5d502cbb476f838c1ca9fb46cc46c4b03/extensions/idevision.py
+
+# Most of rtfm code is from R. Danny
+# https://github.com/Rapptz/RoboDanny/blob/rewrite/cogs/api.py#L308-L316
+
+
+class LibraryConverter(commands.Converter):
+    async def convert(self, _, param):
+        if param.lower() in ("edpy", "enhanced-discord.py"):
+            return "enhanced-discord.py"
+        if param.lower() in ("dpy", "discordpy", "discord.py"):
+            return "discord.py"
+        elif param.lower() in ("dpy2", "discord.py2", "discordpy2"):
+            return "discord.py-2"
+        elif param.lower() in ("tio", "twitch", "twitchio"):
+            return "twitchio"
+        elif param.lower() in ("wl", "wave", "link", "wavelink"):
+            return "wavelink"
+        elif param.lower() in ("ahttp", "aiohttp"):
+            return "aiohttp"
+        else:
+            raise commands.UserInputError("Must be one of `enhanced-discord.py`, `discord.py`, `discord.py-2.0`, `twitchio`, `wavelink`, or `aiohttp`")
 
 
 class SphinxObjectFileReader:
@@ -46,7 +76,7 @@ class SphinxObjectFileReader:
 
 
 class docs(commands.Cog, description=":books: Fuzzy search through documentations."):
-    def __init__(self, bot):
+    def __init__(self, bot : MetroBot):
         self.bot = bot
 
 
@@ -233,6 +263,48 @@ class docs(commands.Cog, description=":books: Fuzzy search through documentation
 
         await self.do_rtfm(ctx, 'aiohttp', object)
 
+    @commands.command(name='rtfs')
+    @commands.check(Cooldown(3, 8, 4, 8, commands.BucketType.user))
+    async def rtfm_github(self, ctx : MyContext, library : Optional[LibraryConverter], *, query : str):
+        """
+        Get source code from a library for items matching the query.
+        Vaild libraries: `enhanced-discord.py`, `discord.py`, `discord.py-2.0`, `twitchio`, `wavelink`, or `aiohttp`
+
+        This command is powered by [IDevision API](https://idevision.net/static/redoc.html)
+        """
+        await ctx.defer()
+
+        if library is None:
+            library = "enhanced-discord.py"
+
+        url = yarl.URL("https://idevision.net/api/public/rtfs").with_query({'query' : query, 'library' : library, 'format' : 'links'})
+        headers = {"User-Agent" : 'metrodiscordbot', 'Authorization' : id_token}
+
+        async with self.bot.session.get(url, headers=headers) as response:
+            if response.status != 200:
+                return await ctx.send(f"IDevision API returned a bad response: {response.status} ({response.reason})")
+
+            data = await response.json()
+
+        nodes : Dict = data['nodes']
+        query_time = float(data['query_time'])
+
+        if not nodes:
+            e = Embed()
+            e.color = discord.Colour.yellow()
+            e.description = 'Could not found anything matching that query.'
+            e.set_footer(text=f'Query time: {round(query_time, 3)}')
+            return await ctx.send(embed=e)
+
+        to_send = [f"[{name}]({url})" for name, url in nodes.items()]
+        
+        e = Embed()
+        e.color = discord.Colour.green()
+        e.description = '\n'.join(to_send)
+        e.url = 'https://idevision.net/static/redoc.html'
+        e.title = 'API result'
+        e.set_footer(text=f'Powered by iDevision API • Query time: {round(query_time, 3)}')
+        await ctx.send(embed=e)
 
 def setup(bot):
     bot.add_cog(docs(bot))
