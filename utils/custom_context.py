@@ -94,7 +94,8 @@ class MyContext(commands.Context):
         *,
         timeout : float = 60.0,
         delete_after : bool = True,
-        author_id : Optional[int] = None
+        author_id : Optional[int] = None,
+        interaction : Optional[discord.Interaction] = None
 
     ) -> Optional[bool]:
 
@@ -107,9 +108,14 @@ class MyContext(commands.Context):
             author_id=author_id
 
         )
-        view.message = await self.send(message, view=view)
-        await view.wait()
-        return view.value
+        if interaction:
+            view.message = await interaction.response.send_message(message, view=view)
+            await view.wait()
+            return view.value
+        else:
+            view.message = await self.send(message, view=view)
+            await view.wait()
+            return view.value
         
 
     async def paginate(
