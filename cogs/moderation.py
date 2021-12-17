@@ -2,6 +2,7 @@ import asyncio
 import shlex
 import discord
 from discord.ext import commands
+from bot import MetroBot
 from utils.custom_context import MyContext
 from utils.remind_utils import UserFriendlyTime, human_timedelta
 
@@ -18,7 +19,7 @@ import argparse
 from humanize.time import precisedelta
 
 from utils import remind_utils
-from utils.useful import Embed
+from utils.useful import Cooldown, Embed
 
 def can_block():
     def predicate(ctx):
@@ -51,8 +52,66 @@ class TimeConverter(commands.Converter):
                 raise commands.BadArgument("{} is not a number!".format(v))
         return time
 
+class MuteRoleView(discord.ui.View):
+    def __init__(self, ctx : MyContext):
+        super().__init__(timeout=180)
+        self.ctx = ctx
+
+    async def interaction_check(self, interaction):
+        if self.ctx.author.id == interaction.user.id:
+            return True
+        else:
+            await interaction.response.send_message(
+                "Only the command invoker can use this button.", ephemeral=True
+            )
+
+    @discord.ui.button(label='Create new mutedrole', style=discord.ButtonStyle.blurple, row=0)
+    async def _(self, button : discord.ui.Button, interaction : discord.Interaction):
+        
+        message = await interaction.response.send_message(f"<a:mtyping:904156199967158293> Creating muterole and setting permissions across the server...")
+        
+        #Create the role
+        muterole = await self.ctx.guild.create_role(name='Muted', reason='Muterole setup [Invoked by: {0} (ID: {0.id})]'.format(self.ctx.author))
+
+        overwrites = {"send_messages": False}
+        for channel in self.ctx.guild.channels:
+            await channel.set_permissions(muterole, **overwrites)
+
+        await interaction.edit_original_message(content=f"{self.ctx.bot.check} Created muterole `@{muterole.name}` and set to this guild's muterole.")
+
+    @discord.ui.button(label='Set existing role', style=discord.ButtonStyle.gray, row=1)
+    async def __(self, button : discord.ui.Button, interaction : discord.Interaction):
+        e = Embed()
+        e.description = 'Please send the mention/id/name of the role to be updated.'
+        await interaction.response.send_message(embed=e)
+
+        def check(message : discord.Message):
+            return message.author == self.ctx.message.author and message.channel == self.ctx.channel
+
+        try:
+            role_string : discord.Message = await self.ctx.bot.wait_for('message', check=check, timeout=30.0)
+        except asyncio.TimeoutError:
+            return await interaction.followup.send('Timed out.')
+        try:
+            role = await commands.RoleConverter().convert(self.ctx, role_string.content)
+        except commands.RoleNotFound:
+            return await interaction.edit_original_message(content='Could not convert that into a role.', embeds=[])
+        
+        return await interaction.edit_original_message(content=f'{self.ctx.bot.check} Successfully updated `@{role.name}` to the mutedrole.', embeds=[])
+
+    @discord.ui.button(label='Remove existing mutedrole', style=discord.ButtonStyle.danger, row=2)
+    async def ___(self, button : discord.ui.Button, interaction : discord.Interaction):
+
+        confirm = await self.ctx.confirm('Are you sure you want to remove the existing mutedrole for this guild?\n(This action cannot be undone)', interaction=interaction)
+        if confirm is None:
+            return await self.ctx.message.reply(f"Timed out.")
+        if confirm is False:
+            return await self.ctx.message.reply(f"Canceled.")
+        
+        await interaction.followup.send(f":wastebasket: Removed the existing mutedrole for this guild.")
+
 class moderation(commands.Cog, description=":hammer: Moderation commands."):
-    def __init__(self, bot):
+    def __init__(self, bot : MetroBot):
         self.bot = bot
 
 
@@ -61,9 +120,9 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
     @commands.bot_has_permissions(send_messages=True, kick_members=True)
     async def kick_cmd(self,
                        ctx : MyContext,
-                       member : discord.Member,
+                       member : discord.Member = commands.Option(description='Member to kick.'),
                        *,
-                       reason : Optional[str] = None  
+                       reason : Optional[str] = commands.Option(description='Reason for kicking this member.')  
                        ):
         """
         Kicks a member from the server.\n
@@ -117,14 +176,14 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
     async def ban_cmd(
             self,
             ctx : MyContext,
-            member : Union[discord.Member, discord.User],
-            delete_days : Optional[int] = 0,
+            member : discord.Member = commands.Option(description='Member to ban.'),
             *,
-            reason : Optional[str] = None
+            delete_days : Optional[int] = commands.Option(default=0, description='Amount of days worth of messages to delete.'),
+            reason : Optional[str] = commands.Option(description='Reason to ban this member/user.')
     ):
         """
         Ban a member from the server.\n
-        Member doesn't need to be in the server. Can be a mention, name or id.
+        Can be a mention, name or id.
         """
         action_converter = ActionReason()
         converted_action = await action_converter.convert(ctx, reason)
@@ -166,7 +225,6 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
         embed.set_footer(text=f'ID: {member.id} | DM successful: {success}')
 
         await ctx.guild.ban(member, reason=converted_action, delete_message_days=delete_days)
-
         await ctx.send(embed=embed)
           
 
@@ -176,11 +234,12 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
                       usage="<member>")
     @commands.has_guild_permissions(ban_members=True)
     @commands.bot_has_permissions(send_messages=True, ban_members=True)
+    @commands.check(Cooldown(2, 8, 2, 4, commands.BucketType.member))
     async def unban_cmd(
             self,
             ctx : MyContext,
-            member : discord.User,
-            reason : str = None
+            member : discord.User = commands.Option(description='User to be unbanned.'),
+            reason : Optional[str] = commands.Option(description='Reason for this user to be unbanned.')
     ):
         """
         Unbans an user from the server.
@@ -196,11 +255,34 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
         raise commands.BadArgument(
             "**" + member.name + "** was not a previously banned member."
         )
+    
+    @commands.command(name='listbans', aliases=['bans'])
+    @commands.bot_has_guild_permissions(ban_members=True)
+    @commands.has_guild_permissions(ban_members=True)
+    @commands.check(Cooldown(2, 8, 2, 4, commands.BucketType.member))
+    async def list_bans(self, ctx : MyContext):
+        """List all the banned users for this guild."""
+
+        bans = await ctx.guild.bans()
+        if not bans:
+            return await ctx.send(f"No users are banned in this guild.")
+
+        to_append = []
+        for ban_entry in bans:
+            to_append.append(f"{ban_entry.user} {ban_entry.user.mention} - {ban_entry.reason}")
+        
+        await ctx.paginate(to_append, per_page=12)
+
+
+        
+        
+
+
 
     @commands.command(name='multiban',usage="[users...] [reason]")
     @commands.has_permissions(ban_members=True)
     @commands.bot_has_permissions(send_messages=True, ban_members=True)
-    async def _multiban(self, ctx, members : commands.Greedy[MemberID], *, reason : ActionReason = None):
+    async def _multiban(self, ctx : MyContext, members : commands.Greedy[MemberID], *, reason : ActionReason = None):
         """
         Ban multiple people from the server.
         
@@ -1003,14 +1085,34 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
         else:
             moderator = f'{moderator} (ID: {mod_id})'
 
-
         reason = f'Automatic unblock from timer made on {timer.created_at} by {moderator}.'
 
-        
         try:
             await channel.set_permissions(to_unblock, send_messages=None, add_reactions=None, reason=reason)
         except:
             pass  
+
+
+    @commands.command(
+        name='muterole'
+    )
+    @commands.bot_has_guild_permissions(manage_roles=True, manage_channels=True)
+    @commands.has_guild_permissions(manage_roles=True)
+    async def muterole(self, ctx : MyContext):
+        """
+        Manage this guild's mute role with an interactive menu.
+        """
+        # Muterole menu idea from Neutra
+        # https://github.com/Hecate946/Neutra/blob/main/cogs/admin.py#L51-L125
+
+        e = Embed()
+        e.color = discord.Color.yellow()
+        e.title = 'Muterole Configuration'
+        e.description = 'Please choose one of the options below to manage/set/create the muted role.'
+
+        await ctx.send(embed=e, view=MuteRoleView(ctx))
+
+        
 
         
 
