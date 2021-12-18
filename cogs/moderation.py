@@ -1494,6 +1494,7 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
                         "mute",
                         ctx.guild.id,
                         ctx.author.id,
+                        ctx.author.id,
                         connection=self.bot.db,
                         created=ctx.message.created_at.replace(tzinfo=None)
             ) 
