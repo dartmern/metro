@@ -7,6 +7,7 @@ from bot import MetroBot
 
 from utils.calc_tils import NumericStringParser
 from utils.checks import check_dev
+from utils.converters import RoleConverter
 from utils.json_loader import read_json
 from utils.custom_context import MyContext
 from utils.useful import Cooldown, Embed, get_bot_uptime
@@ -775,10 +776,24 @@ class utility(commands.Cog, description=":information_source: Get utilities like
         except discord.Forbidden:
             await ctx.send("Oops! I couldn't send you a message. Are you sure your DMs are on?")
 
+    @commands.command(aliases=['ri'])
+    async def roleinfo(self, ctx : MyContext, role : RoleConverter):
+        """
+        Show information about a role.
+        """
 
-        
+        e = Embed()
+        e.set_author(name=role.name)
+        e.add_field(name='Mention', value=role.mention)
+        e.add_field(name='Members', value=len(role.members))
+        e.add_field(name='Hoisted', value=await ctx.emojify(role.hoist))
+        e.add_field(name='Color', value=role.color)
+        e.add_field(name='Position', value=role.position)
+        e.add_field(name='Mentionable', value=await ctx.emojify(role.mentionable))
+        e.set_footer(text=f'Role ID: {role.id} • Created on ')
+        e.timestamp = role.created_at
 
-
+        await ctx.send(embed=e)
 
 def setup(bot):
     bot.add_cog(utility(bot))

@@ -81,7 +81,21 @@ class ActionReason(commands.Converter):
             raise commands.BadArgument(f'Reason is too long ({len(argument)}/{reason_max})')
         return ret
 
+class RoleConverter(commands.Converter):
+    async def convert(self, ctx, argument):
+        try:
+            role_converter = commands.RoleConverter()
+            role = await role_converter.convert(ctx, argument)
+        except commands.RoleNotFound:
+            role = discord.utils.find(
+                lambda r: r.name.lower().startswith(argument),
+                ctx.guild.roles
+            )
 
+        if role is None:
+            raise commands.RoleNotFound(f"Role \"{argument}\" not found.")
+
+        return role
 
 
 
