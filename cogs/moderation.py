@@ -1,6 +1,7 @@
 import asyncio
 import shlex
 import discord
+from discord import role
 from discord.ext import commands
 from bot import MetroBot
 from utils.custom_context import MyContext
@@ -16,6 +17,7 @@ import json
 import datetime
 import re
 import argparse
+import asyncpg
 from humanize.time import precisedelta
 
 from utils import remind_utils
@@ -53,9 +55,10 @@ class TimeConverter(commands.Converter):
         return time
 
 class MuteRoleView(discord.ui.View):
-    def __init__(self, ctx : MyContext):
+    def __init__(self, ctx : MyContext, role_id : int):
         super().__init__(timeout=180)
         self.ctx = ctx
+        self.role_id = role_id
 
     async def interaction_check(self, interaction):
         if self.ctx.author.id == interaction.user.id:
@@ -65,7 +68,7 @@ class MuteRoleView(discord.ui.View):
                 "Only the command invoker can use this button.", ephemeral=True
             )
 
-    @discord.ui.button(label='Create new mutedrole', style=discord.ButtonStyle.blurple, row=0)
+    @discord.ui.button(label='Create new mute role', style=discord.ButtonStyle.blurple, row=0)
     async def _(self, button : discord.ui.Button, interaction : discord.Interaction):
         
         message = await interaction.response.send_message(f"<a:mtyping:904156199967158293> Creating muterole and setting permissions across the server...")
@@ -77,12 +80,17 @@ class MuteRoleView(discord.ui.View):
         for channel in self.ctx.guild.channels:
             await channel.set_permissions(muterole, **overwrites)
 
+        try:
+            await self.ctx.bot.db.execute("INSERT INTO servers (muterole, server_id) VALUES ($1, $2)", muterole.id, self.ctx.guild.id)
+        except asyncpg.exceptions.UniqueViolationError:
+            await self.ctx.bot.execute("UPDATE servers SET muterole = $1 WHERE server_id = $2", muterole.id, self.ctx.guild.id)
+
         await interaction.edit_original_message(content=f"{self.ctx.bot.check} Created muterole `@{muterole.name}` and set to this guild's muterole.")
 
-    @discord.ui.button(label='Set existing role', style=discord.ButtonStyle.gray, row=1)
+    @discord.ui.button(label='Set existing mute role', style=discord.ButtonStyle.green, row=0)
     async def __(self, button : discord.ui.Button, interaction : discord.Interaction):
         e = Embed()
-        e.description = 'Please send the mention/id/name of the role to be updated.'
+        e.description = 'Please send the mention/id/name of the role to be set.'
         await interaction.response.send_message(embed=e)
 
         def check(message : discord.Message):
@@ -97,18 +105,53 @@ class MuteRoleView(discord.ui.View):
         except commands.RoleNotFound:
             return await interaction.edit_original_message(content='Could not convert that into a role.', embeds=[])
         
+        try:
+            await self.ctx.bot.db.execute("INSERT INTO servers (muterole, server_id) VALUES ($1, $2)", role.id, self.ctx.guild.id)
+        except asyncpg.exceptions.UniqueViolationError:
+            await self.ctx.bot.execute("UPDATE servers SET muterole = $1 WHERE server_id = $2", role.id, self.ctx.guild.id)
+
         return await interaction.edit_original_message(content=f'{self.ctx.bot.check} Successfully updated `@{role.name}` to the mutedrole.', embeds=[])
 
-    @discord.ui.button(label='Remove existing mutedrole', style=discord.ButtonStyle.danger, row=2)
+    @discord.ui.button(label='Remove existing muted role', style=discord.ButtonStyle.danger, row=0)
     async def ___(self, button : discord.ui.Button, interaction : discord.Interaction):
 
-        confirm = await self.ctx.confirm('Are you sure you want to remove the existing mutedrole for this guild?\n(This action cannot be undone)', interaction=interaction)
+        if not self.role_id:
+            return await interaction.response.send_message(f"This guild does not have a mute role configured yet.", ephemeral=True)
+
+        # Give a confirmation on deleting this role from database
+        confirm = await self.ctx.confirm('Are you sure you want to remove the existing mutedrole for this guild?', interaction=interaction)
         if confirm is None:
-            return await self.ctx.message.reply(f"Timed out.")
+            return
         if confirm is False:
-            return await self.ctx.message.reply(f"Canceled.")
+            return
         
+        # Remove from db
+        await self.ctx.bot.db.execute("DELETE FROM servers WHERE muterole = $1", self.role_id)
+
         await interaction.followup.send(f":wastebasket: Removed the existing mutedrole for this guild.")
+    
+    @discord.ui.button(emoji='\U00002753', style=discord.ButtonStyle.gray, row=1)
+    async def ____(self, button : discord.ui.Button, interaction : discord.Interaction):
+        
+        await interaction.response.send_message(
+            f"\nNeed help with which option to choose?"
+            f"\n- \U0001f535 Choose **Create new mute role** if you don't currently have a role named `@Muted` setup correctly (choose this if you are confused)"
+            f"\n\n- \U0001f7e2 Choose **Update set mute role** if you *already* have a role named `@Muted` setup across the channels"
+            f"\n\n- \U0001f534 Choose **Remove existing muted role** if you want to delete a already setup muted role from my database (this action cannot be undone)",
+            ephemeral=True
+        )
+
+    @discord.ui.button(emoji='\U0001f5d1', style=discord.ButtonStyle.gray, row=1)
+    async def stop_view(self, button : discord.ui.Button, interaction : discord.Interaction):
+        """
+        Stop the pagination session. 
+        Unless this pagination menu was invoked with a slash command
+        """
+
+        await interaction.response.defer()
+        await interaction.delete_original_message()
+        self.stop()
+
 
 class moderation(commands.Cog, description=":hammer: Moderation commands."):
     def __init__(self, bot : MetroBot):
@@ -1053,6 +1096,35 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
             delta = human_timedelta(duration.dt - datetime.timedelta(seconds=2))
             await ctx.send(f'Blocked {member} for {delta}')
 
+    @commands.command(
+        name='muterole'
+    )
+    @commands.guild_only()
+    @commands.bot_has_guild_permissions(manage_roles=True, manage_channels=True)
+    @commands.has_guild_permissions(manage_roles=True)
+    @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.member))
+    async def muterole(self, ctx : MyContext):
+        """
+        Manage this guild's mute role with an interactive menu.
+        """
+        # Muterole menu idea from Neutra
+        # https://github.com/Hecate946/Neutra/blob/main/cogs/admin.py#L51-L125
+
+        data = await self.bot.db.fetchrow("SELECT muterole FROM servers WHERE server_id = $1", ctx.guild.id)
+        if not data:
+            role_id = None
+            current_settings = "No muterole set yet..."
+        else:
+            role_id = data['muterole']
+            current_settings = f"<@&{role_id}> (ID: {role_id})"
+        e = Embed()
+        e.color = discord.Color.yellow()
+        e.title = 'Muterole Configuration'
+        e.description = 'Please choose one of the options below to manage/set/create the muted role.'\
+                        f"\n\n**Your current muterole configured:** {current_settings}"
+
+        await ctx.send(embed=e, view=MuteRoleView(ctx, role_id))
+
         
     @commands.Cog.listener()
     async def on_tempblock_timer_complete(self, timer):
@@ -1091,30 +1163,6 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
             await channel.set_permissions(to_unblock, send_messages=None, add_reactions=None, reason=reason)
         except:
             pass  
-
-
-    @commands.command(
-        name='muterole'
-    )
-    @commands.bot_has_guild_permissions(manage_roles=True, manage_channels=True)
-    @commands.has_guild_permissions(manage_roles=True)
-    async def muterole(self, ctx : MyContext):
-        """
-        Manage this guild's mute role with an interactive menu.
-        """
-        # Muterole menu idea from Neutra
-        # https://github.com/Hecate946/Neutra/blob/main/cogs/admin.py#L51-L125
-
-        e = Embed()
-        e.color = discord.Color.yellow()
-        e.title = 'Muterole Configuration'
-        e.description = 'Please choose one of the options below to manage/set/create the muted role.'
-
-        await ctx.send(embed=e, view=MuteRoleView(ctx))
-
-        
-
-        
-
+    
 def setup(bot):
     bot.add_cog(moderation(bot))
