@@ -306,6 +306,7 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
     async def list_bans(self, ctx : MyContext):
         """List all the banned users for this guild."""
 
+        await ctx.defer()
         bans = await ctx.guild.bans()
         if not bans:
             return await ctx.send(f"No users are banned in this guild.")
@@ -314,13 +315,7 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
         for ban_entry in bans:
             to_append.append(f"{ban_entry.user} {ban_entry.user.mention} - {ban_entry.reason}")
         
-        await ctx.paginate(to_append, per_page=12)
-
-
-        
-        
-
-
+        return await ctx.paginate(to_append, per_page=12)
 
     @commands.command(name='multiban',usage="[users...] [reason]")
     @commands.has_permissions(ban_members=True)
@@ -751,9 +746,6 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
                 await ctx.send(f'Successfully removed {deleted} messages.', delete_after=7)
             else:
                 await ctx.send(to_send, delete_after=7)
-
-
-
 
     @commands.group(
         name='purge',
