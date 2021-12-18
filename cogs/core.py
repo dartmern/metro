@@ -44,7 +44,7 @@ class ErrorView(discord.ui.View):
             await interaction.response.send_message(embed=embed, ephemeral=True)
         except (discord.HTTPException, discord.Forbidden):
             await interaction.response.defer(ephemeral=False)
-            await self.ctx.message.reply    ('Full traceback was too long:',file=discord.File(io.StringIO(self.traceback_string), filename='traceback.py'))
+            await self.ctx.message.reply('Full traceback was too long:',file=discord.File(io.StringIO(self.traceback_string), filename='traceback.py'))
         
 
 
@@ -122,7 +122,7 @@ class core(commands.Cog, description="Core events."):
                 try:
                     await channel.send(embeds=embeds)
                 except (discord.Forbidden, discord.HTTPException):
-                    await channel.send(content='Traceback string was too long to output.', embed=embed, file=discord.File(io.StringIO(traceback_string)))
+                    await channel.send(content='Traceback string was too long to output.', embed=embed, file=discord.File(io.StringIO(traceback_string), filename='traceback.py'))
                 
         elif isinstance(error, commands.BadArgument):
             await ctx.send(str(error))

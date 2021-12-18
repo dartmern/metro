@@ -1,5 +1,6 @@
 import re
 import discord
+import time
 from discord.ext import commands
 
 
@@ -264,14 +265,20 @@ class support(commands.Cog, description=':test_tube: Support only commands.'):
     
     @commands.Cog.listener()
     async def on_message(self, message : discord.Message):
-        
-        if not message.guild:
-            return
-        if not message.guild.id == SUPPORT_GUILD:
-            return
+        start = time.perf_counter()
 
-        if 525843819850104842 in map(int, message.mentions):
-            await message.add_reaction(self.bot.cross)
+        #if not message.guild:
+            #return
+
+        #if 525843819850104842 in map(int, message.mentions):
+            #await message.add_reaction(self.bot.cross)
+
+        if 788543184082698252 in map(int, message.mentions):
+            end = time.perf_counter()
+            await message.add_reaction("\U0001f440")
+            await message.channel.send(f"{(end-start)*1000} ms")
+
+
     
 def setup(bot):
     bot.add_cog(support(bot))

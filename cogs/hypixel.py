@@ -328,7 +328,6 @@ class hypixel(commands.Cog, description='<:hypixel:912575998380355626> Get stats
         
         async with self.bot.session.get(f"https://sky.shiiyu.moe/api/v2/profile/{username}") as s:
             res = await s.json()
-            await self.bot.mystbin_client.post(res, syntax='python')
             try:
                 raise commands.BadArgument(res['error'])
             except KeyError:

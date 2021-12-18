@@ -304,6 +304,7 @@ class UserFriendlyTime(commands.Converter):
 
             match = regex.match(argument)
             if match is not None and match.group(0):
+                print("matched")
                 data = {k: int(v) for k, v in match.groupdict(default=0).items()}
                 remaining = argument[match.end() :].strip()
                 result.dt = now + relativedelta(**data)
@@ -386,6 +387,7 @@ class UserFriendlyTime(commands.Converter):
             return await result.check_constraints(ctx, now, remaining)
         except Exception as e:
             print(f"Error in UserFriendlyTime: {e}")
+
 
 
 def format_dt(dt, style=None):

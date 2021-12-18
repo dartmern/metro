@@ -5,7 +5,7 @@ from discord import role
 from discord.ext import commands
 from bot import MetroBot
 from utils.custom_context import MyContext
-from utils.remind_utils import UserFriendlyTime, human_timedelta
+from utils.remind_utils import FutureTime, UserFriendlyTime, human_timedelta
 
 from utils.converters import ActionReason, MemberID
 from utils.checks import can_execute_action
@@ -24,7 +24,7 @@ from utils import remind_utils
 from utils.useful import Cooldown, Embed
 
 def can_block():
-    def predicate(ctx):
+    def predicate(ctx : MyContext):
         if ctx.guild is None:
             return False
         
@@ -32,6 +32,8 @@ def can_block():
 
     return commands.check(predicate)
 
+
+        
 
 class Arguments(argparse.ArgumentParser):
     def error(self, message):
@@ -72,7 +74,10 @@ class MuteRoleView(discord.ui.View):
     async def _(self, button : discord.ui.Button, interaction : discord.Interaction):
         
         message = await interaction.response.send_message(f"<a:mtyping:904156199967158293> Creating muterole and setting permissions across the server...")
-        
+        for item in self.children:
+            if isinstance(item, discord.ui.Button):
+                item.disabled = True
+        await interaction.message.edit(view=self)
         #Create the role
         muterole = await self.ctx.guild.create_role(name='Muted', reason='Muterole setup [Invoked by: {0} (ID: {0.id})]'.format(self.ctx.author))
 
@@ -87,8 +92,15 @@ class MuteRoleView(discord.ui.View):
 
         await interaction.edit_original_message(content=f"{self.ctx.bot.check} Created muterole `@{muterole.name}` and set to this guild's muterole.")
 
+
     @discord.ui.button(label='Set existing mute role', style=discord.ButtonStyle.green, row=0)
     async def __(self, button : discord.ui.Button, interaction : discord.Interaction):
+
+        for item in self.children:
+            if isinstance(item, discord.ui.Button):
+                item.disabled = True
+        await interaction.message.edit(view=self)
+
         e = Embed()
         e.description = 'Please send the mention/id/name of the role to be set.'
         await interaction.response.send_message(embed=e)
@@ -112,11 +124,23 @@ class MuteRoleView(discord.ui.View):
 
         return await interaction.edit_original_message(content=f'{self.ctx.bot.check} Successfully updated `@{role.name}` to the mutedrole.', embeds=[])
 
-    @discord.ui.button(label='Remove existing muted role', style=discord.ButtonStyle.danger, row=0)
+
+    @discord.ui.button(label='Remove existing muted role', style=discord.ButtonStyle.danger, row=0, custom_id='remove_muterole')
     async def ___(self, button : discord.ui.Button, interaction : discord.Interaction):
 
         if not self.role_id:
-            return await interaction.response.send_message(f"This guild does not have a mute role configured yet.", ephemeral=True)
+            await interaction.response.send_message(f"This guild does not have a mute role configured yet.", ephemeral=True)
+            for item in self.children:
+                if isinstance(item, discord.ui.Button):
+                    if item.custom_id == 'remove_muterole':
+                        item.disabled = True
+            await interaction.message.edit(view=self)
+            return
+
+        for item in self.children:
+            if isinstance(item, discord.ui.Button):
+                item.disabled = True
+        await interaction.message.edit(view=self)
 
         # Give a confirmation on deleting this role from database
         confirm = await self.ctx.confirm('Are you sure you want to remove the existing mutedrole for this guild?', interaction=interaction)
@@ -129,7 +153,11 @@ class MuteRoleView(discord.ui.View):
         await self.ctx.bot.db.execute("DELETE FROM servers WHERE muterole = $1", self.role_id)
 
         await interaction.followup.send(f":wastebasket: Removed the existing mutedrole for this guild.")
-    
+        for item in self.children:
+            if isinstance(item, discord.ui.Button):
+                item.disabled = True
+        return await interaction.message.edit(view=self)
+
     @discord.ui.button(emoji='\U00002753', style=discord.ButtonStyle.gray, row=1)
     async def ____(self, button : discord.ui.Button, interaction : discord.Interaction):
         
@@ -1088,36 +1116,6 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
             delta = human_timedelta(duration.dt - datetime.timedelta(seconds=2))
             await ctx.send(f'Blocked {member} for {delta}')
 
-    @commands.command(
-        name='muterole'
-    )
-    @commands.guild_only()
-    @commands.bot_has_guild_permissions(manage_roles=True, manage_channels=True)
-    @commands.has_guild_permissions(manage_roles=True)
-    @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.member))
-    async def muterole(self, ctx : MyContext):
-        """
-        Manage this guild's mute role with an interactive menu.
-        """
-        # Muterole menu idea from Neutra
-        # https://github.com/Hecate946/Neutra/blob/main/cogs/admin.py#L51-L125
-
-        data = await self.bot.db.fetchrow("SELECT muterole FROM servers WHERE server_id = $1", ctx.guild.id)
-        if not data:
-            role_id = None
-            current_settings = "No muterole set yet..."
-        else:
-            role_id = data['muterole']
-            current_settings = f"<@&{role_id}> (ID: {role_id})"
-        e = Embed()
-        e.color = discord.Color.yellow()
-        e.title = 'Muterole Configuration'
-        e.description = 'Please choose one of the options below to manage/set/create the muted role.'\
-                        f"\n\n**Your current muterole configured:** {current_settings}"
-
-        await ctx.send(embed=e, view=MuteRoleView(ctx, role_id))
-
-        
     @commands.Cog.listener()
     async def on_tempblock_timer_complete(self, timer):
         guild_id, mod_id, channel_id, member_id = timer.args
@@ -1155,6 +1153,405 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
             await channel.set_permissions(to_unblock, send_messages=None, add_reactions=None, reason=reason)
         except:
             pass  
-    
+
+
+    @commands.command(
+        name='muterole'
+    )
+    @commands.guild_only()
+    @commands.bot_has_guild_permissions(manage_roles=True, manage_channels=True)
+    @commands.has_guild_permissions(manage_roles=True)
+    @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.member))
+    async def muterole(self, ctx : MyContext):
+        """
+        Manage this guild's mute role with an interactive menu.
+        """
+        # Muterole menu idea from Neutra
+        # https://github.com/Hecate946/Neutra/blob/main/cogs/admin.py#L51-L125
+
+        data = await self.bot.db.fetchrow("SELECT muterole FROM servers WHERE server_id = $1", ctx.guild.id)
+        if not data:
+            role_id = None
+            current_settings = "No muterole set yet..."
+        else:
+            role_id = data['muterole']
+            current_settings = f"<@&{role_id}> (ID: {role_id})"
+        e = Embed()
+        e.color = discord.Color.yellow()
+        e.title = 'Muterole Configuration'
+        e.description = 'Please choose one of the options below to manage/set/create the muted role.'\
+                        f"\n\n**Your current muterole configured:** {current_settings}"
+
+        await ctx.send(embed=e, view=MuteRoleView(ctx, role_id))
+
+
+    @commands.command(
+        name='mute', 
+        aliases=['moot', 'tempmute'], 
+        extras={"examples" : "[p]mute @dartmern 1h spamming\n[p]mute @dartmern @Pickles @gamer97878 raiders\n[p]mute @Picklesbefree"},
+        usage="[members...] [duration] [reason]"
+    )
+    @commands.check(Cooldown(4, 8, 6, 8, commands.BucketType.member))
+    @commands.guild_only()
+    @commands.has_guild_permissions(manage_roles=True)
+    @commands.bot_has_guild_permissions(manage_roles=True)
+    async def mute(
+        self, 
+        ctx : MyContext,
+        members : commands.Greedy[discord.Member],
+        *,
+        duration : UserFriendlyTime(
+            commands.clean_content, default='\u2026'
+        ) = None
+    ):
+        """
+        Mute multiple members using the configured muted role.
+        
+        The bot's stop role must be above the configured role.
+        To setup or change the muted role see the `muterole` command.
+        """
+        reminder_cog = self.bot.get_cog("reminder")
+        if not reminder_cog:
+            return await ctx.send("This feature is currectly unavailable. Please try again later.")
+        if not len(members):
+            return await ctx.help()
+
+        muterole = await ctx.bot.db.fetchval("SELECT muterole FROM servers WHERE server_id = $1", ctx.guild.id)
+        muterole = ctx.guild.get_role(muterole)
+        if not muterole:
+            return await ctx.send(f"You do not have a mute role setup yet. Please run `{ctx.prefix}muterole`")
+
+        await ctx.defer()
+
+        if muterole.position > ctx.guild.me.top_role.position:
+            to_send = ""
+            to_send += (
+                f"\🔴 I am unable to mute {'these members' if len(members) > 1 else 'this member'} due to discord hierarchy rules."
+                f"\nMy top role's position ({ctx.guild.me.top_role.mention}) is lower than the configured mute role."
+                f"\n\nMy top role position: {ctx.guild.me.top_role.position} • Muted Role's position: {muterole.position}"
+                f"\n\nPlease move my top role higher to make this command work!"
+            )
+            raise commands.BadArgument(to_send)
+        
+        if duration:
+            reason = duration.arg if duration.arg != "…" else None
+            endtime = duration.dt.replace(tzinfo=None) if duration.dt else None
+            dm = True if reason else False
+        else:
+            reason = None
+            endtime = None
+            dm = False
+
+        if reason:
+            real_reason = await ActionReason().convert(ctx, reason)
+        else:
+            real_reason = f"Action requested by {ctx.author} (ID: {ctx.author.id})"
+        
+        failed, muted = [], []
+        for user in members:
+            if not can_execute_action(ctx, ctx.author, user):
+                failed.append(f"• `{user}` cannot be muted due to your top role being lower than their top role.")
+                continue
+                
+            if user == ctx.author:
+                failed.append(f"• I cannot mute `{user}` as you cannot mute yourself.")
+                continue
+
+            if muterole in user.roles:
+                failed.append(f"• `{user}` was already muted")
+                continue
+
+            await self.bot.db.fetchval("DELETE FROM reminders WHERE event = 'mute' AND extra->'kwargs'->>'user_id' = $1", str(user.id))
+            try:
+                if endtime:
+                    timer = await reminder_cog.create_timer(
+                        endtime,
+                        "mute",
+                        ctx.guild.id,
+                        ctx.author.id,
+                        user.id,
+                        dm=dm,
+                        user_id=user.id,
+                        roles=[x.id for x in user.roles],
+                        connection=self.bot.db,
+                        created=ctx.message.created_at.replace(tzinfo=None)
+                    )
+                    ftime = human_timedelta(endtime, accuracy=50)
+                    desc = f"for `{ftime}`"
+                else:
+                    desc = ""
+
+                await user.add_roles(muterole, reason=real_reason)
+                muted.append(str(user))
+
+                e = Embed()
+                e.colour = discord.Colour.orange()
+                e.description = f'You were muted from **{ctx.guild.name}** by {ctx.author} {desc}'
+                e.set_footer(text=f'Reason: {reason if reason else "No reason provided..."}')
+
+                try:
+                    await user.send(embed=e)
+                except discord.HTTPException:
+                    pass
+
+            except Exception as e:
+                failed.append(f"• {str(user)} : {e}")
+
+        if muted:
+            if endtime:
+                ftime = human_timedelta(endtime, accuracy=50)
+                to_send = f"{self.bot.check} Successfully **muted** `{', '.join(muted)}` for **{ftime}**"
+            else:
+                to_send = f"{self.bot.check} Successfully **muted** `{', '.join(muted)}`"
+            
+            e = Embed()
+            e.colour = discord.Colour.green()
+            e.description = to_send
+            e.set_footer(text=f'Reason: {reason if reason else "No reason provided..."}')
+
+            await ctx.send(embed=e)
+        if failed:
+            nl = '\n'
+            await ctx.send(f"Had a problem muting these members:\n {nl.join(failed)}")
+
+    @commands.command(
+        name='unmute',
+        aliases=['unmoot'],
+        usage="[members...] [reason]"
+    )
+    @commands.check(Cooldown(4, 8, 6, 8, commands.BucketType.member))
+    @commands.guild_only()
+    @commands.has_guild_permissions(manage_roles=True)
+    @commands.bot_has_guild_permissions(manage_roles=True)
+    async def unmute(
+        self,
+        ctx : MyContext,
+        members : commands.Greedy[discord.Member],
+        *,
+        reason : Optional[str] = None
+    ):
+        """
+        Unmute previously muted members.
+
+        They must have the configured mutedrole for this to work.
+        """
+        reminder_cog = self.bot.get_cog("reminder")
+        if not reminder_cog:
+            return await ctx.send("This feature is currectly unavailable. Please try again later.")
+        if not len(members):
+            return await ctx.help()
+
+        muterole = await ctx.bot.db.fetchval("SELECT muterole FROM servers WHERE server_id = $1", ctx.guild.id)
+        muterole = ctx.guild.get_role(muterole)
+        if not muterole:
+            return await ctx.send(f"You do not have a mute role setup yet. Please run `{ctx.prefix}muterole`")
+
+        await ctx.defer()
+
+        if muterole.position > ctx.guild.me.top_role.position:
+            to_send = ""
+            to_send += (
+                f"\🔴 I am unable to mute {'these members' if len(members) > 1 else 'this member'} due to discord hierarchy rules."
+                f"\nMy top role's position ({ctx.guild.me.top_role.mention}) is lower than the configured mute role."
+                f"\n\nMy top role position: {ctx.guild.me.top_role.position} • Muted Role's position: {muterole.position}"
+                f"\n\nPlease move my top role higher to make this command work!"
+            )
+            raise commands.BadArgument(to_send)
+
+        failed, unmuted = [], []
+        for user in members:
+            if not can_execute_action(ctx, ctx.author, user):
+                failed.append(f"• `{user}` cannot be unmuted due to your top role being lower than their top role.")
+                continue
+
+            if not muterole in user.roles:
+                failed.append(f"• `{user}` is not even muted.")
+                continue
+
+            query = """
+                    select (id, extra)
+                    from reminders
+                    where event = 'mute'
+                    and extra->'kwargs'->>'user_id' = $1;
+                    """
+            s = await self.bot.db.fetchval(query, str(user.id))
+            if not s:
+                await user.remove_roles(muterole)
+
+                em = Embed()
+                em.colour = discord.Colour.yellow()
+                em.description = f"You were unmuted in **{ctx.guild}** by {ctx.author}"
+                em.set_footer(text=f'Reason: {reason if reason else "No reason provided..."}')
+
+                try:
+                    await user.send(embed=em)
+                except discord.HTTPException:
+                    pass
+
+                unmuted.append(str(user))
+                continue
+
+            task_id = s[0]
+
+            try:
+                await user.remove_roles(muterole)
+                query = """
+                        DELETE FROM reminders
+                        WHERE id = $1
+                        """
+                await self.bot.db.execute(query, task_id)
+
+                em = Embed()
+                em.colour = discord.Colour.yellow()
+                em.description = f"You were unmuted in **{ctx.guild}** by {ctx.author}"
+                em.set_footer(text=f'Reason: {reason if reason else "No reason provided..."}')
+
+                try:
+                    await user.send(embed=em)
+                except discord.HTTPException:
+                    pass
+
+                unmuted.append(str(user))
+            except Exception as e:
+                failed.append(f"• {user} : {e}")
+
+        if unmuted:
+            e = Embed()
+            e.colour = discord.Colour.green()
+            e.description = f"{self.bot.check} Successfully **unmuted** `{', '.join(unmuted)}`"
+            e.set_footer(text=f'Reason: {reason if reason else "No reason provided..."}')
+            return await ctx.send(embed=e)
+        if failed:
+            nl = '\n'
+            return await ctx.send(f"Had a problem unmuting these members: \n{nl.join(failed)}")
+        return
+
+    @commands.command(name='selfmute')
+    @commands.guild_only()
+    @commands.bot_has_guild_permissions(manage_roles=True)
+    async def selfmute(self, ctx : MyContext, *, duration : FutureTime):
+        """
+        Temporarily mute yourself for a specific duration.
+
+        You must specify a duration at least 5 minutes and no longer than 1 day.
+
+        **:warning: Do not ask an moderator to unmute you :warning:** 
+        """
+        reminder_cog = self.bot.get_cog("reminder")
+        if not reminder_cog:
+            return await ctx.send("This feature is currectly unavailable. Please try again later.")
+
+        muterole = await ctx.bot.db.fetchval("SELECT muterole FROM servers WHERE server_id = $1", ctx.guild.id)
+        muterole = ctx.guild.get_role(muterole)
+        if not muterole:
+            return await ctx.send(f"This server's moderators have not setup a mute role yet...")
+
+        await ctx.defer()
+
+        if muterole in ctx.author.roles:
+            raise commands.BadArgument("Somehow you are already muted...")
+            
+        reason = f"Self-mute requested by: {ctx.author} (ID: {ctx.author.id})"
+
+        if muterole.position > ctx.guild.me.top_role.position:
+            to_send = ""
+            to_send += (
+                f"\🔴 I am unable to mute you due to discord hierarchy rules."
+                f"\nMy top role's position ({ctx.guild.me.top_role.mention}) is lower than the configured mute role."
+                f"\n\nMy top role position: {ctx.guild.me.top_role.position} • Muted Role's position: {muterole.position}"
+                f"\n\nPlease ask a moderator to move my top role higher to make this command work!"
+            )
+            raise commands.BadArgument(to_send)
+
+        created_at = ctx.message.created_at
+        if duration.dt < (created_at + datetime.timedelta(minutes=5)):
+            raise commands.BadArgument("Duration is too short. Must be at least 5 minutes and less than 1 day.")
+
+        if duration.dt > (created_at + datetime.timedelta(days=1)):
+            raise commands.BadArgument("Duration is too long. Must be at least 5 minutes and less than 1 day.")
+
+        ftime = human_timedelta(duration.dt, accuracy=50)
+
+        confirm = await ctx.confirm(f"_Are you sure you want to mute yourself for **{ftime}**?_"
+                                    f"\n**__Don't ask the moderators to undo this!__**", timeout=45.0
+        )
+        if confirm is False:
+            return await ctx.send("Canceled.")
+        if confirm is None:
+            return await ctx.send("Timed out.")
+
+        await ctx.send(f"Selfmuted for `{ftime}`, be sure to bother anyone about it.")
+
+        try:
+            await ctx.author.add_roles(muterole, reason=reason)
+        except discord.HTTPException:
+            raise commands.BadArgument(f"I am having trouble adding `@{muterole.name}` to your roles.")
+
+        await self.bot.db.fetchval("DELETE FROM reminders WHERE event = 'mute' AND extra->'kwargs'->>'user_id' = $1", str(ctx.author.id))
+        try:
+            timer = await reminder_cog.create_timer(
+                        duration.dt,
+                        "mute",
+                        ctx.guild.id,
+                        ctx.author.id,
+                        connection=self.bot.db,
+                        created=ctx.message.created_at.replace(tzinfo=None)
+            ) 
+        except Exception as e:
+            return await ctx.send(str(e))
+            
+
+
+    @commands.Cog.listener()
+    async def on_mute_timer_complete(self, timer):
+        await self.bot.wait_until_ready()
+        guild_id, mod_id, member_id = timer.args
+
+        guild = self.bot.get_guild(guild_id)
+        if guild is None:
+            # RIP
+            return
+
+        moderator = guild.get_member(mod_id)
+        if moderator is None:
+            try:
+                moderator = await self.bot.fetch_user(mod_id)
+            except:
+                # request failed somehow
+                moderator = f"Mod ID {mod_id}"
+            else:
+                moderator = f"{moderator} ({mod_id})"
+        else:
+            moderator = f"{moderator} ({mod_id})"
+
+        reason = (
+            f"Automatic unmute from timer made on {timer.created_at} by {moderator}."
+        )
+        member = guild.get_member(member_id)
+        if not member:
+            return  # They left...
+
+        muterole = await self.bot.db.fetchval("SELECT muterole FROM servers WHERE server_id = $1", guild.id)
+        muterole = guild.get_role(muterole)
+        if not muterole:
+            return # Muted role somehow not found...
+
+        try:
+            await member.remove_roles(muterole, reason=reason)
+        except Exception:  # They probably removed roles lmao.
+            return
+        
+        e = Embed()
+        e.colour = discord.Colour.yellow()
+        e.description = f"You were automatically unmuted in **{guild}** as your mute expried."
+        
+        try:
+            await member.send(embed=e)
+        except discord.HTTPException:
+            pass # DMs off or somehow cannot dm them
+
+
+
+
 def setup(bot):
     bot.add_cog(moderation(bot))
