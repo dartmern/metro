@@ -135,9 +135,9 @@ class MuteRoleView(discord.ui.View):
         
         await interaction.response.send_message(
             f"\nNeed help with which option to choose?"
-            f"\n- \U0001f535 Choose **Create new mute role** if you don't currently have a role named `@Muted` setup correctly (choose this if you are confused)"
-            f"\n\n- \U0001f7e2 Choose **Update set mute role** if you *already* have a role named `@Muted` setup across the channels"
-            f"\n\n- \U0001f534 Choose **Remove existing muted role** if you want to delete a already setup muted role from my database (this action cannot be undone)",
+            f"\n\n- \🔵 Choose **Create new mute role** if you don't currently have a role named `@Muted` setup correctly (choose this if you are confused)"
+            f"\n\n- \🟢 Choose **Set existing mute role** if you *already* have a role named `@Muted` setup across the channels"
+            f"\n\n- \🔴 Choose **Remove existing muted role** if you want to delete a already setup muted role from my database (this action cannot be undone)",
             ephemeral=True
         )
 
