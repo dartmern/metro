@@ -676,7 +676,7 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
         )
 
 
-    @config_blacklist.command(name='list')
+    @config_blacklist.command(name='list', usage='[--cache]')
     @is_dev()
     async def config_blacklist_list(self, ctx : MyContext, *, args : str = None):
         """List all the users blacklisted from bot.

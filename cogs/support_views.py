@@ -262,22 +262,159 @@ class support(commands.Cog, description=':test_tube: Support only commands.'):
             await ctx.author.add_roles(role)
             return await ctx.message.add_reaction('<:mplus:904450883633426553>')
 
+    @commands.command()
+    @in_support()
+    async def faq(self, ctx : MyContext):
+        """Show Metro's faq."""
+
+        embeds = []
+
+        embed = Embed()
+        embed.colour = discord.Colour.yellow()
+        embed.add_field(
+            name='How to disable a certain command', 
+            value='\n - You can do this with the `?config disable [entity] [commands...]` command.' \
+                '\n An entity can be a channel/role/member.'\
+                '\n You can disable commands for the entire guild by using `~` for entity.'
+                '\n Example: `?config disable #general selfmute`'\
+                '\n :mag: **Tip:** You can disable multiple commands like this: `?config disable ~ selfmute mute unmute`'
+        )
+        embeds.append(embed)
+
+        embed = Embed()
+        embed.colour = discord.Colour.yellow()
+        embed.add_field(
+            name='How to ignore commands in a channel',
+            value='\n - You can do this with the `?config ignore [entities...]` command.'\
+                '\n An entity can be a channel/role/member.'\
+                '\n You can disable all commands by using `~` in place of entities.'
+                '\n Example: `?config ignore #general`'
+        )
+        embeds.append(embed)
+
+        embed = Embed()
+        embed.colour = discord.Colour.light_gray()
+        embed.add_field(
+            name='How to setup a mute role with an exisiting role',
+            value='\n - Run `?muterole` in your server and choose the `Set existing muterole` option.'\
+                '\n Send the mention/name/id of the role you want to set the muterole as.'\
+        )
+        embeds.append(embed)
+
+        embed = Embed()
+        embed.colour = discord.Colour.light_gray()
+        embed.add_field(
+            name='Can I change the name or colour of my muterole after I configure it?',
+            value='Yes. As long as you set the role using `?muterole` you can edit it to whatever you wish.'
+        )
+        embeds.append(embed)
+
+        embed = Embed()
+        embed.colour = discord.Colour.light_gray()
+        embed.add_field(
+            name='How do I mute members?',
+            value='\n Using the mute command, you pass in the member(s) you want to mute as the first argument.'\
+                '\n The arguments after that can either be the duration followed by the reason or just simply the reason.'\
+                '\n Examples: '\
+                '\n `?mute @dartmern @Pickles 1 hour spamming commands`'\
+                '\n `?mute @dartmern misuse of channels`'\
+        )
+        embeds.append(embed)
+
+        embed = Embed()
+        embed.colour = discord.Colour.blue()
+        embed.add_field(
+            name='How do I search through documentation with the `rtfm` command?',
+            value='\n Using the rtfm command, you pass in the library you want to search as the subcommand, then your query.'\
+                '\n You can view all the accepted documentation types with `?help rtfm`'\
+                '\n Example: `?rtfm python Dict`'\
+                '\n :mag: **Tip:** Passing in no subcommand and a query searches through enhanced-discord.py docs.'
+        )
+        embeds.append(embed)
+
+        embed = Embed()
+        embed.colour = discord.Colour.orange()
+        embed.add_field(
+            name='How do I view my message stats?',
+            value='\n Messages sent in this guild: `?messages_guild`'\
+                '\n Messages a member has sent in this guild: `?messages [member]`'\
+                '\n Messages a user has sent globally: `?messages_global [user]`'\
+                '\n Messages I have seen globally use: `?messages_total`'\
+                '\n :warning: I can only tracking messages in channels I can see and guilds that I am in.'
+        )
+        embeds.append(embed)
+
+        await ctx.send(embeds=embeds)
+
     
     @commands.Cog.listener()
     async def on_message(self, message : discord.Message):
-        start = time.perf_counter()
-
-        #if not message.guild:
-            #return
-
-        #if 525843819850104842 in map(int, message.mentions):
-            #await message.add_reaction(self.bot.cross)
 
         if 788543184082698252 in map(int, message.mentions):
-            end = time.perf_counter()
             await message.add_reaction("\U0001f440")
-            await message.channel.send(f"{(end-start)*1000} ms")
 
+    @commands.command()
+    @commands.check(Cooldown(3, 8, 3, 8, commands.BucketType.guild))
+    @in_support()
+    async def ping_staff(self, ctx : MyContext, *, question : str):
+        """
+        Ping staff with a question!
+        
+        I'm completely fine with you bothering me 👍
+        """
+        if isinstance(ctx.channel, discord.Thread):
+            raise commands.BadArgument("This cannot be used in a thread.")
+
+        await ctx.message.add_reaction('👍')
+
+        embed = Embed()
+        embed.colour = discord.Colour.red()
+        embed.set_author(name=ctx.author, icon_url=ctx.author.display_avatar.url)
+        embed.description = question[0:1800]
+        embed.set_footer(text=f'ID: {ctx.author.id} | Asked at ')
+        embed.timestamp = ctx.message.created_at
+        
+        message = await ctx.send(f"<a:mtyping:904156199967158293> Submitting question to moderators...")
+
+        thread = await ctx.channel.create_thread(name=f"🙋{ctx.author.name[0:10]}-{ctx.author.discriminator}", message=message)
+
+        await thread.send(f'<@&814018291353124895> - Assistance is needed! {ctx.author.mention}', embed=embed, allowed_mentions=discord.AllowedMentions(roles=True))
+        await message.edit(f"{self.bot.check} Created {thread.mention}", delete_after=5)
+
+    @commands.command()
+    @commands.has_role(814018291353124895)
+    @in_support()
+    async def close(self, ctx : MyContext):
+        """Close a support ticket."""
+
+        if not '🙋' in ctx.channel.name:
+            return await ctx.send("This can only be used in support tickets.", delete_after=5)
+
+        await ctx.message.delete(silent=True)
+
+        embed = Embed()
+        embed.colour = discord.Colour.blue()
+        embed.set_author(name='This channel has been moved resolved by moderators.')
+        embed.description = "If your question was not answered or need more clarification please ping a staff."\
+            "\nThis thread/ticket will close with 24 hours of inactivity. \nOpen a new ticket in <#869693768582979715> with `?ping_staff` if you have issues."\
+            "\n\n If all your questions were answered please run `?resolved` in current thread."
+
+        await ctx.send(embed=embed)
+
+    @commands.command()
+    @in_support()
+    async def resolved(self, ctx : MyContext):
+        """Archive a support ticket."""
+
+        if not '🙋' in ctx.channel.name:
+            return await ctx.send("This can only be used in support tickets.", delete_after=5)
+        
+        embed = Embed()
+        embed.colour = discord.Colour.green()
+        embed.description = "This channel has been archived. It has been marked resolved."
+        await ctx.send(embed=embed)
+        await ctx.channel.archive(locked=True)
+    
 
     
 def setup(bot):
