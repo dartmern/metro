@@ -120,7 +120,7 @@ class MuteRoleView(discord.ui.View):
         try:
             await self.ctx.bot.db.execute("INSERT INTO servers (muterole, server_id) VALUES ($1, $2)", role.id, self.ctx.guild.id)
         except asyncpg.exceptions.UniqueViolationError:
-            await self.ctx.bot.execute("UPDATE servers SET muterole = $1 WHERE server_id = $2", role.id, self.ctx.guild.id)
+            await self.ctx.bot.db.execute("UPDATE servers SET muterole = $1 WHERE server_id = $2", role.id, self.ctx.guild.id)
 
         return await interaction.edit_original_message(content=f'{self.ctx.bot.check} Successfully updated `@{role.name}` to the mutedrole.', embeds=[])
 
@@ -236,7 +236,44 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
         embed.set_footer(text=f'ID: {member.id} | DM successful: {success}')
 
         await ctx.send(embed=embed)
+
+    @commands.command(
+        name='softban'
+    )
+    @commands.has_guild_permissions(ban_members=True)
+    @commands.bot_has_guild_permissions(ban_members=True)
+    async def soft_ban(self, ctx : MyContext, member : Union[discord.Member, discord.User], delete_days : Optional[int] = 1, *, reason : Optional[str] = None):
+        """
+        Soft-bans a member from the server.
         
+        A softban bans the user and immediately unbans them to delete their messages.
+        """
+        if delete_days and not 8 > delete_days > -1:
+            raise commands.BadArgument(f"{self.bot.cross} `delete_days` must be between 0 and 7 days.")
+
+        if not can_execute_action(ctx, ctx.author, member):
+            return await ctx.send('You are not high enough in role hierarchy to ban this member.')
+
+        await ctx.guild.ban(member, reason=f'Soft-ban requested by: {ctx.author} (ID: {ctx.author.id})\n{f"Reason: {reason}" if reason else ""}')
+        await ctx.guild.unban(member, reason=f'Soft-ban requested by: {ctx.author} (ID: {ctx.author.id})\n{f"Reason: {reason}" if reason else ""}')
+
+        e = Embed()
+        e.colour = discord.Colour.green()
+        e.description = f"You were soft-banned in **{ctx.guild}** by {ctx.author}"
+        e.set_footer(text=f'{f"Reason: {reason}" if reason else "No reason provided..."}')
+
+        try:
+            await member.send(embed=e)
+            success = '✅'
+        except discord.HTTPException:
+            success = '❌'
+        
+        embed = Embed()
+        embed.description = f'**{ctx.author.mention}** has banned **{member}**\n{f"Reason: {reason}" if reason else "No reason provided..."}'
+        embed.set_footer(text=f'ID: {member.id} | DM successful: {success}')
+
+        await ctx.send(embed=embed)
+
 
     @commands.command(
         name="ban",
@@ -247,7 +284,7 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
     async def ban_cmd(
             self,
             ctx : MyContext,
-            member : discord.Member = commands.Option(description='Member to ban.'),
+            member : Union[discord.Member, discord.User] = commands.Option(description='Member to ban.'),
             *,
             delete_days : Optional[int] = commands.Option(default=0, description='Amount of days worth of messages to delete.'),
             reason : Optional[str] = commands.Option(description='Reason to ban this member/user.')
@@ -429,7 +466,7 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
         if perms is False:
             raise commands.BadArgument(f"{self.bot.cross} Channel {channel.mention} is already locked.")
 
-        reminder_cog = self.bot.get_cog('reminder')
+        reminder_cog = self.bot.get_cog('utility')
         if not reminder_cog:
             raise commands.BadArgument(f'This feature is currently unavailable.')
 
@@ -597,6 +634,8 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
             if time < 21601:
                 await ctx.channel.edit(slowmode_delay=int(time))
                 await ctx.send(f"Set the slowmode delay to `{timeconverter}`")
+            else:
+                raise commands.BadArgument("Slowmode delay must be more than 1 second and less than 6 hours.")
 
         else:
             await ctx.channel.edit(slowmode_delay=0)
@@ -624,7 +663,7 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
             real_reason = f'Reason: {reason}'
 
         
-        reminder_cog = self.bot.get_cog('reminder')
+        reminder_cog = self.bot.get_cog('utility')
         if reminder_cog is None:
             return await ctx.send('This function is not available at this time. Try again later.')
         
@@ -1093,7 +1132,7 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
 
         created_at = ctx.message.created_at
 
-        reminder_cog = self.bot.get_cog('reminder')
+        reminder_cog = self.bot.get_cog('utility')
         if reminder_cog is None:
             return await ctx.send('This function is not available at this time. Try again later.')
 
@@ -1159,8 +1198,8 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
         name='muterole'
     )
     @commands.guild_only()
-    @commands.bot_has_guild_permissions(manage_roles=True, manage_channels=True)
     @commands.has_guild_permissions(manage_roles=True)
+    @commands.bot_has_guild_permissions(manage_roles=True, manage_channels=True)
     @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.member))
     async def muterole(self, ctx : MyContext):
         """
@@ -1210,7 +1249,7 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
         The bot's stop role must be above the configured role.
         To setup or change the muted role see the `muterole` command.
         """
-        reminder_cog = self.bot.get_cog("reminder")
+        reminder_cog = self.bot.get_cog("utility")
         if not reminder_cog:
             return await ctx.send("This feature is currectly unavailable. Please try again later.")
         if not len(members):
@@ -1335,7 +1374,7 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
 
         They must have the configured mutedrole for this to work.
         """
-        reminder_cog = self.bot.get_cog("reminder")
+        reminder_cog = self.bot.get_cog("utility")
         if not reminder_cog:
             return await ctx.send("This feature is currectly unavailable. Please try again later.")
         if not len(members):
@@ -1437,7 +1476,7 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
 
         **:warning: Do not ask an moderator to unmute you :warning:** 
         """
-        reminder_cog = self.bot.get_cog("reminder")
+        reminder_cog = self.bot.get_cog("utility")
         if not reminder_cog:
             return await ctx.send("This feature is currectly unavailable. Please try again later.")
 
@@ -1445,8 +1484,6 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
         muterole = ctx.guild.get_role(muterole)
         if not muterole:
             return await ctx.send(f"This server's moderators have not setup a mute role yet...")
-
-        await ctx.defer()
 
         if muterole in ctx.author.roles:
             raise commands.BadArgument("Somehow you are already muted...")
@@ -1490,7 +1527,7 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
         await self.bot.db.fetchval("DELETE FROM reminders WHERE event = 'mute' AND extra->'kwargs'->>'user_id' = $1", str(ctx.author.id))
         try:
             timer = await reminder_cog.create_timer(
-                        duration.dt,
+                        duration.dt.replace(tzinfo=None),
                         "mute",
                         ctx.guild.id,
                         ctx.author.id,
