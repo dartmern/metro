@@ -1,7 +1,7 @@
 import asyncio
 import shlex
 import discord
-from discord import role
+
 from discord.ext import commands
 from bot import MetroBot
 from utils.custom_context import MyContext
@@ -10,9 +10,10 @@ from utils.remind_utils import FutureTime, UserFriendlyTime, human_timedelta
 from utils.converters import ActionReason, MemberID
 from utils.checks import can_execute_action
 
-from typing import Optional, Union
+from typing import Dict, Optional, Union
 from collections import Counter
 
+import pytz
 import json
 import datetime
 import re
@@ -1275,11 +1276,11 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
         if duration:
             reason = duration.arg if duration.arg != "…" else None
             endtime = duration.dt.replace(tzinfo=None) if duration.dt else None
-            dm = True if reason else False
+            ftime = human_timedelta((endtime - datetime.timedelta(seconds=1.9)), accuracy=25)
+            
         else:
             reason = None
             endtime = None
-            dm = False
 
         if reason:
             real_reason = await ActionReason().convert(ctx, reason)
@@ -1304,18 +1305,15 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
             try:
                 if endtime:
                     timer = await reminder_cog.create_timer(
-                        endtime,
+                        duration.dt,
                         "mute",
                         ctx.guild.id,
                         ctx.author.id,
                         user.id,
-                        dm=dm,
                         user_id=user.id,
-                        roles=[x.id for x in user.roles],
                         connection=self.bot.db,
-                        created=ctx.message.created_at.replace(tzinfo=None)
+                        created=ctx.message.created_at
                     )
-                    ftime = human_timedelta(endtime, accuracy=50)
                     desc = f"for `{ftime}`"
                 else:
                     desc = ""
@@ -1338,7 +1336,6 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
 
         if muted:
             if endtime:
-                ftime = human_timedelta(endtime, accuracy=50)
                 to_send = f"{self.bot.check} Successfully **muted** `{', '.join(muted)}` for **{ftime}**"
             else:
                 to_send = f"{self.bot.check} Successfully **muted** `{', '.join(muted)}`"
@@ -1411,7 +1408,7 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
                     select (id, extra)
                     from reminders
                     where event = 'mute'
-                    and extra->'kwargs'->>'user_id' = $1;
+                    and extra->'kwargs'->>'user_id' = $1
                     """
             s = await self.bot.db.fetchval(query, str(user.id))
             if not s:
@@ -1431,7 +1428,6 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
                 continue
 
             task_id = s[0]
-
             try:
                 await user.remove_roles(muterole)
                 query = """
@@ -1464,6 +1460,57 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
             nl = '\n'
             return await ctx.send(f"Had a problem unmuting these members: \n{nl.join(failed)}")
         return
+
+    @commands.command(name='mutelist', aliases=['listmute'])
+    @commands.guild_only()
+    async def mutelist(self, ctx : MyContext):
+        """
+        List all the current and active mutes in this server.
+
+        This includes indefinite and temporary mutes.
+        """
+        reminder_cog = self.bot.get_cog("utility")
+        if not reminder_cog:
+            return await ctx.send("This feature is currectly unavailable. Please try again later.")
+
+        muterole = await ctx.bot.db.fetchval("SELECT muterole FROM servers WHERE server_id = $1", ctx.guild.id)
+        muterole = ctx.guild.get_role(muterole)
+        if not muterole:
+            return await ctx.send(f"This server's moderators have not setup a mute role yet...Therefore no one is muted.")
+
+        await ctx.defer()
+
+        embed = Embed()
+        embed.colour = discord.Colour.yellow()
+
+        query = """
+                SELECT (expires, extra, created)
+                FROM reminders
+                WHERE event = 'mute'
+                ORDER BY expires;
+                """
+        records = await self.bot.db.fetch(query)
+        if not records:
+            return await ctx.send("No one is muted in this guild.")
+
+        for record in records:
+            expires : datetime.datetime = pytz.utc.localize(record['row'][0])
+            extra : Dict = json.loads(record['row'][1])
+            created = pytz.utc.localize(record['row'][2])
+
+            user = self.bot.get_user(extra['kwargs'].get('user_id'))
+            selfmute = self.bot.check if extra['kwargs'].get('selfmute') else self.bot.cross
+            embed.add_field(
+                name=f'{user.name[0:40]}#{user.discriminator}', 
+                value=f'\n Muted: {discord.utils.format_dt(created, "R")}'\
+                    f"\n Moderator: <@{extra['args'][2]}>"\
+                    f"\n Expired: {discord.utils.format_dt(expires, 'R')}"
+                    f"\n Selfmute: {selfmute}",
+                inline=False
+            )
+        return await ctx.send(embed=embed)
+
+        
 
     @commands.command(name='selfmute')
     @commands.guild_only()
@@ -1532,6 +1579,8 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
                         ctx.guild.id,
                         ctx.author.id,
                         ctx.author.id,
+                        user_id=ctx.author.id,
+                        selfmute=True,
                         connection=self.bot.db,
                         created=ctx.message.created_at.replace(tzinfo=None)
             ) 
@@ -1545,6 +1594,8 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
         await self.bot.wait_until_ready()
         guild_id, mod_id, member_id = timer.args
 
+
+        print("fired")
         guild = self.bot.get_guild(guild_id)
         if guild is None:
             # RIP
@@ -1574,10 +1625,10 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
         if not muterole:
             return # Muted role somehow not found...
 
-        try:
-            await member.remove_roles(muterole, reason=reason)
-        except Exception:  # They probably removed roles lmao.
-            return
+        #try:
+        await member.remove_roles(muterole, reason=reason)
+        #except Exception:  # They probably removed roles lmao.
+        #return
         
         e = Embed()
         e.colour = discord.Colour.yellow()

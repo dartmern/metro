@@ -998,16 +998,15 @@ class utility(commands.Cog, description=":information_source: Get utilities like
             now = kwargs.pop('created')
         except KeyError:
             now = discord.utils.utcnow()
-
+        print(when)
         # Remove timezone information since the database does not deal with it
         when = when.astimezone(datetime.timezone.utc).replace(tzinfo=None)
         now = now.astimezone(datetime.timezone.utc).replace(tzinfo=None)
-
+        print(when)
         timer = Timer.temporary(event=event, args=args, kwargs=kwargs, expires=when, created=now)
         delta = (when - now).total_seconds()
         if delta <= 30:
             # a shortcut for small timers
-            print("small task")
             self.bot.loop.create_task(self.short_timer_optimisation(delta, timer))
             return timer
 
@@ -1063,7 +1062,6 @@ class utility(commands.Cog, description=":information_source: Get utilities like
 
         Times are in UTC.
         """
-
         timer = await self.create_timer(
             when.dt,
             "reminder",

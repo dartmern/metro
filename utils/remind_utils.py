@@ -303,8 +303,7 @@ class UserFriendlyTime(commands.Converter):
             now = ctx.message.created_at
 
             match = regex.match(argument)
-            if match is not None and match.group(0):
-                print("matched")
+            if match is not None and match.group(0):    
                 data = {k: int(v) for k, v in match.groupdict(default=0).items()}
                 remaining = argument[match.end() :].strip()
                 result.dt = now + relativedelta(**data)
