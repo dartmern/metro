@@ -38,9 +38,6 @@ class StopView(discord.ui.View):
         super().__init__(timeout=120)
         self.ctx = ctx
 
-    async def on_timeout(self) -> None:
-        self.stop_view.disabled = True
-        await self.message.edit(view=self)
 
     async def interaction_check(self, interaction):
         if self.ctx.author.id == interaction.user.id:
@@ -193,6 +190,7 @@ class GithubError(commands.CommandError):
 
 info_file = read_json('info')
 github_token = info_file["github_token"]
+bitly_token = info_file['bitly_token']
 
 def chunkIt(seq, num):
     avg = len(seq) / float(num)
@@ -1403,8 +1401,7 @@ class utility(commands.Cog, description=":information_source: Get utilities like
         You cannot end giveaways that have `None` as their id.
         This is due to them being too short.
         """
-        await ctx.defer()
-
+        
         query = """
                 SELECT extra FROM reminders
                 WHERE id = $1
@@ -1524,7 +1521,7 @@ class utility(commands.Cog, description=":information_source: Get utilities like
         
         reactions = await message.reactions[0].users().flatten()
         reactions.remove(guild.me)
-        if len(reactions) <= 1:
+        if len(reactions) < 1:
             e = Embed()
             e.set_author(name=prize[0:40])
             e.colour = discord.Colour(3553599)
@@ -1539,8 +1536,7 @@ class utility(commands.Cog, description=":information_source: Get utilities like
         else:
             winners_string = [] 
             winners_list = reactions
-            if len(winners_list) - 1 < winners:
-                winners = len(winners_list) - 1
+
             for _ in range(winners):
                 winner = random.choice(winners_list)
                 winners_list.pop(winners_list.index(winner))
@@ -1569,7 +1565,28 @@ class utility(commands.Cog, description=":information_source: Get utilities like
             await message.reply(f'{", ".join(f"<@{users}>" for i, users in enumerate(winners_string))} {"have" if len(winners_string) > 1 else "has"} won the giveaway for **{prize}**\n{message.jump_url}')
             return
 
-    
+    @commands.command(name='shorten_url', aliases=['shorten'])
+    @commands.check(Cooldown(2, 5, 3, 5, commands.BucketType.user))
+    async def shorten_url(self, ctx: MyContext, *, url: str):
+        """
+        Shorten a long url.
+        
+        Powered by [Bitly API](https://dev.bitly.com/)
+        """
+        await ctx.defer()
+
+        params = {"access_token" : bitly_token, "longUrl" : url}
+        async with self.bot.session.get("https://api-ssl.bitly.com/v3/shorten", params=params) as response:
+            if response.status != 200:
+                raise commands.BucketType("Bitly API returned a bad response. Please try again later.")
+
+            data = await response.json()
+
+        embed = Embed()
+        embed.colour = discord.Colour.orange()
+        embed.description = f'Your shortened url: {data["data"]["url"]}\nOriginal url: {url}'
+        embed.set_author(name='URL Shortner')
+        return await ctx.send(embed=embed)
 
 
 def setup(bot):
