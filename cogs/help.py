@@ -156,12 +156,13 @@ class HelpMenu(OldRoboPages):
 
 
 class ButtonMenuSrc(menus.ListPageSource):
-    def __init__(self, group, commands, *, prefix):
+    def __init__(self, group, commands, *, prefix, ctx : MyContext):
         super().__init__(entries=commands, per_page=9)
         self.group = group
         self.prefix = prefix
         self.description = self.group.help  
         self.extras = self.group.extras
+        self.ctx = ctx
         
 
     async def format_page(self, menu, commands):
@@ -184,6 +185,10 @@ class ButtonMenuSrc(menus.ListPageSource):
             title = f"`{self.group}` `{self.group.signature}`"
 
         embed = Embed(title=title, description=self.description)
+        docs_url = f"{self.ctx.bot.docs}/{self.group.cog_name}/{(self.group.qualified_name).replace(' ', '/')}"
+        print(docs_url)
+        embed.set_author(name='Documentation Link', url=docs_url, icon_url=self.ctx.bot.user.display_avatar.url)
+
 
         cooldown = discord.utils.find(lambda x: isinstance(x, Cooldown), self.group.checks) or Cooldown(1, 3, 1, 1,
                                                                                                      discord.ext.commands.BucketType.user)
@@ -283,9 +288,9 @@ class MetroHelp(commands.HelpCommand):
         else:
             return await self.send_command_help(cmd)
 
-    async def get_command_help(self, command) -> Embed:
+    async def get_command_help(self, command : commands.Command) -> Embed:
 
-        ctx = self.context
+        ctx : MyContext = self.context
         command_extras = command.extras
         # Base
         if command.signature == "":
@@ -298,6 +303,9 @@ class MetroHelp(commands.HelpCommand):
                 title=f"`{command.qualified_name}` `{command.signature}`",
                 description=self.get_doc(command)
             )
+
+        docs_url = f"{ctx.bot.docs}/{command.cog_name}/{command.qualified_name}"
+        em.set_author(name='Documentation Link', url=docs_url, icon_url=ctx.bot.user.display_avatar.url)
 
         # Cooldowns
         cooldown = discord.utils.find(lambda x: isinstance(x, Cooldown), command.checks) or Cooldown(1, 3, 1, 1,
@@ -382,7 +390,7 @@ class MetroHelp(commands.HelpCommand):
             description=
             f"**Total Commands:** {len(list(bot.walk_commands()))} | **Usable by you (here):** {len(await self.filter_commands(list(bot.walk_commands()), sort=True))}"
             f"\n```diff\n- [] = optional argument\n- <> = required argument\n- Do not type these when using commands!\n+ Type {ctx.clean_prefix}{ctx.invoked_with} [Command/Module] for more help on a command```"
-            f"[Support]({ctx.bot.invite}) | [Invite]({ctx.bot.invite}) | [Donate]({ctx.bot.donate})"
+            f"[Support]({ctx.bot.invite}) | [Invite]({ctx.bot.invite}) | [Donate]({ctx.bot.donate}) | [Documentation]({ctx.bot.docs})"
         )
         embed.add_field(
             name=f"**Modules: [{len(to_append)}]**",
@@ -418,7 +426,7 @@ class MetroHelp(commands.HelpCommand):
         if int(len(group.commands)) == 0 or len(entries) == 0:
             return await self.context.send(embed=await self.get_command_help(group),view=View(self.context.author), hide=True)
 
-        menu = SimplePages(ButtonMenuSrc(group, entries, prefix=self.context.clean_prefix),ctx=self.context)
+        menu = SimplePages(ButtonMenuSrc(group, entries, prefix=self.context.clean_prefix, ctx=self.context),ctx=self.context)
         await menu.start()
         
 
