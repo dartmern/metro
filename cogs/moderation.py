@@ -34,8 +34,6 @@ def can_block():
     return commands.check(predicate)
 
 
-        
-
 class Arguments(argparse.ArgumentParser):
     def error(self, message):
         raise RuntimeError(message)
@@ -1276,7 +1274,7 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
         if duration:
             reason = duration.arg if duration.arg != "…" else None
             endtime = duration.dt.replace(tzinfo=None) if duration.dt else None
-            ftime = human_timedelta((endtime - datetime.timedelta(seconds=1.9)), accuracy=25)
+            ftime = human_timedelta((endtime), accuracy=500)
             
         else:
             reason = None
@@ -1295,6 +1293,10 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
                 
             if user == ctx.author:
                 failed.append(f"• I cannot mute `{user}` as you cannot mute yourself.")
+                continue
+
+            if user == self.bot.user:
+                failed.append(f"• I cannot mute myself.")
                 continue
 
             if muterole in user.roles:
@@ -1332,7 +1334,7 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
                     pass
 
             except Exception as e:
-                failed.append(f"• {str(user)} : {e}")
+                failed.append(f"• {str(user)} : `{e}`")
 
         if muted:
             if endtime:

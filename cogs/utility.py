@@ -1,10 +1,9 @@
-
 import discord
-from discord import reaction
 from discord.ext import commands, menus
 
 from typing import List, Optional, Union
 from bot import MetroBot
+from cogs.moderation import Arguments
 
 from utils.calc_tils import NumericStringParser
 from utils.checks import check_dev
@@ -21,7 +20,9 @@ from utils.pages import ExtraPages
 from datetime import timedelta
 import json
 import random
+import io
 import traceback
+import shlex
 import asyncio
 import datetime
 import time
@@ -31,6 +32,85 @@ import yarl
 from pathlib import Path
 import inspect
 import unicodedata
+
+class StopView(discord.ui.View):
+    def __init__(self, ctx : MyContext):
+        super().__init__(timeout=120)
+        self.ctx = ctx
+
+    async def on_timeout(self) -> None:
+        self.stop_view.disabled = True
+        await self.message.edit(view=self)
+
+    async def interaction_check(self, interaction):
+        if self.ctx.author.id == interaction.user.id:
+            return True
+        else:
+            await interaction.response.send_message(
+                "Only the command invoker can use this button.", ephemeral=True
+            )
+
+    @discord.ui.button(emoji='\U0001f5d1', style=discord.ButtonStyle.red)
+    async def stop_view(self, button : discord.ui.Button, interaction : discord.Interaction):
+        """
+        Stop the pagination session. 
+        Unless this pagination menu was invoked with a slash command
+        """
+
+        await interaction.response.defer()
+        await interaction.delete_original_message()
+        self.stop()
+
+
+class SourceView(discord.ui.View):
+    def __init__(self, ctx : MyContext, code : str):
+        super().__init__(timeout=180)
+        self.ctx = ctx
+        self.code = code
+
+    async def interaction_check(self, interaction):
+        if self.ctx.author.id == interaction.user.id:
+            return True
+        else:
+            await interaction.response.send_message(
+                "Only the command invoker can use this button.", ephemeral=True
+            )
+
+    @discord.ui.button(label='Source File', emoji='\U0001f4c1', style=discord.ButtonStyle.blurple)
+    async def foo(self, button : discord.ui.Button, interaction : discord.Interaction):
+        
+        if len(self.code) >= 1500:
+            file = discord.File(io.StringIO(self.code), filename='code.py')
+            await interaction.response.defer()
+            await self.ctx.message.reply(file=file, view=StopView(self.ctx))
+        else:
+            await interaction.response.send_message(f"```py\n{self.code}\n```", view=StopView(self.ctx))
+
+        button.disabled = True
+        await interaction.message.edit(view=self)
+
+    @discord.ui.button(label='Post Source', emoji='\U0001f587', style=discord.ButtonStyle.blurple)
+    async def bar(self, button : discord.ui.Button, interaction : discord.Interaction):
+
+        async with self.ctx.bot.session.post(f"https://mystb.in/documents", data=self.code) as s:
+            res = await s.json()
+            url_key = res['key']
+        
+        await interaction.response.send_message(f"Output: https://mystb.in/{url_key}.python", view=StopView(self.ctx))
+        button.disabled = True
+        await interaction.message.edit(view=self)
+
+    @discord.ui.button(emoji='\U0001f5d1', style=discord.ButtonStyle.red)
+    async def stop_view(self, button : discord.ui.Button, interaction : discord.Interaction):
+        """
+        Stop the pagination session. 
+        Unless this pagination menu was invoked with a slash command
+        """
+
+        await interaction.response.defer()
+        await interaction.delete_original_message()
+        self.stop()
+
 
 class MySource(menus.ListPageSource):
     def __init__(self, data):
@@ -52,12 +132,16 @@ class WinnerConverter(commands.Converter):
         try:
             if int(argument) > 30:
                 raise commands.BadArgument("You cannot have more than 30 winners.")
+            if int(argument) <= 0:
+                raise commands.BadArgument("You cannot have less than 0 winners.")
             return int(argument)
         except ValueError:
             argument = argument.replace("w", "")
             try:
                 if int(argument) > 30:
                     raise commands.BadArgument("You cannot have more than 30 winners.")
+                if int(argument) <= 0:
+                    raise commands.BadArgument("You cannot have less than 0 winners.")
                 return int(argument)
             except ValueError:
                 raise commands.BadArgument("There was an issue converting your winners argument.")
@@ -208,10 +292,10 @@ class utility(commands.Cog, description=":information_source: Get utilities like
         return permission
         
 
-    async def say_permissions(self, ctx, member, channel):
+    async def say_permissions(self, ctx : MyContext, member : discord.Member, channel : discord.TextChannel):
         permissions = channel.permissions_for(member)
         e = discord.Embed(colour=member.colour)
-        avatar = member.avatar.url
+        avatar = member.display_avatar.url
 
         if avatar is None:
             e.set_author(name=str(member))
@@ -493,56 +577,59 @@ class utility(commands.Cog, description=":information_source: Get utilities like
         
         
 
-    @commands.command(aliases=['sourcecode', 'code'],
-                      )
+    @commands.command(aliases=['sourcecode', 'code'])
     @commands.bot_has_permissions(send_messages=True, embed_links=True)
-    async def source(self, ctx, command: str = None, *, args : str = None):
+    async def source(self, ctx, *, command: str = None):
         """
         Links to the bot's source code, or a specific command's
         """
         
-        if args is None:
+        source_url = 'https://github.com/dartmern/metro'
+        license_url = 'https://github.com/dartmern/metro/blob/master/LICENSE'
+        branch = 'master'
 
-            source_url = 'https://github.com/dartmern/metro'
-            branch = 'master'
+        if command is None:
+            embed = Embed()
+            embed.colour = discord.Colour.yellow()
+            embed.set_author(name='Here is my source code:')
+            embed.description = str(f"My code is under the [**MPL**]({license_url}) license\n → {source_url}")
+            return await ctx.send(embed=embed, view=StopView(ctx))
 
-            if command is None:
+        if command == 'help':
+            src = type(self.bot.help_command)
+            module = src.__module__
+            filename = inspect.getsourcefile(src)
+            obj = 'help'
+        else:
+            obj = self.bot.get_command(command.replace('.', ' '))
+            if obj is None:
                 embed = Embed(description=f"Take the [**entire reposoitory**]({source_url})")
                 embed.set_footer(text='Please make sure you follow the license.')
                 return await ctx.send(embed=embed)
 
-            if command == 'help':
-                src = type(self.bot.help_command)
-                module = src.__module__
-                filename = inspect.getsourcefile(src)
-            else:
-                obj = self.bot.get_command(command.replace('.', ' '))
-                if obj is None:
-                    embed = Embed(description=f"Take the [**entire reposoitory**]({source_url})")
-                    embed.set_footer(text='Please make sure you follow the license.')
-                    return await ctx.send(embed=embed)
+            src = obj.callback.__code__
+            module = obj.callback.__module__
+            filename = src.co_filename
 
-                src = obj.callback.__code__
-                module = obj.callback.__module__
-                filename = src.co_filename
-
-            lines, firstlineno = inspect.getsourcelines(src)
-            if not module.startswith('discord'):
-                # not a built-in command
-                location = os.path.relpath(filename).replace('\\', '/')
-            else:
-                location = module.replace('.', '/') + '.py'
-                source_url = 'https://github.com/Rapptz/discord.py'
-                branch = 'master'
-
-            final_url = f'<{source_url}/blob/{branch}/{location}#L{firstlineno}-L{firstlineno + len(lines) - 1}>'
-            embed = Embed(color=ctx.me.color,
-                                description=f"Source code for [`{obj.qualified_name}`]({final_url})")
-            embed.set_footer(text='Please make sure you follow the license.')
-            await ctx.send(embed=embed)
-
+        lines, firstlineno = inspect.getsourcelines(src)
+        code_lines = inspect.getsource(src)
+        if not module.startswith('discord'):
+            # not a built-in command
+            location = os.path.relpath(filename).replace('\\', '/')
         else:
-            parser = inspect.Arguments
+            location = module.replace('.', '/') + '.py'
+            source_url = 'https://github.com/Rapptz/discord.py'
+            branch = 'master'
+
+        
+        final_url = f'<{source_url}/blob/{branch}/{location}#L{firstlineno}-L{firstlineno + len(lines) - 1}>'
+        embed = Embed()
+        embed.colour = discord.Colour.purple()
+        embed.description = f"**__My source code for `{str(obj)}` is located at:__**\n{final_url}"\
+                f"\n\nMy code is under licensed under the [**Mozilla Public License**]({license_url})."
+
+        await ctx.send(embed=embed, view=SourceView(ctx, code_lines))
+
 
 
     @commands.command(slash_command=True)
@@ -989,6 +1076,9 @@ class utility(commands.Cog, description=":information_source: Get utilities like
         """
         when, event, *args = args
 
+        if not when or not event:
+            raise commands.BadArgument('Invalid time provided, try e.g. "tomorrow" or "3 days"')
+
         try:
             connection = kwargs.pop('connection')
         except KeyError:
@@ -998,11 +1088,11 @@ class utility(commands.Cog, description=":information_source: Get utilities like
             now = kwargs.pop('created')
         except KeyError:
             now = discord.utils.utcnow()
-        print(when)
+
         # Remove timezone information since the database does not deal with it
         when = when.astimezone(datetime.timezone.utc).replace(tzinfo=None)
         now = now.astimezone(datetime.timezone.utc).replace(tzinfo=None)
-        print(when)
+
         timer = Timer.temporary(event=event, args=args, kwargs=kwargs, expires=when, created=now)
         delta = (when - now).total_seconds()
         if delta <= 30:
@@ -1062,7 +1152,8 @@ class utility(commands.Cog, description=":information_source: Get utilities like
 
         Times are in UTC.
         """
-        timer = await self.create_timer(
+        try:
+            timer = await self.create_timer(
             when.dt,
             "reminder",
             ctx.author.id,
@@ -1071,7 +1162,9 @@ class utility(commands.Cog, description=":information_source: Get utilities like
             connection=self.bot.db,
             created=ctx.message.created_at,
             message_id=ctx.message.id
-        )
+            )
+        except Exception as e:
+            return await ctx.send(str(e))
 
         delta = human_timedelta(when.dt - datetime.timedelta(seconds=2))
         #dunno why it's off by 3 seconds but this should fix
@@ -1258,7 +1351,9 @@ class utility(commands.Cog, description=":information_source: Get utilities like
         If the winners argument is no provided there will be 1 winner.
         """
         await ctx.defer()
-        #await ctx.message.delete(silent=True)
+        
+        if duration.dt < (ctx.message.created_at + datetime.timedelta(seconds=5)):
+            return await ctx.send("Duration is too short. Must be at least 5 seconds.")
 
         e = Embed()
         e.colour = 0xe91e63
@@ -1302,6 +1397,11 @@ class utility(commands.Cog, description=":information_source: Get utilities like
         End a giveaway early.
         
         This is different from canceling it as I will roll the winners.
+        
+        You can find the giveaway's id in the footer of the giveaway's embed.
+        
+        You cannot end giveaways that have `None` as their id.
+        This is due to them being too short.
         """
         await ctx.defer()
 
@@ -1362,7 +1462,7 @@ class utility(commands.Cog, description=":information_source: Get utilities like
             e.set_footer(text=f'{winners} winner{"s" if winners > 1 else ""}')
 
             await message.edit(embed=e, content=f"\U0001f389\U0001f389 **GIVEAWAY ENDED** \U0001f389\U0001f389")
-            await ctx.reply("Successfully ended that giveaway.")
+            await ctx.check()
             return # No need to choose winners as there is nothing to choose from
                     
         else:
@@ -1395,7 +1495,7 @@ class utility(commands.Cog, description=":information_source: Get utilities like
             e.set_footer(text=f'{winners} winner{"s" if winners > 1 else ""}')
             await message.edit(embed=e, content=f"\U0001f389\U0001f389 **GIVEAWAY ENDED** \U0001f389\U0001f389")
             await message.reply(f'{", ".join(f"<@{users}>" for i, users in enumerate(winners_string))} {"have" if len(winners_string) > 1 else "has"} won the giveaway for **{prize}**\n{message.jump_url}')
-            await ctx.reply("Successfully ended that giveaway.")
+            await ctx.check()
             return
 
 
