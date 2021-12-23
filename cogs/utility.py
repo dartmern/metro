@@ -1,12 +1,12 @@
 import discord
 from discord.ext import commands, menus
 
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 from bot import MetroBot
 from cogs.moderation import Arguments
 
 from utils.calc_tils import NumericStringParser
-from utils.checks import check_dev
+from utils.checks import can_execute_action, check_dev
 from utils.converters import RoleConverter
 from utils.json_loader import read_json
 from utils.custom_context import MyContext
@@ -21,6 +21,7 @@ from datetime import timedelta
 import json
 import random
 import io
+import pytz
 import traceback
 import shlex
 import asyncio
@@ -320,6 +321,23 @@ class utility(commands.Cog, description=":information_source: Get utilities like
         
         return f"https://mystb.in/{url_key}"
 
+    @commands.command(name='mystbin')
+    @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.user))
+    async def mystbin(self, ctx: MyContext, content : str):
+        """Create and post a mystbin online."""
+
+        start = time.perf_counter()
+        link = await self.post_mystbin(content)
+        end = time.perf_counter()
+
+        post_time = (end - start) * 1000
+
+        e = Embed()
+        e.colour = discord.Colour.yellow()
+        e.description = f"Output: {link}"
+        e.set_footer(text=f'Post time: {round(post_time, 3)}')
+        return await ctx.send(embed=e)
+
         
 
     @commands.command(name='permissions',brief="Shows a member's permissions in a specific channel.")
@@ -528,10 +546,6 @@ class utility(commands.Cog, description=":information_source: Get utilities like
         embed.colour = discord.Colour.green()
         return await ctx.send(embed=embed)
 
-    @commands.command()
-    async def prefixes(self, ctx):
-        """Alias for `prefix list` (list all my prefixes)"""
-        await ctx.invoke(self.prefix_list)
 
         
     def read_tags(self, ctx : MyContext):
@@ -629,79 +643,6 @@ class utility(commands.Cog, description=":information_source: Get utilities like
         await ctx.send(embed=embed, view=SourceView(ctx, code_lines))
 
 
-
-    @commands.command(slash_command=True)
-    @commands.bot_has_permissions(send_messages=True)
-    async def uptime(self, ctx):
-        """Get the bot's uptime."""
-
-        await ctx.send(f'I have an uptime of: **{get_bot_uptime(self.bot, brief=False)}**',hide=True)
-
-
-    @commands.command(aliases=['lc'])
-    @commands.bot_has_permissions(send_messages=True)
-    async def linecount(self, ctx):
-        """
-        Get the linecount + code stats for Metro.
-
-        Taken from `?tag linecount`
-        """
-        
-        import pathlib
-
-        p = pathlib.Path('./')
-        cm = cr = fn = cl = ls = fc = 0
-        for f in p.rglob('*.py'):
-            if str(f).startswith("venv"):
-                continue
-            fc += 1
-            with f.open(encoding='utf8',errors='ignore') as of:
-                for l in of.readlines():
-                    l = l.strip()
-                    if l.startswith('class'):
-                        cl += 1
-                    if l.startswith('def'):
-                        fn += 1
-                    if l.startswith('async def'):
-                        cr += 1
-                    if '#' in l:
-                        cm += 1
-                    ls += 1
-
-        await ctx.send(f"Files: {fc}\nLines: {ls:,}\nClasses: {cl}\nFunctions: {fn}\nCoroutines: {cr}\nComments: {cm:,}")
-
-
-    @commands.command()
-    async def ping(self, ctx):
-        """Show the bot's latency in milliseconds.
-        Useful to see if the bot is lagging out."""
-
-        start = time.perf_counter()
-        message = await ctx.send('Pinging...')
-        end = time.perf_counter()
-
-        typing_ping = (end - start) * 1000
-
-        start = time.perf_counter()
-        await self.bot.db.execute('SELECT 1')
-        end = time.perf_counter()
-
-        database_ping = (end - start) * 1000
-
-        typing_emoji = self.bot.get_emoji(904156199967158293)
-
-        if ctx.guild is None:
-            mess = "`Note that my messages are on shard 0 so it isn't guaranteed your server is online.`" 
-            shard = self.bot.get_shard(0)
-        else:
-            mess = ""
-            shard = self.bot.get_shard(ctx.guild.shard_id)
-
-        await message.edit(
-            content=f'{typing_emoji} **Typing:** | {round(typing_ping, 1)} ms'
-                    f'\n<:msql:904157158608867409> **Database:** | {round(database_ping, 1)} ms'
-                    f'\n<:mdiscord:904157585266049104> **Websocket:** | {round(self.bot.latency*1000)} ms'
-                    f'\n:infinity: **Shard Latency:** | {round(shard.latency *1000)} ms \n{mess}')
 
 
 
@@ -945,26 +886,6 @@ class utility(commands.Cog, description=":information_source: Get utilities like
             await ctx.send(f"Archived the message in your DMs!\n{msg.jump_url}")
         except discord.Forbidden:
             await ctx.send("Oops! I couldn't send you a message. Are you sure your DMs are on?")
-
-    @commands.command(aliases=['ri'])
-    async def roleinfo(self, ctx : MyContext, role : RoleConverter):
-        """
-        Show information about a role.
-        """
-
-        e = Embed()
-        e.set_author(name=role.name)
-        e.add_field(name='Mention', value=role.mention)
-        e.add_field(name='Members', value=len(role.members))
-        e.add_field(name='Hoisted', value=await ctx.emojify(role.hoist))
-        e.add_field(name='Color', value=role.color)
-        e.add_field(name='Position', value=role.position)
-        e.add_field(name='Mentionable', value=await ctx.emojify(role.mentionable))
-        e.set_footer(text=f'Role ID: {role.id} • Created on ')
-        e.timestamp = role.created_at
-
-        await ctx.send(embed=e)
-
 
     async def cog_command_error(self, ctx, error):
         if isinstance(error, commands.BadArgument):
@@ -1385,6 +1306,56 @@ class utility(commands.Cog, description=":information_source: Get utilities like
         await giveaway_message.edit(":tada: **GIVEAWAY!** :tada:",embed=e)
 
         return
+
+    @giveaway.command(name='list')
+    @commands.check(Cooldown(4, 8, 6, 8, commands.BucketType.member))
+    @commands.bot_has_permissions(send_messages=True, add_reactions=True)
+    @commands.has_guild_permissions(manage_guild=True)
+    async def giveaway_list(self, ctx: MyContext):
+        """List all the active giveaways."""
+
+        cog = self.bot.get_cog("utility")
+        if not cog:
+            raise commands.BadArgument("This feature is currectly unavailable. Please try again later.")
+
+        embed = Embed()
+        embed.colour = discord.Colour.yellow()
+
+        query = """
+                SELECT (id, expires, extra, created)
+                FROM reminders
+                WHERE event = 'giveaway'
+                ORDER BY expires;
+                """
+        records = await self.bot.db.fetch(query)
+        if not records:
+            return await ctx.send("There are no active giveaways in this guild.")
+
+        to_append = []
+        for record in records:
+            _id : int = record['row'][0]
+            expires : datetime.datetime = pytz.utc.localize(record['row'][1])
+            extra : Dict = json.loads(record['row'][2])
+            created = pytz.utc.localize(record['row'][3])
+            args = extra['args']
+            kwargs = extra['kwargs']
+
+            guild_id, host_id, channel_id, giveaway_id = args
+            winners = kwargs['winners']
+            prize = kwargs['prize']
+
+            to_append.append(
+                f"\n\n**{prize}** - {winners} winner{'s' if winners > 1 else ''} - [jump url](https://discord.com/channels/{guild_id}/{channel_id}/{giveaway_id}) - ID: {_id}" # save an api call
+                f"\n Created: {discord.utils.format_dt(created, 'R')}"
+                f"\n Ends: {discord.utils.format_dt(expires, 'R')}"
+                f"\n Host: <@{host_id}>"
+            )
+
+        await ctx.paginate(to_append)
+            
+
+
+            
 
     @giveaway.command(name='end')
     @commands.check(Cooldown(4, 8, 6, 8, commands.BucketType.member))

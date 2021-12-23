@@ -95,7 +95,7 @@ class RoleConverter(commands.Converter):
             )
 
         if role is None:
-            raise commands.RoleNotFound(f"Role \"{argument}\" not found.")
+            raise commands.BadArgument(f"Role \"{argument}\" not found.")
 
         return role
 

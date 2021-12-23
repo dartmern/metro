@@ -1,5 +1,6 @@
 import itertools
 from discord.ext.commands.core import command
+from discord.ext.commands.errors import CommandError
 from utils.new_pages import SimplePages
 from utils.pages import ExtraPages
 import discord
@@ -10,9 +11,11 @@ from discord.ext import commands, menus
 import contextlib
 
 import asyncio
+import copy
+import time
 
 from utils.custom_context import MyContext
-from utils.useful import Embed, Cooldown, OldRoboPages
+from utils.useful import Embed, Cooldown, OldRoboPages, get_bot_uptime
 
 
 class View(discord.ui.View):
@@ -186,7 +189,6 @@ class ButtonMenuSrc(menus.ListPageSource):
 
         embed = Embed(title=title, description=self.description)
         docs_url = f"{self.ctx.bot.docs}/{self.group.cog_name}/{(self.group.qualified_name).replace(' ', '/')}"
-        print(docs_url)
         embed.set_author(name='Documentation Link', url=docs_url, icon_url=self.ctx.bot.user.display_avatar.url)
 
 
@@ -290,7 +292,6 @@ class MetroHelp(commands.HelpCommand):
 
     async def get_command_help(self, command : commands.Command) -> Embed:
 
-        ctx : MyContext = self.context
         command_extras = command.extras
         # Base
         if command.signature == "":
@@ -304,8 +305,9 @@ class MetroHelp(commands.HelpCommand):
                 description=self.get_doc(command)
             )
 
-        docs_url = f"{ctx.bot.docs}/{command.cog_name}/{command.qualified_name}"
-        em.set_author(name='Documentation Link', url=docs_url, icon_url=ctx.bot.user.display_avatar.url)
+        if not command.cog_name == 'Jishaku':
+            docs_url = f"{ctx.bot.docs}/{command.cog_name}/{command.qualified_name}"
+            em.set_author(name='Documentation Link', url=docs_url, icon_url=ctx.bot.user.display_avatar.url)
 
         # Cooldowns
         cooldown = discord.utils.find(lambda x: isinstance(x, Cooldown), command.checks) or Cooldown(1, 3, 1, 1,
@@ -359,14 +361,14 @@ class MetroHelp(commands.HelpCommand):
         return em
         
 
-    async def handle_help(self, command):
+    async def handle_help(self, command, old_ctx : MyContext = None):
         with contextlib.suppress(commands.CommandError):
-            if not await command.can_run(self.context):
+            if not await command.can_run(old_ctx):
                 raise commands.CommandError
-            if self.context.interaction:
-                return await self.context.interaction.response.send_message(embed=self.get_command_help(command),ephemeral=True)
+            if old_ctx.interaction:
+                return await old_ctx.interaction.response.send_message(embed=self.get_command_help(command),ephemeral=True)
             else:
-                return await self.context.send(embed=await self.get_command_help(command),view=View(self.context.author))
+                return await old_ctx.send(embed=await self.get_command_help(command, old_ctx),view=View(old_ctx))
         raise commands.BadArgument("You do not have the permissions to view this command's help.")
 
 
@@ -406,22 +408,13 @@ class MetroHelp(commands.HelpCommand):
         channel = self.get_destination()
         await channel.send(embed=embed, hide=True)
 
-    async def send_missing_required_argument(self, ctx, error):
-        missing = f"{error.param.name}"
-        command = f"{ctx.clean_prefix}{ctx.command} {ctx.command.signature}"
-        separator = (' ' * (len([item[::-1] for item in command[::-1].split(missing[::-1], 1)][::-1][0]) - 1)) + (8*' ')
-        indicator = ('^' * (len(missing) + 2))
-        return await ctx.send(
-                                  f"\n```yaml\nSyntax: {command}\n{separator}{indicator}"
-                                  f'\n{missing} is a required argument that is missing.\n```',
-                                  embed=await self.get_command_help(ctx.command))
 
     async def send_command_help(self, command):
         return await self.context.send(embed=await self.get_command_help(command),view=View(self.context.author), hide=True)
 
     async def send_group_help(self, group):
         
-        entries = await self.filter_commands(group.commands)
+        entries = list(group.commands)
         
         if int(len(group.commands)) == 0 or len(entries) == 0:
             return await self.context.send(embed=await self.get_command_help(group),view=View(self.context.author), hide=True)
@@ -475,6 +468,48 @@ class meta(commands.Cog, description='ℹ️ Get bot stats and information.'):
         self.old_help_command = bot.help_command
         bot.help_command = MetroHelp(command_attrs=attrs)
         bot.help_command.cog = self
+
+    @commands.command(slash_command=True)
+    @commands.bot_has_permissions(send_messages=True)
+    async def uptime(self, ctx):
+        """Get the bot's uptime."""
+
+        await ctx.send(f'I have an uptime of: **{get_bot_uptime(self.bot, brief=False)}**',hide=True)
+
+
+    @commands.command()
+    async def ping(self, ctx):
+        """Show the bot's latency in milliseconds.
+        Useful to see if the bot is lagging out."""
+
+        start = time.perf_counter()
+        message = await ctx.send('Pinging...')
+        end = time.perf_counter()
+
+        typing_ping = (end - start) * 1000
+
+        start = time.perf_counter()
+        await self.bot.db.execute('SELECT 1')
+        end = time.perf_counter()
+
+        database_ping = (end - start) * 1000
+
+        typing_emoji = self.bot.get_emoji(904156199967158293)
+
+        if ctx.guild is None:
+            mess = "`Note that my messages are on shard 0 so it isn't guaranteed your server is online.`" 
+            shard = self.bot.get_shard(0)
+        else:
+            mess = ""
+            shard = self.bot.get_shard(ctx.guild.shard_id)
+
+        await message.edit(
+            content=f'{typing_emoji} **Typing:** | {round(typing_ping, 1)} ms'
+                    f'\n<:msql:904157158608867409> **Database:** | {round(database_ping, 1)} ms'
+                    f'\n<:mdiscord:904157585266049104> **Websocket:** | {round(self.bot.latency*1000)} ms'
+                    f'\n:infinity: **Shard Latency:** | {round(shard.latency *1000)} ms \n{mess}')
+
+
 
 
     @commands.command(name='invite',slash_command=True)

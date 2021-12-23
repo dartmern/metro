@@ -109,6 +109,7 @@ class MetroBot(commands.AutoShardedBot):
         self.invite = 'https://discord.com/api/oauth2/authorize?client_id=788543184082698252&permissions=0&scope=applications.commands%20bot'
         self.support = 'https://discord.gg/2ceTMZ9qJh'
         self.donate = 'https://www.patreon.com/metrodiscordbot'
+        self.docs = 'https://metro-discord-bot.gitbook.io/metro-documentation'
 
         self.noprefix = False
         self.started = False

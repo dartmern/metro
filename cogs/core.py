@@ -128,7 +128,17 @@ class core(commands.Cog, description="Core events."):
             await ctx.send(str(error))
 
         elif isinstance(error, commands.MissingRequiredArgument):
-            return await self.bot.help_command.send_missing_required_argument(ctx, error)
+            missing = f"{error.param.name}"
+            command = f"{ctx.clean_prefix}{ctx.command} {ctx.command.signature}"
+            separator = (' ' * (len([item[::-1] for item in command[::-1].split(missing[::-1], 1)][::-1][0]) - 1)) + (8*' ')
+            indicator = ('^' * (len(missing) + 2))
+            await ctx.send(  
+                                     f'> Run **{ctx.prefix}help {ctx.command}** for this command\'s help.'
+                                    f"\n```yaml\nSyntax: {command}\n{separator}{indicator}"
+                                    f'\n{missing} is a required argument that is missing.\n```',
+                                    )
+
+            return
 
         elif isinstance(error, commands.errors.BotMissingPermissions):
 
