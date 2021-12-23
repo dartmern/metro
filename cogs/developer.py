@@ -611,38 +611,43 @@ class developer(commands.Cog, description="Developer commands."):
         command = self.bot.get_command('eval')
         await command(ctx, body=f'import inspect\nreturn inspect.getsource({object})')
 
-    @commands.command()
+    @commands.command(usage='[--global]')
     @is_dev()
-    async def reboot(self, ctx : MyContext):
+    async def reboot(self, ctx : MyContext, *, flags : str = None):
         """Restart the bot."""
+        if flags and "--global" in flags:
+            confirm = await ctx.confirm("Are you sure you want to restart the bot?", timeout=30)
+            if confirm is False:
+                return await ctx.send("Canceled.")
+            if confirm is None:
+                return await ctx.send("Timed out.")
+            
+            message = await ctx.send("Rebooting...")
+            if ctx.guild:
+                write_json(
+                    {
+                        "message_id" : message.id,
+                        "channel_id" : message.channel.id,
+                        "dms" : False
+                    },
+                    'restart'
+                )
+                restart_program()
+            else:
+                write_json(
+                    {
+                        "message_id" : message.id,
+                        "channel_id" : message.channel.id,
+                        "dms" : True
+                    },
+                    'restart'
+                )
+                restart_program()
 
-        confirm = await ctx.confirm("Are you sure you want to restart the bot?", timeout=30)
-        if confirm is False:
-            return await ctx.send("Canceled.")
-        if confirm is None:
-            return await ctx.send("Timed out.")
-        
-        message = await ctx.send("Rebooting...")
-        if ctx.guild:
-            write_json(
-                {
-                    "message_id" : message.id,
-                    "channel_id" : message.channel.id,
-                    "dms" : False
-                },
-                'restart'
-            )
-            restart_program()
         else:
-            write_json(
-                {
-                    "message_id" : message.id,
-                    "channel_id" : message.channel.id,
-                    "dms" : True
-                },
-                'restart'
-            )
-            restart_program()
+            msg = await ctx.send(f"Rebooting `Shard #{ctx.guild.shard_id}`")
+            await self.bot.get_shard(ctx.guild.shard_id).reconnect()
+            await msg.edit(content=f"{self.bot.check} Successfully rebooted `Shard #{ctx.guild.shard_id}`")
 
 
 
