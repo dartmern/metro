@@ -283,10 +283,10 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
     async def ban_cmd(
             self,
             ctx : MyContext,
-            member : Union[discord.Member, discord.User] = commands.Option(description='Member to ban.'),
-            *,
+            member : discord.User = commands.Option(description='Member to ban.'),
             delete_days : Optional[int] = commands.Option(default=0, description='Amount of days worth of messages to delete.'),
-            reason : Optional[str] = commands.Option(description='Reason to ban this member/user.')
+            *,
+            reason : str = commands.Option(default=None, description='Reason to ban this member/user.')
     ):
         """
         Ban a member from the server.\n
@@ -305,7 +305,7 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
 
         if member == ctx.author:
             return await ctx.send(f'{self.bot.cross} You cannot ban yourself!')
-        if isinstance(member, discord.Member):
+        if member in ctx.guild.members:
             if not can_execute_action(ctx, ctx.author, member):
                 return await ctx.send('You are not high enough in role hierarchy to ban this member.')
 
@@ -346,6 +346,7 @@ class moderation(commands.Cog, description=":hammer: Moderation commands."):
             self,
             ctx : MyContext,
             member : discord.User = commands.Option(description='User to be unbanned.'),
+            *,
             reason : Optional[str] = commands.Option(description='Reason for this user to be unbanned.')
     ):
         """
