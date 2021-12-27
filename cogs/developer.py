@@ -132,6 +132,10 @@ class developer(commands.Cog, description="Developer commands."):
         self.bot = bot
         self._last_result = None
 
+    @property
+    def emoji(self) -> str:
+        return ''
+
     def cleanup_code(self, content):
         """Automatically removes code blocks from the code."""
         # remove ```py\n```

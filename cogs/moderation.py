@@ -180,10 +180,13 @@ class MuteRoleView(discord.ui.View):
         self.stop()
 
 
-class moderation(commands.Cog, description=":hammer: Moderation commands."):
+class moderation(commands.Cog, description="Moderation commands."):
     def __init__(self, bot : MetroBot):
         self.bot = bot
 
+    @property
+    def emoji(self) -> str:
+        return '🔨'
 
     @commands.command(name="kick", brief="Kick a member from the server.")
     @commands.has_guild_permissions(kick_members=True)

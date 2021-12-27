@@ -110,6 +110,7 @@ class MetroBot(commands.AutoShardedBot):
         self.support = 'https://discord.gg/2ceTMZ9qJh'
         self.donate = 'https://www.patreon.com/metrodiscordbot'
         self.docs = 'https://metro-discord-bot.gitbook.io/metro-documentation'
+        self.github = 'https://github.com/dartmern/metro'
 
         self.noprefix = False
         self.started = False

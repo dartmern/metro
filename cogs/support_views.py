@@ -2,6 +2,7 @@ import re
 import discord
 import time
 from discord.ext import commands
+from bot import MetroBot
 
 
 from utils.custom_context import MyContext
@@ -135,12 +136,16 @@ class AllRoles(discord.ui.View):
         
 
 
-class support(commands.Cog, description=':test_tube: Support only commands.'):
-    def __init__(self, bot):
+class support(commands.Cog, description='Support only commands.'):
+    def __init__(self, bot : MetroBot):
         self.bot = bot
 
+    @property
+    def emoji(self) -> str:
+        return '🧪'
+        
     @commands.Cog.listener()
-    async def on_member_join(self, member):
+    async def on_member_join(self, member : discord.Member):
 
         if member.guild.id != SUPPORT_GUILD:
             return
@@ -239,10 +244,6 @@ class support(commands.Cog, description=':test_tube: Support only commands.'):
 
         await user.send(f'Your bot (<@{bot}>) was added to {ctx.guild.name}')
         await ctx.check()
-
-    @commands.command()
-    async def foo(self, ctx : MyContext, args : typing.Literal[1,2,3]):
-        await ctx.send(args, hide=True)
 
     @commands.command(
         name='tester',

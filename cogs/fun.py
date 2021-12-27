@@ -10,9 +10,13 @@ import random
 from utils.custom_context import MyContext
 
 
-class fun(commands.Cog, description=":smile: Fun commands!"):
+class fun(commands.Cog, description="Fun commands!"):
     def __init__(self, bot : MetroBot):
         self.bot = bot
+
+    @property
+    def emoji(self) -> str:
+        return '😄'
 
     @commands.command()
     @commands.bot_has_permissions(send_messages=True)

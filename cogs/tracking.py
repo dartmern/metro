@@ -16,7 +16,7 @@ from utils.useful import Cooldown, Embed, traceback_maker
 def setup(bot : MetroBot):
     bot.add_cog(tracking(bot))
 
-class tracking(commands.Cog, description=':mag: Module for user and server stats.'):
+class tracking(commands.Cog, description='Module for user and server stats.'):
     def __init__(self, bot : MetroBot):
         self.bot = bot
         self.batch_lock = asyncio.Lock(loop=bot.loop)
@@ -27,6 +27,10 @@ class tracking(commands.Cog, description=':mag: Module for user and server stats
 
     def cog_unload(self):
         self.message_inserter.stop()
+
+    @property
+    def emoji(self) -> str:
+        return '🔍'
 
     @tasks.loop(seconds=0.5)
     async def message_inserter(self):

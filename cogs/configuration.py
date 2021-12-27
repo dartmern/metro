@@ -26,7 +26,7 @@ from utils.custom_context import MyContext
 class Flags(commands.FlagConverter, prefix='--', delimiter=' '):
     reason : str
 
-class configuration(commands.Cog, description=':gear: Configure the bot/server.'):
+class configuration(commands.Cog, description='Configure the bot/server.'):
     def __init__(self, bot : MetroBot):
         self.bot = bot
 
@@ -36,6 +36,9 @@ class configuration(commands.Cog, description=':gear: Configure the bot/server.'
         self.ignored = defaultdict(list)
         self.command_config = defaultdict(list)
 
+    @property
+    def emoji(self) -> str:
+        return '⚙️'
 
     async def load_plonks(self):
         await self.bot.wait_until_ready()

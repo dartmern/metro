@@ -270,10 +270,14 @@ class VoiceState:
             self.voice = None
 
 
-class music(commands.Cog, description=':musical_note: Make your server enjoy music within discord!'):
+class music(commands.Cog, description='Make your server enjoy music within discord!'):
     def __init__(self, bot : MetroBot):
         self.bot = bot
         self.voice_states = {}
+
+    @property
+    def emoji(self) -> str:
+        return '🎵'
 
     def get_voice_state(self, ctx: commands.Context):
         state = self.voice_states.get(ctx.guild.id)

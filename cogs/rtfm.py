@@ -75,10 +75,13 @@ class SphinxObjectFileReader:
                 pos = buf.find(b'\n')
 
 
-class docs(commands.Cog, description=":books: Fuzzy search through documentations."):
+class docs(commands.Cog, description="Fuzzy search through documentations."):
     def __init__(self, bot : MetroBot):
         self.bot = bot
 
+    @property
+    def emoji(self) -> str:
+        return '📚'
 
     def parse_object_inv(self, stream, url):
         # key: URL

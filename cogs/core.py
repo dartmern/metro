@@ -56,6 +56,10 @@ class core(commands.Cog, description="Core events."):
         self.blacklist_message_sent = []
         self.error_channel = 912447757212606494
 
+    @property
+    def emoji(self) -> str:
+        return ''
+
     @commands.Cog.listener()
     async def on_command_error(self, ctx : MyContext, error):
 

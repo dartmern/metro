@@ -1,6 +1,10 @@
 import itertools
+from typing import Any, List
+from discord.embeds import E
 from discord.ext.commands.core import command
 from discord.ext.commands.errors import CommandError
+from discord.ext.commands.help import HelpCommand
+from bot import MetroBot
 from utils.new_pages import SimplePages
 from utils.pages import ExtraPages
 import discord
@@ -16,6 +20,262 @@ import time
 
 from utils.custom_context import MyContext
 from utils.useful import Embed, Cooldown, OldRoboPages, get_bot_uptime
+
+class SupportView(discord.ui.View):
+    def __init__(self, ctx : MyContext):
+        super().__init__()
+        self.ctx = ctx
+        
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id == self.ctx.author.id:
+            return True
+        await interaction.response.send_message('This pagination menu cannot be controlled by you, sorry!', ephemeral=True)
+        return False
+
+    async def start(self, interaction: discord.Interaction):
+        self.add_item(discord.ui.Button(label='Support Server', url='https://discord.gg/2ceTMZ9qJh'))
+
+        embed = Embed()
+        embed.colour = discord.Colour.orange()
+        embed.description = '__**Are you sure you want to join my support server?**__'\
+            f'\n Joining is completely at your own will. \nThis message is here to protect people from accidentally joining.'\
+            f'\n You can kindly dismiss this message if you clicked by accident.'
+        await interaction.response.send_message(embed=embed, ephemeral=True, view=self)
+    
+
+
+
+class InviteView(discord.ui.View):
+    def __init__(self, ctx : MyContext):
+        super().__init__()
+        self.ctx = ctx
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id == self.ctx.author.id:
+            return True
+        await interaction.response.send_message('This pagination menu cannot be controlled by you, sorry!', ephemeral=True)
+        return False
+
+    async def start_normal(self):
+        embed = Embed()
+        embed.colour = discord.Colour.blue()
+        embed.description = "__**Choose a invite option below or press `Create custom permissions`**__"\
+            f"\n\nIf you press `Create custom permissions` you are required to enter a vaild discord permissions integer."\
+            f'\n- You can use [this calculator](https://discordapi.com/permissions.html) to calculate the permissions if you are unsure what to put.'
+        
+        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='None', url=discord.utils.oauth_url(self.ctx.bot.user.id, permissions=discord.Permissions(0))))
+        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='Basic', url=discord.utils.oauth_url(self.ctx.bot.user.id, permissions=discord.Permissions(140663671873))))
+        self.add_item(discord.ui.Button(style=discord.ButtonStyle.blurple, label='Advanced', url=discord.utils.oauth_url(self.ctx.bot.user.id, permissions=discord.Permissions(140932115831))))
+        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='Admin', url=discord.utils.oauth_url(self.ctx.bot.user.id, permissions=discord.Permissions(8))))
+        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='All', url=discord.utils.oauth_url(self.ctx.bot.user.id, permissions=discord.Permissions(549755813887))))
+        await self.ctx.send(embed=embed, view=self)
+
+    async def start(self, interaction: discord.Interaction):
+
+        embed = Embed()
+        embed.colour = discord.Colour.blue()
+        embed.description = "__**Choose a invite option below or press `Create custom permissions`**__"\
+            f"\n\nIf you press `Create custom permissions` you are required to enter a vaild discord permissions integer."\
+            f'\n- You can use [this calculator](https://discordapi.com/permissions.html) to calculate the permissions if you are unsure what to put.'
+        
+        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='None', url=discord.utils.oauth_url(self.ctx.bot.user.id, permissions=discord.Permissions(0))))
+        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='Basic', url=discord.utils.oauth_url(self.ctx.bot.user.id, permissions=discord.Permissions(140663671873))))
+        self.add_item(discord.ui.Button(style=discord.ButtonStyle.blurple, label='Advanced', url=discord.utils.oauth_url(self.ctx.bot.user.id, permissions=discord.Permissions(140932115831))))
+        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='Admin', url=discord.utils.oauth_url(self.ctx.bot.user.id, permissions=discord.Permissions(8))))
+        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='All', url=discord.utils.oauth_url(self.ctx.bot.user.id, permissions=discord.Permissions(549755813887))))
+        
+        await interaction.response.send_message(embed=embed, view=self)
+
+    @discord.ui.button(row=1, label='Enter a custom permission value', style=discord.ButtonStyle.green)
+    async def custom_perms(self, button: discord.ui.Button, interaction: discord.Interaction):
+        
+        await interaction.response.send_message(f"Please enter a permissions integer: ")
+        
+        def check(message : discord.Message) -> bool:
+            return message.channel == self.ctx.channel and message.author == self.ctx.author and message.content.isdigit()
+
+        try:
+            message = await self.ctx.bot.wait_for("message", check=check, timeout=180)
+        except asyncio.TimeoutError:
+            return await interaction.followup.send("Timed out.")
+        
+        em = Embed()
+        em.description = f"Permission Integer: {message.content}"\
+            f"\n Invite URL: {discord.utils.oauth_url(self.ctx.bot.user.id, permissions=discord.Permissions(int(message.content)))}"
+        await interaction.followup.send(embed=em)
+
+    @discord.ui.button(emoji='🗑️', style=discord.ButtonStyle.red, row=1)
+    async def stop_pages(self, button: discord.ui.Button, interaction: discord.Interaction):
+        """
+        Stop the pagination session. 
+        Unless this pagination menu was invoked with a slash command
+        """
+        if self.ctx.interaction:
+            return await interaction.response.send_message(f"This pagination menu was invoked with a slash command. \nPlease click *dismiss message* to quit.", ephemeral=True)
+
+        await interaction.response.defer()
+        await interaction.delete_original_message()
+        self.stop()
+
+class NeedHelp(discord.ui.View):
+    def __init__(self, ctx: MyContext, old_view: discord.ui.View):
+        super().__init__()
+        self.ctx = ctx
+        self.old_embed = None
+        self.old_view = old_view # For the go home button
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id == self.ctx.author.id:
+            return True
+        await interaction.response.send_message('This pagination menu cannot be controlled by you, sorry!', ephemeral=True)
+        return False
+
+    async def start(self, interaction: discord.Interaction):
+        self.old_embed = interaction.message.embeds[0] # interaction.message.embeds[0] is just the home page embed
+        
+        embed = Embed(title="Argument Help Menu")
+        embed.description = "__**Do not not include these brackets when running a command!**__"
+        embed.add_field(
+            name="How do I use this bot?",
+            value="Reading the bot signature is pretty simple.",
+        )
+
+        embed.add_field(name="`<argument>`", value="Means that this argument is __**required**__", inline=False)
+        embed.add_field(name="`[argument]`", value="Means that this argument is __**optional**__", inline=False)
+        embed.add_field(name="`[argument='default']`",
+                        value="Means that this argument is __**optional**__ and has a default value", inline=False)
+        embed.add_field(name="`[argument]...` or `[argument...]`",
+                        value="Means that this argument is __**optional**__ and can take __**multiple entries**__",
+                        inline=False)
+        embed.add_field(name="`<argument>...` or `<argument...>`",
+                        value="Means that this argument is __**required**__ and can take __**multiple entries**__", inline=False)
+        embed.add_field(name="`[X|Y|Z]`", value="Means that this argument can be __**either X, Y or Z**__",
+                        inline=False)
+
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    @discord.ui.button(label='Go Home', emoji='🏘️', style=discord.ButtonStyle.blurple)
+    async def go_home_button(self, _, interaction: discord.Interaction):
+        await interaction.response.edit_message(embed=self.old_embed, view=self.old_view)
+        self.stop()
+
+class NewHelpView(discord.ui.View):
+    def __init__(self, ctx : MyContext, data : List, help_command):
+        super().__init__(timeout=None)
+        self.ctx : MyContext = ctx
+        self.bot : MetroBot = ctx.bot #get typehinted bot and better to remember
+        self.help_command : HelpCommand = help_command
+        self.data : List = data #List[cog.name, Optional[cog.emoji]]
+
+    def start_select(self) -> None:
+        self.select_category : discord.ui.Select
+        self.select_category.options = []
+        self.select_category.add_option(emoji='🏘️', label='Home Page', value='home_page')
+
+        for category, command in self.data:
+            if category[0] == 'Jishaku':
+                self.select_category.add_option(emoji=None, label=category[0].capitalize(), description='The Jishaku debug and diagnostic commands.')
+                continue
+
+            try:
+                _emoji = category[2]
+            except IndexError:
+                _emoji = None
+            self.select_category.add_option(emoji=_emoji, label=category[0].capitalize(), description=category[1])
+
+    def category_embed(self, cog : commands.Cog) -> discord.Embed:
+
+        to_join = []
+        for command in cog.get_commands():
+            if len(command.name) < 15:
+                group_mark = '✅' if isinstance(command, commands.Group) else ''
+                empty_space = 15 - len(command.name)
+                if not group_mark == '':
+                    empty_space = empty_space - 2
+                short_doc = command.short_doc or "No help provided..."
+                signature = f"`{command.name}{' '*empty_space}{group_mark}:` {short_doc if len(short_doc) < 58 else f'{short_doc[0:58]}...'}"
+            else:
+                group_mark = '\✅' if isinstance(command, commands.Group) else ''
+                signature = f"`{command.name[0:12]}...{group_mark}` {short_doc if len(short_doc) < 58 else f'{short_doc[0:58]}...'}"
+            to_join.append(signature)
+
+        embed = Embed()
+        embed.set_author(
+            name=self.ctx.author.name + " | Help Menu",
+            icon_url=self.ctx.author.display_avatar.url,
+        )
+
+        description = f" __**{cog.qualified_name.capitalize()}**__ \n"
+        description += (
+            '\n'.join(to_join)
+        )
+        embed.description = description
+        embed.set_footer(text='A command marked with a ✅ means it\'s a group command.')
+        return embed
+
+    def home_page_embed(self) -> discord.Embed:
+        embed = Embed(
+            description=
+            f"\n**Total Commands:** {len(list(self.ctx.bot.walk_commands()))} | **Total Categories:** {len(self.ctx.bot.cogs)}"
+        )
+        embed.add_field(
+            name='Getting Help',
+            value=f'\n • Use `{self.ctx.prefix}help <command>` for some help and examples on any command'\
+                f'\n • Join my [support server]({self.ctx.bot.support}) for additional help'\
+                f'\n • Use the select menu below to view the categories\' commands'\
+                f'\n • Use `{self.ctx.prefix}help all` to view all my commands in one message',
+            inline=True
+        )
+        embed.add_field(
+            name='Quick Links',
+            value=f'\n <:mdiscord:904157585266049104> [Support Server]({self.ctx.bot.support})'\
+                f'\n <:inviteme:924868244525940807> [Invite Link]({self.ctx.bot.invite})'\
+                f'\n <:github:744345792172654643> [Github]({self.ctx.bot.github})'\
+                f'\n <:readthedocs:596577085036953611> [Documentation]({self.ctx.bot.docs})' 
+        )
+        embed.set_author(
+            name=self.ctx.author.name + " | Help Menu",
+            icon_url=self.ctx.author.display_avatar.url,
+        )
+        return embed
+
+    @discord.ui.select(placeholder='Please select a category...', row=0)
+    async def select_category(self, select : discord.ui.Select, interaction : discord.Interaction):
+
+        if select.values[0] == 'home_page': 
+            await interaction.response.edit_message(embed=self.home_page_embed(), view=self)
+        else:
+            cog = self.bot.get_cog(select.values[0].lower())
+            if not cog:
+                return await interaction.response.send_message(f"That category was somehow not found. Try using `{self.ctx.prefix}help {select.values[0]}`", ephemeral=True)
+            await interaction.response.edit_message(embed=self.category_embed(cog))
+
+    @discord.ui.button(label='Need help', emoji='❓', style=discord.ButtonStyle.red)
+    async def help_button(self, button : discord.ui.Button, interaction : discord.Interaction):
+        await NeedHelp(self.ctx, self).start(interaction) 
+
+    @discord.ui.button(label='Support Server', style=discord.ButtonStyle.blurple)
+    async def support_url(self, button: discord.ui.Button, interaction: discord.Interaction):
+
+        view = SupportView(self.ctx)
+        await view.start(interaction)
+        
+    @discord.ui.button(label='Invite Me')
+    async def invite_url(self, button: discord.ui.Button, interaction: discord.Interaction):
+        
+        view = InviteView(self.ctx)
+        await view.start(interaction)
+
+
+    async def start(self) -> discord.Message:
+        self.start_select()
+        self.message = await self.ctx.send(embed=self.home_page_embed(), view=self)
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id == self.ctx.author.id:
+            return True
+        await interaction.response.send_message('This pagination menu cannot be controlled by you, sorry!', ephemeral=True)
+        return False
 
 
 class View(discord.ui.View):
@@ -216,11 +476,12 @@ class ButtonMenuSrc(menus.ListPageSource):
         sub_commands = []
 
         for command in commands:
-            
-            if command.signature == '':
-                signature = f"`{command.name}` {command.short_doc}"
+            if len(command.name) < 15:
+                empty_space = 15 - len(command.name)
+                signature = f"`{command.name}{' '*empty_space}:` {command.short_doc if len(command.short_doc) < 58 else f'{command.short_doc[0:58]}...'}"
             else:
-                signature = f"`{command.name} {command.signature}` {command.short_doc}"
+                signature = f"`{command.name[0:14]}...` {command.short_doc if len(command.short_doc) < 58 else f'{command.short_doc[0:58]}...'}"
+
             sub_commands.append(signature)
         
         embed.add_field(name='Subcommands',value='\n'.join(sub_commands),inline=False)
@@ -242,15 +503,13 @@ class ButtonMenuSrc(menus.ListPageSource):
 class MetroHelp(commands.HelpCommand):
 
     @staticmethod
-    def get_doc(command):
+    def get_doc(command : commands.Command):
         _help = command.help or "This command has no description"
         return _help
 
-
-    async def command_callback(self, ctx, *, command : str =None):
+    async def command_callback(self, ctx : MyContext, *, command : str =None):
         await self.prepare_help_command(ctx, command)
         bot = ctx.bot
-
 
         if command is None:
             mapping = self.get_bot_mapping()
@@ -306,8 +565,8 @@ class MetroHelp(commands.HelpCommand):
             )
 
         if not command.cog_name == 'Jishaku':
-            docs_url = f"{ctx.bot.docs}/{command.cog_name}/{command.qualified_name}"
-            em.set_author(name='Documentation Link', url=docs_url, icon_url=ctx.bot.user.display_avatar.url)
+            docs_url = f"https://metro-discord-bot.gitbook.io/metro-documentation/{command.cog_name}/{command.qualified_name.replace(' ', '/')}"
+            em.set_author(name='Documentation Link', url=docs_url, icon_url='https://cdn.discordapp.com/embed/avatars/1.png')
 
         # Cooldowns
         cooldown = discord.utils.find(lambda x: isinstance(x, Cooldown), command.checks) or Cooldown(1, 3, 1, 1,
@@ -333,7 +592,7 @@ class MetroHelp(commands.HelpCommand):
             inline=False
         )
         if command_extras:
-            examples = command_extras['examples'].replace("[p]", ctx.prefix)
+            examples = command_extras['examples'].replace("[p]", self.context.prefix)
             em.add_field(
                 name='Examples/Usage',
                 value=examples,
@@ -372,43 +631,27 @@ class MetroHelp(commands.HelpCommand):
         raise commands.BadArgument("You do not have the permissions to view this command's help.")
 
 
-
     async def send_bot_help(self, mapping):
-        ctx = self.context
-        bot = ctx.bot
 
-        to_append = []
-
-        def get_category(command, *, no_category : str ='**•** No Category - :black_small_square: Commands without categories'):
+        def get_category(command, *, no_category='No Category'):
             cog = command.cog
-            return '**•** **' + cog.qualified_name.capitalize() + '** - ' + cog.description if cog is not None else no_category
-        filtered = await self.filter_commands(bot.commands, sort=True, key=get_category)
+            if cog is None: return [no_category, 'Commands that do not have a category.']
+            try:
+                to_return = [cog.qualified_name, cog.description, cog.emoji]
+                if cog.emoji == '':
+                    return [cog.qualified_name, cog.description]
+                else:
+                    return to_return
+            except AttributeError:
+                return [cog.qualified_name]
+            
+        filtered = await self.filter_commands(self.context.bot.commands, sort=True, key=get_category)
         to_iterate = itertools.groupby(filtered, key=get_category)
 
-        for category, commands in to_iterate:
-            to_append.append(category)
-        
-        embed = Embed(
-            description=
-            f"**Total Commands:** {len(list(bot.walk_commands()))} | **Usable by you (here):** {len(await self.filter_commands(list(bot.walk_commands()), sort=True))}"
-            f"\n```diff\n- [] = optional argument\n- <> = required argument\n- Do not type these when using commands!\n+ Type {ctx.clean_prefix}{ctx.invoked_with} [Command/Module] for more help on a command```"
-            f"[Support]({ctx.bot.invite}) | [Invite]({ctx.bot.invite}) | [Donate]({ctx.bot.donate}) | [Documentation]({ctx.bot.docs})"
-        )
-        embed.add_field(
-            name=f"**Modules: [{len(to_append)}]**",
-            value='\n'.join(to_append),
-            inline=True
-        )
-        
-        embed.set_author(
-            name=self.context.author.name + " | Help Menu",
-            icon_url=self.context.author.avatar.url,
-        )
+        view = NewHelpView(self.context, to_iterate, self)
+        await view.start()
 
-        channel = self.get_destination()
-        await channel.send(embed=embed, hide=True)
-
-
+    
     async def send_command_help(self, command):
         return await self.context.send(embed=await self.get_command_help(command),view=View(self.context.author), hide=True)
 
@@ -423,23 +666,43 @@ class MetroHelp(commands.HelpCommand):
         await menu.start()
         
 
-    async def send_cog_help(self, cog):
-        entries = await self.filter_commands(cog.get_commands())
-        #entries = cog.get_commands() 
-        # No filters
+    async def send_cog_help(self, cog: commands.Cog):
+        to_join = []
+        for command in cog.get_commands():
+            if len(command.name) < 15:
+                group_mark = '✅' if isinstance(command, commands.Group) else ''
+                empty_space = 15 - len(command.name)
+                if not group_mark == '':
+                    empty_space = empty_space - 2
+                short_doc = command.short_doc or "No help provided..."
+                signature = f"`{command.name}{' '*empty_space}{group_mark}:` {short_doc if len(short_doc) < 58 else f'{short_doc[0:58]}...'}"
+            else:
+                group_mark = '\✅' if isinstance(command, commands.Group) else ''
+                signature = f"`{command.name[0:12]}...{group_mark}` {short_doc if len(short_doc) < 58 else f'{short_doc[0:58]}...'}"
+            to_join.append(signature)
 
-        menu = SimplePages(GroupHelpPageSource(cog, entries, prefix=self.context.prefix), ctx=self.context, hide=True)
-        await menu.start()
+        embed = Embed()
+        embed.set_author(
+            name=self.context.author.name + " | Help Menu",
+            icon_url=self.context.author.display_avatar.url,
+        )
 
+        description = f" __**{cog.qualified_name.capitalize()}**__ \n"
+        description += (
+            '\n'.join(to_join)
+        )
+        embed.description = description
+        embed.set_footer(text='A command marked with a ✅ means it\'s a group command.')
+        
+        return await self.context.send(embed=embed)
 
-
-    # Error handlers
     async def command_not_found(self, command):
         if command.lower() == "all":
             commands = await self.filter_commands(self.context.bot.commands)
             
             menu = SimplePages(source=HelpSource(tuple(commands), prefix=self.context.prefix), ctx=self.context)
             await menu.start()
+            await self.context.send("This part of the command kinda sucks and will be updated soon.")
             return
 
 
@@ -451,8 +714,7 @@ class MetroHelp(commands.HelpCommand):
         return await ctx.send(error, hide=True)
        
 
-
-class meta(commands.Cog, description='ℹ️ Get bot stats and information.'):
+class meta(commands.Cog, description='Get bot stats and information.'):
     def __init__(self, bot):
 
         attrs = {
@@ -468,6 +730,11 @@ class meta(commands.Cog, description='ℹ️ Get bot stats and information.'):
         self.old_help_command = bot.help_command
         bot.help_command = MetroHelp(command_attrs=attrs)
         bot.help_command.cog = self
+
+    @property
+    def emoji(self) -> str:
+        return 'ℹ️'
+
 
     @commands.command(slash_command=True)
     @commands.bot_has_permissions(send_messages=True)
@@ -510,25 +777,11 @@ class meta(commands.Cog, description='ℹ️ Get bot stats and information.'):
                     f'\n:infinity: **Shard Latency:** | {round(shard.latency *1000)} ms \n{mess}')
 
 
-
-
     @commands.command(name='invite',slash_command=True)
     @commands.bot_has_permissions(send_messages=True)
     async def invite(self, ctx):
         """Get invite links for the bot."""
-
-
-        basic_button = discord.ui.Button(label='Basic Perms',url='https://discord.com/api/oauth2/authorize?client_id=788543184082698252&permissions=140663671873&scope=bot%20applications.commands')
-        advan_button = discord.ui.Button(label='Advanced Perms',url='https://discord.com/api/oauth2/authorize?client_id=788543184082698252&permissions=140932115831&scope=bot%20applications.commands')
-        admin_button = discord.ui.Button(label='Admin Perms',url='https://discord.com/api/oauth2/authorize?client_id=788543184082698252&permissions=8&scope=bot%20applications.commands')
-
-        view = discord.ui.View()
-        view.add_item(basic_button)
-        view.add_item(advan_button)
-        view.add_item(admin_button)
-
-        await ctx.send('Please choose a permission to invite me with below:',view=view)
-
+        await InviteView(ctx).start_normal()
 
     @commands.command()
     @commands.bot_has_permissions(send_messages=True, embed_links=True)

@@ -9,7 +9,7 @@ from bot import MetroBot
 from utils.custom_context import MyContext
 from utils.useful import Embed
 
-class boosts(commands.Cog, description='<:booster:916183319144710154> Get booster stats a members'):
+class boosts(commands.Cog, description='Get booster stats a members'):
     def __init__(self, bot : MetroBot):
         self.bot = bot
         self.boost_badges = {
@@ -23,6 +23,11 @@ class boosts(commands.Cog, description='<:booster:916183319144710154> Get booste
             540 : "<:boost8:916198948228718613>",
             720 : "<:boost9:916198948383891466>",  
         }
+
+    @property
+    def emoji(self) -> str:
+        return '<:booster:916183319144710154>'
+        
 
     @commands.Cog.listener()
     async def on_message(self, message : discord.Message):

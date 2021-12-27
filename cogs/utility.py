@@ -265,7 +265,7 @@ class Source(menus.ListPageSource):
 class CustomPermissions:
     pass
 
-class utility(commands.Cog, description=":information_source: Get utilities like prefixes, serverinfo, source, etc."):
+class utility(commands.Cog, description="Get utilities like prefixes, serverinfo, source, etc."):
     def __init__(self, bot : MetroBot):
         self.bot = bot
         self._req_lock = asyncio.Lock(loop=self.bot.loop)
@@ -275,6 +275,10 @@ class utility(commands.Cog, description=":information_source: Get utilities like
 
     def cog_unload(self):
         self._task.cancel()
+
+    @property
+    def emoji(self) -> str:
+        return 'ℹ️'
 
     async def from_permission(self, permission : int):
 

@@ -93,7 +93,7 @@ hypixel_api_key = info_file["hypixel_api_key"]
 def setup(bot):
     bot.add_cog(hypixel(bot))
 
-class hypixel(commands.Cog, description='<:hypixel:912575998380355626> Get stats from hypixel api'):
+class hypixel(commands.Cog, description='Get stats from hypixel api'):
     
     def __init__(self, bot : MetroBot):
         self.bot = bot
@@ -138,6 +138,9 @@ class hypixel(commands.Cog, description='<:hypixel:912575998380355626> Get stats
             "hotm" : "<:hotm:917924672069333013>"
         }
 
+    @property
+    def emoji(self) -> str:
+        return '<:hypixel:912575998380355626>'
 
     async def handle_status_codes(self, s : ClientResponse):
         if s.status == 429:
