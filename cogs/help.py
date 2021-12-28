@@ -1,4 +1,5 @@
 import itertools
+from re import match
 from typing import Any, List
 
 from discord.ext.commands.help import HelpCommand
@@ -15,6 +16,8 @@ import asyncio
 import psutil
 import copy
 import time
+
+from difflib import get_close_matches
 
 from utils.custom_context import MyContext
 from utils.useful import Embed, Cooldown, OldRoboPages, get_bot_uptime
@@ -39,6 +42,17 @@ class SupportView(discord.ui.View):
             f'\n Joining is completely at your own will. \nThis message is here to protect people from accidentally joining.'\
             f'\n You can kindly dismiss this message if you clicked by accident.'
         await interaction.response.send_message(embed=embed, ephemeral=True, view=self)
+
+    async def start_normal(self):
+        self.add_item(discord.ui.Button(label='Support Server', url='https://discord.gg/2ceTMZ9qJh'))
+
+        embed = Embed()
+        embed.colour = discord.Colour.orange()
+        embed.description = '__**Are you sure you want to join my support server?**__'\
+            f'\n Joining is completely at your own will. \nThis message is here to protect people from accidentally joining.'\
+            f'\n You can kindly dismiss this message if you clicked by accident.'
+        await self.ctx.send(embed=embed, ephemeral=True, view=self)
+    
     
 
 
@@ -291,7 +305,7 @@ class NewHelpView(discord.ui.View):
             value=f'\n • Use `{self.ctx.prefix}help <command>` for some help and examples on any command'\
                 f'\n • Join my [support server]({self.ctx.bot.support}) for additional help'\
                 f'\n • Use the select menu below to view the categories\' commands'\
-                f'\n • Use `{self.ctx.prefix}help all` to view all my commands in one message',
+                f'\n • Use `{self.ctx.prefix}search <query>` to search for a particular command',
             inline=True
         )
         embed.add_field(
@@ -872,7 +886,41 @@ class meta(commands.Cog, description='Get bot stats and information.'):
     @commands.command()
     @commands.bot_has_permissions(send_messages=True, embed_links=True)
     async def support(self, ctx: MyContext):
-        await ctx.reply(ctx.bot.support)
+        await SupportView(ctx).start_normal()
+
+    @commands.command(name='search', aliases=['commandsearch'])
+    async def search(self, ctx: MyContext, *, search_query: str):
+        """
+        Search through my commands and find that hidden command.
+        """
+
+        commands = [command.qualified_name for command in self.bot.walk_commands()]
+         
+        matches = get_close_matches(search_query, commands)
+
+        embed = Embed()
+
+        if len(matches) > 0:
+            to_send = []
+            for command in matches:
+                command = self.bot.get_command(command)
+                if len(command.name) < 15:
+                    empty_space = 15 - len(command.name)
+                    signature = f"`{command.qualified_name}{' '*empty_space}:` {command.short_doc if len(command.short_doc) < 58 else f'{command.short_doc[0:58]}...'}"
+                else:
+                    signature = f"`{command.qualified_name[0:14]}...` {command.short_doc if len(command.short_doc) < 58 else f'{command.short_doc[0:58]}...'}"
+                to_send.append(signature)
+
+            embed.colour = discord.Colour.green()
+            embed.description = "\n".join(to_send)
+            embed.set_footer(text=f'{len(matches)} matches.')
+
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send("No matches were found. Try again with a different query.")
+            
+
+    
 
 
 def setup(bot):

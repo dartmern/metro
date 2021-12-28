@@ -49,6 +49,17 @@ async def create_db_pool(user, password, database, host, port) -> asyncpg.Pool:
     }
     return await asyncpg.create_pool(**details)
     
+async def execute_scripts():
+    await bot.wait_until_ready()
+
+    scripts = [x[:-4] for x in sorted(os.listdir("./database")) if x.endswith(".sql")]
+
+    for script in scripts:
+        with open(f"./database/{script}.sql", "r", encoding='utf-8') as script:
+            try:
+                await bot.db.execute(script.read())
+            except Exception as e:
+                print(e)
 
 async def load_blacklist():
     await bot.wait_until_ready()
@@ -278,20 +289,14 @@ class MetroBot(commands.AutoShardedBot):
         return members[0]
 
 
-
-
-
 cwd = Path(__file__).parents[0]
 cwd = str(cwd)
 print(f"{cwd}\n-----")
-
-
 
 bot = MetroBot()
 
 bot.check = "<:mCheck:819254444197019669>"
 bot.cross = "<:mCross:819254444217860116>"
-
 
 if __name__ == "__main__":
     # When running this file, if it is the 'main' file
@@ -304,6 +309,7 @@ if __name__ == "__main__":
 
     bot.load_extension('jishaku')
     bot.loop.create_task(load_blacklist())
+    bot.loop.create_task(execute_scripts())
     bot.run(token)
 
 

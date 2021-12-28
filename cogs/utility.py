@@ -1410,18 +1410,18 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
         guild = self.bot.get_guild(guild_id)
         if guild is None:
-            raise commands.BadArgument("I'm having trouble ending this giveaway. Issue: `guild_id from select is None`")
+            return await ctx.send("I'm having trouble ending this giveaway. Issue: `guild_id from select is None`\nThe giveaway has been deleted from my database.")
         
         channel = self.bot.get_channel(channel_id)
         if channel is None:
-            raise commands.BadArgument("I'm having trouble ending this giveaway. Issue: `channel_id from select is None`")
+            return await ctx.send("I'm having trouble ending this giveaway. Issue: `channel_id from select is None`\nThe giveaway has been deleted from my database.")
 
         message = discord.utils.get(self.bot.cached_messages, id=message_id)
         if message is None:
             try:
                 message = await channel.fetch_message(message_id)
             except discord.NotFound:
-                raise commands.BadArgument("I'm having trouble ending this giveaway. Issue: `message could not be fetched`") # At this found we can't find it in the cache or fetch it, it's deleted.
+                return await ctx.send("I'm having trouble ending this giveaway. Issue: `message could not be fetched`\nThe giveaway has been deleted from my database.") # At this found we can't find it in the cache or fetch it, it's deleted.
         
         reactions = await message.reactions[0].users().flatten()
         reactions.remove(guild.me)

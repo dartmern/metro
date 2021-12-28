@@ -355,7 +355,7 @@ class music(commands.Cog, description='Make your server enjoy music within disco
 
 
 # Search whatever u want on youtube!
-    @commands.command(help="Search something on YouTube", aliases=['syt'], name='search')
+    @commands.command(help="Search something on YouTube", aliases=['syt'], name='youtubesearch')
     async def search_youtube(self, ctx, *, search):
         await ctx.trigger_typing()
 
