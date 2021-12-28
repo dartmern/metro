@@ -1,6 +1,7 @@
 import asyncio
 import shlex
 import discord
+import copy
 
 from discord.ext import commands
 from bot import MetroBot
@@ -591,7 +592,7 @@ class moderation(commands.Cog, description="Moderation commands."):
     async def cleanup(self, ctx, amount: int=5):
         """
         Cleans up the bot's messages. 
-        Defaults to 25 messages. If you or the bot doesn't have `manage_messages` permission, the search will be limited to 25 messages.
+        Defaults to 25 messages. If you or the bot does not have the Manage Messages permission, the search will be limited to 25 messages.
         """
         if amount > 25:
             if not ctx.channel.permissions_for(ctx.author).manage_messages:
@@ -1653,8 +1654,32 @@ class moderation(commands.Cog, description="Moderation commands."):
         except discord.HTTPException:
             pass # DMs off or somehow cannot dm them
 
+    @commands.command(name='nuke-channel', aliases=['nuke'])
+    @commands.has_guild_permissions(manage_channels=True)
+    @commands.bot_has_guild_permissions(manage_channels=True)
+    async def nuke_channel(self, ctx: MyContext, *, channel: Optional[discord.TextChannel]):
+        """Nuke a text channel.
+        
+        This deletes the channel and creates the same channel again.
+        """
+        channel = channel or ctx.channel
 
+        confirm = await ctx.confirm(f'Are you sure you want to nuke {channel.mention}', timeout=30.0)
+        if confirm is False:
+            return await ctx.send("Canceled.")
+        if confirm is None:
+            return await ctx.send("Timed out.")
 
+        new_channel = await channel.clone(name=channel.name)
+        await ctx.ghost_ping(ctx.author, channel=new_channel)
+
+        try:
+            await channel.delete(reason=f'Nuke command invoked by: {ctx.author} (ID: {ctx.author.id})')
+        except (discord.HTTPException, discord.Forbidden) as e:
+            return await ctx.send(f"Had an issue with deleting this channel. {e}")
+
+        await new_channel.send(f"Nuke-command ran by: {ctx.author}")
+        
 
 def setup(bot):
     bot.add_cog(moderation(bot))

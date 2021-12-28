@@ -1,3 +1,4 @@
+import re
 import discord
 from discord.ext import commands, menus
 
@@ -84,6 +85,7 @@ class SourceView(discord.ui.View):
         else:
             await interaction.response.send_message(f"```py\n{self.code}\n```", view=StopView(self.ctx))
 
+        button.style = discord.ButtonStyle.gray
         button.disabled = True
         await interaction.message.edit(view=self)
 
@@ -95,6 +97,8 @@ class SourceView(discord.ui.View):
             url_key = res['key']
         
         await interaction.response.send_message(f"Output: https://mystb.in/{url_key}.python", view=StopView(self.ctx))
+
+        button.style = discord.ButtonStyle.gray
         button.disabled = True
         await interaction.message.edit(view=self)
 
@@ -327,7 +331,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
     @commands.command(name='mystbin')
     @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.user))
-    async def mystbin(self, ctx: MyContext, content : str):
+    async def mystbin(self, ctx: MyContext, *, content : str):
         """Create and post a mystbin online."""
 
         start = time.perf_counter()
@@ -1329,9 +1333,10 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
                 SELECT (id, expires, extra, created)
                 FROM reminders
                 WHERE event = 'giveaway'
+                AND extra #>> '{args,0}' = $1
                 ORDER BY expires;
                 """
-        records = await self.bot.db.fetch(query)
+        records = await self.bot.db.fetch(query, str(ctx.guild.id))
         if not records:
             return await ctx.send("There are no active giveaways in this guild.")
 
@@ -1357,10 +1362,6 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
         await ctx.paginate(to_append)
             
-
-
-            
-
     @giveaway.command(name='end')
     @commands.check(Cooldown(4, 8, 6, 8, commands.BucketType.member))
     @commands.bot_has_permissions(send_messages=True, add_reactions=True)
@@ -1548,6 +1549,9 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         
         Powered by [Bitly API](https://dev.bitly.com/)
         """
+        if not re.fullmatch(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', url):
+            raise commands.BadArgument("That is not a vaild url.")
+
         await ctx.defer()
 
         params = {"access_token" : bitly_token, "longUrl" : url}
@@ -1563,6 +1567,27 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         embed.set_author(name='URL Shortner')
         return await ctx.send(embed=embed)
 
+
+    @commands.command(name='raw-message', aliases=['rmsg', 'raw'])
+    @commands.check(Cooldown(1, 30, 1, 15, commands.BucketType.user))
+    async def raw_message(self, ctx: MyContext, message: Optional[discord.Message]):
+        async with ctx.typing():
+            message: discord.Message = getattr(ctx.message.reference, 'resolved', message)
+            if not message:
+                raise commands.BadArgument("Please specify a message or reply to one.")
+
+            try:
+                message = await self.bot.http.get_message(message.channel.id, message.id)
+            except discord.HTTPException:
+                raise commands.BadArgument("There was an issue fetching that message.")
+
+            data = json.dumps(message, indent=4)
+            if len(data) > 1950:
+                link = await self.post_mystbin(data)
+                to_send = f"__**Output was too long:**__\n<{link}.python>"
+            else:
+                to_send = f"```json\n{data}\n```"
+            await ctx.send(to_send)
 
 def setup(bot):
     bot.add_cog(utility(bot))

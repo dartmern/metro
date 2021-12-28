@@ -1,5 +1,12 @@
-discord.py
-jishaku
-discord.ext.menus
-discord
-aiohttp
+requests==2.26.0
+yarl==1.7.2
+jishaku==2.3.2
+enhanced-discord.py @ git+https://github.com/iDevision/enhanced-discord.py
+discord-ext-menus @ git+https://github.com/Rapptz/discord-ext-menus@fbb8803779373357e274e1540b368365fd9d8074
+discord-ext-menus-views @ git+https://github.com/oliver-ni/discord-ext-menus-views@ebe27e606fbacedfd472a65275bcaa197bf30666
+aiohttp==3.7.4.post0
+python-dateutil
+parsedatetime==2.6
+emoji==1.6.1
+asyncpg==0.25.0
+mystbin.py

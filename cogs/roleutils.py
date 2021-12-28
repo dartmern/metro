@@ -7,6 +7,7 @@ from utils.checks import can_execute_action
 from utils.custom_context import MyContext
 from utils.converters import RoleConverter
 from utils.parsing import RoleParser
+from utils.remind_utils import FutureTime, human_timedelta
 from utils.useful import Cooldown, Embed
 
 
@@ -792,3 +793,59 @@ class roleutils(commands.Cog, description=' Manage anything role related.'):
             to_send += f"Failed to remove **{target_role.name}** from {failed} members due to role hierarchy or permission errors."
 
         await ctx.send(to_send)
+
+    @commands.command(name='temprole', usage='<member> <duration> <role>')
+    @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.member))
+    @commands.has_guild_permissions(manage_roles=True)
+    @commands.bot_has_guild_permissions(manage_roles=True)
+    async def temprole(
+        self, 
+        ctx: MyContext, 
+        member: discord.Member, 
+        duration: FutureTime,
+        *,
+        role: RoleConverter
+    ):
+        """Adds a role to a member and removes it after the specified duration"""
+
+        if role in member.roles:
+            return await ctx.send("This member already has that role. \nIf you want to extend the temprole duration remove the role first.")
+
+        if role.position > ctx.guild.me.top_role.position:
+            to_send = ""
+            to_send += (
+                f"\🔴 I am unable to remove roles due to discord hierarchy rules."
+                f"\nMy top role's position ({ctx.guild.me.top_role.mention}) is lower than `@{role.name}`"
+                f"\n\nMy top role position: {ctx.guild.me.top_role.position} • `@{role.name}` position: {role.position}"
+                f"\n\nPlease move my top role higher to make this command work!"
+            )
+            raise commands.BadArgument(to_send)
+
+        if not can_execute_action(ctx, ctx.author, member):
+            return await ctx.send('You are not high enough in role hierarchy to give roles to this member.')
+
+        reminder_cog = ctx.bot.get_cog('utility')
+        if reminder_cog is None:
+            return await ctx.send('This function is not available at this time. Try again later.')
+
+        try:
+            timer = await reminder_cog.create_timer(
+                duration.dt,
+                "temprole",
+                ctx.guild.id,
+                ctx.author.id,
+                role.id,
+                member.id,
+                connection=ctx.bot.db,
+                created_at=ctx.message.created_at
+            )
+        except Exception as e:
+            return await ctx.send(str(e))
+
+        await member.add_roles(role, reason=f'Temprole command invoked by: {ctx.author} (ID: {ctx.author.id})')
+
+        embed = Embed()
+        embed.colour = discord.Colour.blue()
+        embed.description = "__**Temporary role added**__"\
+            f"\n{member.mention} was granted the {role.mention} role for {human_timedelta(duration.dt, accuracy=50)}"
+        await ctx.send(embed=embed)

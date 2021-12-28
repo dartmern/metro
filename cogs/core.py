@@ -27,14 +27,9 @@ class ErrorView(discord.ui.View):
 
         self.add_item(discord.ui.Button(label='Support Server', url='https://discord.gg/2ceTMZ9qJh'))
 
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if interaction.user.id == self.ctx.author.id:
-            return True
-        await interaction.response.send_message('This menu cannot be controlled by you, sorry!', ephemeral=True)
-        return False
 
     @discord.ui.button(label='View Traceback', style=discord.ButtonStyle.blurple)
-    async def view_traceback(self, button : discord.ui.Button, interaction : discord.Interaction):
+    async def view_traceback(self, _, interaction : discord.Interaction):
 
         embed = Embed()
         embed.title = 'Full Traceback'

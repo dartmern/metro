@@ -6,8 +6,7 @@ from discord.ext import commands
 from pathlib import Path
 import os
 import asyncpg
-from discord.ext.commands.core import check
-from discord.ext.commands.flags import F
+
 import mystbin
 import aiohttp
 import logging
@@ -30,20 +29,25 @@ logging.basicConfig(level=logging.INFO)
 #handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 #logger.addHandler(handler)
 
-p_database = info_file['postgres_database']
-p_user = info_file['postgres_user']
-p_password = info_file['postgres_password']
+database_info = info_file['database_info']
+
+database = database_info['database']
+user = database_info['user']
+password = database_info['password']
+host = database_info['host']
+port = database_info['port']
+
 token = info_file['bot_token']
 
-async def create_db_pool(database, user, password) -> asyncpg.Pool:
-    print("------")
-    print("Creating database connection...")
-    print('------')
-    print(f"Database: {len(p_database) * '*'}")
-    print(f"User: {len(p_user) * '*'}")
-    print(f"Password: {len(p_password) * '*'}")
-    print('------')
-    return await asyncpg.create_pool(database=database,user=user,password=password)
+async def create_db_pool(user, password, database, host, port) -> asyncpg.Pool:
+    details = {
+        "user" : user,
+        "password" : password,
+        "database" : database,
+        "host" : host,
+        "port" : port
+    }
+    return await asyncpg.create_pool(**details)
     
 
 async def load_blacklist():
@@ -115,10 +119,7 @@ class MetroBot(commands.AutoShardedBot):
         self.noprefix = False
         self.started = False
 
-        self.owner = 'dartmern#7563'
-        #This is just a temp fix for something. I'll make this a user object later
-
-        self.db = asyncpg.Pool = self.loop.run_until_complete(create_db_pool(p_database, p_user, p_password))
+        self.db = asyncpg.Pool = self.loop.run_until_complete(create_db_pool(user, password, database, host, port))
 
         #Cache
         self.prefixes = {}

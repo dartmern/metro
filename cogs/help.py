@@ -1,12 +1,9 @@
 import itertools
 from typing import Any, List
-from discord.embeds import E
-from discord.ext.commands.core import command
-from discord.ext.commands.errors import CommandError
+
 from discord.ext.commands.help import HelpCommand
 from bot import MetroBot
 from utils.new_pages import SimplePages
-from utils.pages import ExtraPages
 import discord
 
 import discord.ext
@@ -15,6 +12,7 @@ from discord.ext import commands, menus
 import contextlib
 
 import asyncio
+import psutil
 import copy
 import time
 
@@ -61,7 +59,7 @@ class InviteView(discord.ui.View):
         embed.colour = discord.Colour.blue()
         embed.description = "__**Choose a invite option below or press `Create custom permissions`**__"\
             f"\n\nIf you press `Create custom permissions` you are required to enter a vaild discord permissions integer."\
-            f'\n- You can use [this calculator](https://discordapi.com/permissions.html) to calculate the permissions if you are unsure what to put.'
+            f'\nYou can use [this calculator](https://discordapi.com/permissions.html) to find the permissions if you are unsure what to put.'
         
         self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='None', url=discord.utils.oauth_url(self.ctx.bot.user.id, permissions=discord.Permissions(0))))
         self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='Basic', url=discord.utils.oauth_url(self.ctx.bot.user.id, permissions=discord.Permissions(140663671873))))
@@ -76,7 +74,7 @@ class InviteView(discord.ui.View):
         embed.colour = discord.Colour.blue()
         embed.description = "__**Choose a invite option below or press `Create custom permissions`**__"\
             f"\n\nIf you press `Create custom permissions` you are required to enter a vaild discord permissions integer."\
-            f'\n- You can use [this calculator](https://discordapi.com/permissions.html) to calculate the permissions if you are unsure what to put.'
+            f'\nYou can use [this calculator](https://discordapi.com/permissions.html) to find the permissions if you are unsure what to put.'
         
         self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='None', url=discord.utils.oauth_url(self.ctx.bot.user.id, permissions=discord.Permissions(0))))
         self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='Basic', url=discord.utils.oauth_url(self.ctx.bot.user.id, permissions=discord.Permissions(140663671873))))
@@ -95,7 +93,7 @@ class InviteView(discord.ui.View):
             return message.channel == self.ctx.channel and message.author == self.ctx.author and message.content.isdigit()
 
         try:
-            message = await self.ctx.bot.wait_for("message", check=check, timeout=180)
+            message = await self.ctx.bot.wait_for("message", check=check, timeout=30)
         except asyncio.TimeoutError:
             return await interaction.followup.send("Timed out.")
         
@@ -154,9 +152,19 @@ class NeedHelp(discord.ui.View):
 
         await interaction.response.edit_message(embed=embed, view=self)
 
-    @discord.ui.button(label='Go Home', emoji='🏘️', style=discord.ButtonStyle.blurple)
+    @discord.ui.button(label='Go Back', emoji='🏘️', style=discord.ButtonStyle.blurple)
     async def go_home_button(self, _, interaction: discord.Interaction):
         await interaction.response.edit_message(embed=self.old_embed, view=self.old_view)
+        self.stop()
+
+    @discord.ui.button(emoji='🗑️', style=discord.ButtonStyle.red)
+    async def stop_pages(self, button: discord.ui.Button, interaction: discord.Interaction):
+        """
+        Stop the pagination session. 
+        """
+        
+        await interaction.response.defer()
+        await interaction.delete_original_message()
         self.stop()
 
 class NewHelpView(discord.ui.View):
@@ -170,11 +178,13 @@ class NewHelpView(discord.ui.View):
     def start_select(self) -> None:
         self.select_category : discord.ui.Select
         self.select_category.options = []
+
         self.select_category.add_option(emoji='🏘️', label='Home Page', value='home_page')
+        self.select_category.add_option(emoji='<:bot:925107948789837844>', label='Bot Information', value='bot_information')
+        self.select_category.add_option(emoji='📙', label='All commands', value='all_commands')
 
         for category, command in self.data:
             if category[0] == 'Jishaku':
-                self.select_category.add_option(emoji=None, label=category[0].capitalize(), description='The Jishaku debug and diagnostic commands.')
                 continue
 
             try:
@@ -205,12 +215,70 @@ class NewHelpView(discord.ui.View):
             icon_url=self.ctx.author.display_avatar.url,
         )
 
-        description = f" __**{cog.qualified_name.capitalize()}**__ \n"
+        description = f"{cog.emoji if cog.emoji != '' else ''} __**{cog.qualified_name.capitalize()}**__ {cog.description if len(cog.description) < 57 else f'{cog.description[0:57]}...'}\n\n"
         description += (
             '\n'.join(to_join)
         )
         embed.description = description
         embed.set_footer(text='A command marked with a ✅ means it\'s a group command.')
+        return embed
+
+    async def bot_info_embed(self) -> discord.Embed:
+        embed = Embed()
+        embed.description = f'\n <:mdiscord:904157585266049104> [Support Server]({self.ctx.bot.support})'\
+                f'\n <:inviteme:924868244525940807> [Invite Link]({self.ctx.bot.invite})'\
+                f'\n <:github:744345792172654643> [Github]({self.ctx.bot.github})'\
+                f'\n <:readthedocs:596577085036953611> [Documentation]({self.ctx.bot.docs})' 
+        
+        embed.set_author(name=f"Created by {self.ctx.bot.owner}", icon_url=self.ctx.bot.owner.display_avatar.url)
+        embed.colour = self.ctx.guild.me.colour
+
+        total_members = 0
+        total_unique_members = len(self.ctx.bot.users)
+
+        text = 0
+        voice = 0
+        total = 0
+        guilds = 0
+
+        for guild in self.ctx.bot.guilds:
+            guild : discord.Guild
+
+            guilds += 1
+            if guild.unavailable:
+                continue
+            
+            total_members += guild.member_count
+            for channel in guild.channels:
+                total += 1
+                if isinstance(channel, discord.TextChannel):
+                    text += 1
+                if isinstance(channel, (discord.VoiceChannel, discord.StageChannel)):
+                    voice += 1
+
+        embed.add_field(name='Members', value=f'{total_members:,} total \n {total_unique_members:,} unique')
+        embed.add_field(name='Channels', value=f'{total:,} total \n {text:,} text \n {voice:,} voice')
+
+        memory_usage = psutil.Process().memory_full_info().uss / 1024 ** 2
+        cpu_usage = psutil.cpu_percent()
+
+        embed.add_field(name='Process', value=f'{memory_usage:.2f} MiB\n{cpu_usage:.2f}% CPU')
+
+        embed.add_field(name='Guilds', value=guilds)
+
+        count = await self.bot.db.fetchval('SELECT COUNT(*) as c FROM messages')
+
+        embed.add_field(name='Messages', value=count)
+        embed.add_field(name='Uptime', value=get_bot_uptime(self.bot, brief=True))
+        return embed
+
+    async def all_commands_embed(self) -> discord.Embed:
+        embed = Embed(
+            title=f'All commands [{len(self.bot.commands)}]'
+        )
+        
+        embed.description = ', '.join([f"`{command}`" for command in self.bot.commands])
+        embed.description += '\n\n__**This is a simplified list of my commands.\n Run `?help all` for a more detailed version**__'
         return embed
 
     def home_page_embed(self) -> discord.Embed:
@@ -237,6 +305,7 @@ class NewHelpView(discord.ui.View):
             name=self.ctx.author.name + " | Help Menu",
             icon_url=self.ctx.author.display_avatar.url,
         )
+        embed.set_footer(text=f'Made by {self.bot.owner} with 💖 and discord.py')
         return embed
 
     @discord.ui.select(placeholder='Please select a category...', row=0)
@@ -244,13 +313,17 @@ class NewHelpView(discord.ui.View):
 
         if select.values[0] == 'home_page': 
             await interaction.response.edit_message(embed=self.home_page_embed(), view=self)
+        elif select.values[0] == 'bot_information':
+            await interaction.response.edit_message(embed=await self.bot_info_embed())
+        elif select.values[0] == 'all_commands':
+            await interaction.response.edit_message(embed=await self.all_commands_embed())
         else:
             cog = self.bot.get_cog(select.values[0].lower())
             if not cog:
                 return await interaction.response.send_message(f"That category was somehow not found. Try using `{self.ctx.prefix}help {select.values[0]}`", ephemeral=True)
             await interaction.response.edit_message(embed=self.category_embed(cog))
 
-    @discord.ui.button(label='Need help', emoji='❓', style=discord.ButtonStyle.red)
+    @discord.ui.button(label='Need help', emoji='❓', style=discord.ButtonStyle.green)
     async def help_button(self, button : discord.ui.Button, interaction : discord.Interaction):
         await NeedHelp(self.ctx, self).start(interaction) 
 
@@ -265,6 +338,16 @@ class NewHelpView(discord.ui.View):
         
         view = InviteView(self.ctx)
         await view.start(interaction)
+
+    @discord.ui.button(emoji='🗑️', style=discord.ButtonStyle.red)
+    async def stop_pages(self, button: discord.ui.Button, interaction: discord.Interaction):
+        """
+        Stop the pagination session. 
+        """
+
+        await interaction.response.defer()
+        await interaction.delete_original_message()
+        self.stop()
 
 
     async def start(self) -> discord.Message:
@@ -315,24 +398,27 @@ class HelpSource(menus.ListPageSource):
         self.prefix = prefix
 
     async def format_page(self, menu, commands):
-
         maximum = self.get_max_pages()
 
-        embed = Embed(description=f'All commands: [{len(commands)}]')
-        
+        embed = Embed()
+        embed.title = f'All commands [{len(commands)}]'
+        embed.colour = discord.Colour.green()
+
         desc = ""
 
         for command in commands:
-            desc += f"`{command.name}` {command.short_doc or 'No help provided...'}\n"
+            if len(command.name) < 15:
+                empty_space = 15 - len(command.name)
+                signature = f"\n `{command.name}{' '*empty_space}:` {command.short_doc if len(command.short_doc) < 58 else f'{command.short_doc[0:58]}...'}"
+            else:
+                signature = f"\n `{command.name[0:14]}...` {command.short_doc if len(command.short_doc) < 58 else f'{command.short_doc[0:58]}...'}"
+
+            desc += signature
 
         embed.description = desc
         embed.set_footer(text=f'Type "{self.prefix}help [Command | Category]" for more information | [{menu.current_page + 1}/{maximum}]')
 
-
         return embed
-
-
-
 
 class GroupHelpPageSource(menus.ListPageSource):
     def __init__(self, group, commands, *, prefix):
@@ -633,6 +719,8 @@ class MetroHelp(commands.HelpCommand):
 
     async def send_bot_help(self, mapping):
 
+        #This is a very bad implantation of the base help command but it works
+
         def get_category(command, *, no_category='No Category'):
             cog = command.cog
             if cog is None: return [no_category, 'Commands that do not have a category.']
@@ -701,10 +789,7 @@ class MetroHelp(commands.HelpCommand):
             commands = await self.filter_commands(self.context.bot.commands)
             
             menu = SimplePages(source=HelpSource(tuple(commands), prefix=self.context.prefix), ctx=self.context)
-            await menu.start()
-            await self.context.send("This part of the command kinda sucks and will be updated soon.")
-            return
-
+            return await menu.start()
 
         return f"No command/category called `{command}` found."
 
@@ -745,6 +830,7 @@ class meta(commands.Cog, description='Get bot stats and information.'):
 
 
     @commands.command()
+    @commands.check(Cooldown(1, 5, 1, 3, commands.BucketType.member))
     async def ping(self, ctx):
         """Show the bot's latency in milliseconds.
         Useful to see if the bot is lagging out."""
@@ -779,13 +865,13 @@ class meta(commands.Cog, description='Get bot stats and information.'):
 
     @commands.command(name='invite',slash_command=True)
     @commands.bot_has_permissions(send_messages=True)
-    async def invite(self, ctx):
+    async def invite(self, ctx: MyContext):
         """Get invite links for the bot."""
         await InviteView(ctx).start_normal()
 
     @commands.command()
     @commands.bot_has_permissions(send_messages=True, embed_links=True)
-    async def support(self, ctx):
+    async def support(self, ctx: MyContext):
         await ctx.reply(ctx.bot.support)
 
 

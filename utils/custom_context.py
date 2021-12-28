@@ -1,7 +1,9 @@
 import discord
 from discord.ext import commands, menus
 
-from typing import List, Optional
+from typing import List, Optional, Union
+
+from discord.ext.commands.converter import Option
 
 from utils.new_pages import SimplePageSource, SimplePages
 
@@ -172,6 +174,10 @@ class MyContext(commands.Context):
                 return self.bot.cross
             else:
                 return '❌'
+
+    async def ghost_ping(self, member: Union[discord.User, discord.Member], message: Optional[str] = None, *, channel: Optional[discord.TextChannel] = None):
+        channel = channel or self.channel
+        await channel.send(f"{member.mention} {message if message else ''}", delete_after=0.1)
 
         
         
