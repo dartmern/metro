@@ -302,10 +302,10 @@ class NewHelpView(discord.ui.View):
         )
         embed.add_field(
             name='Getting Help',
-            value=f'\n • Use `{self.ctx.prefix}help <command>` for some help and examples on any command'\
+            value=f'\n • Use `{self.ctx.clean_prefix}help <command>` for some help and examples on any command'\
                 f'\n • Join my [support server]({self.ctx.bot.support}) for additional help'\
                 f'\n • Use the select menu below to view the categories\' commands'\
-                f'\n • Use `{self.ctx.prefix}search <query>` to search for a particular command',
+                f'\n • Use `{self.ctx.clean_prefix}search <query>` to search for a particular command',
             inline=True
         )
         embed.add_field(
@@ -334,7 +334,7 @@ class NewHelpView(discord.ui.View):
         else:
             cog = self.bot.get_cog(select.values[0].lower())
             if not cog:
-                return await interaction.response.send_message(f"That category was somehow not found. Try using `{self.ctx.prefix}help {select.values[0]}`", ephemeral=True)
+                return await interaction.response.send_message(f"That category was somehow not found. Try using `{self.ctx.clean_prefix}help {select.values[0]}`", ephemeral=True)
             await interaction.response.edit_message(embed=self.category_embed(cog))
 
     @discord.ui.button(label='Need help', emoji='❓', style=discord.ButtonStyle.green)
@@ -415,7 +415,7 @@ class HelpSource(menus.ListPageSource):
         maximum = self.get_max_pages()
 
         embed = Embed()
-        embed.title = f'All commands [{len(commands)}]'
+        embed.title = f'All commands [{len(self.entries)}]'
         embed.colour = discord.Colour.green()
 
         desc = ""
@@ -692,7 +692,7 @@ class MetroHelp(commands.HelpCommand):
             inline=False
         )
         if command_extras:
-            examples = command_extras['examples'].replace("[p]", self.context.prefix)
+            examples = command_extras['examples'].replace("[p]", self.context.clean_prefix)
             em.add_field(
                 name='Examples/Usage',
                 value=examples,
@@ -802,7 +802,7 @@ class MetroHelp(commands.HelpCommand):
         if command.lower() == "all":
             commands = await self.filter_commands(self.context.bot.commands)
             
-            menu = SimplePages(source=HelpSource(tuple(commands), prefix=self.context.prefix), ctx=self.context)
+            menu = SimplePages(source=HelpSource(tuple(commands), prefix=self.context.clean_prefix), ctx=self.context)
             return await menu.start()
 
         return f"No command/category called `{command}` found."

@@ -1,11 +1,7 @@
-import json
-from operator import is_
 import discord
-from discord.ext import commands, menus
-
+from discord.ext import commands
 
 from typing import Optional, Union
-
 
 import traceback
 import time
@@ -14,7 +10,7 @@ import io
 import datetime
 import itertools
 import copy
-import sys
+import os
 from collections import Counter
 import argparse, shlex
 import textwrap
@@ -23,13 +19,9 @@ from contextlib import redirect_stdout
 import jishaku 
 from jishaku.paginators import WrappedPaginator
 
-from utils.checks import is_dev
+from utils.decos import is_dev
 from utils.custom_context import MyContext
-from utils.json_loader import read_json, write_json
-
-
 from utils.useful import Embed, fuzzy, BaseMenu, pages, get_bot_uptime
-
 
 class TabularData:
     def __init__(self):
@@ -93,9 +85,6 @@ class plural:
             return f'{v} {plural}'
         return f'{v} {singular}'
 
-
-
-
 @pages()
 async def show_result(self, menu, entry):
     return f"```\n{entry}```"
@@ -104,28 +93,11 @@ class Arguments(argparse.ArgumentParser):
     def error(self, message):
         raise RuntimeError(message)
 
-
-def restart_program():
-    python = sys.executable
-    os.execl(python, python, * sys.argv)
-
-
-class Arguments(argparse.ArgumentParser):
-    def error(self, message):
-        raise RuntimeError(message)
-
-
-import os
-
 def clearConsole():
     command = 'clear'
     if os.name in ('nt', 'dos'):  # If Machine is running on Windows, use cls
         command = 'cls'
     os.system(command)
-
-
-
-
 
 class developer(commands.Cog, description="Developer commands."):
     def __init__(self, bot):
@@ -186,8 +158,6 @@ class developer(commands.Cog, description="Developer commands."):
         Bot also must be in the guild.
 
         """
-
-
         try:
             guild = self.bot.get_guild(guild_id)
         except:
@@ -203,10 +173,7 @@ class developer(commands.Cog, description="Developer commands."):
             
 
 
-    @developer_cmds.command(
-        name='guilds',
-        aliases=['servers']
-    )
+    @developer_cmds.command(name='guilds', aliases=['servers'])
     @commands.is_owner()
     @commands.bot_has_permissions(send_messages=True,embed_links=True)
     async def dev_guilds(self, ctx, search=None):
@@ -244,7 +211,6 @@ class developer(commands.Cog, description="Developer commands."):
                 await ctx.send(f"No guild was found named **{search}**")
 
 
-
     @developer_cmds.command(name='cleanup',brief='Cleanup my messages with no limit')
     @commands.is_owner()
     @commands.bot_has_permissions(send_messages=True)
@@ -277,7 +243,6 @@ class developer(commands.Cog, description="Developer commands."):
                 await ctx.send(f'Successfully removed {deleted} messages.', delete_after=10)
             else:
                 await ctx.send(to_send, delete_after=10)
-
             return
 
         else:
@@ -299,7 +264,6 @@ class developer(commands.Cog, description="Developer commands."):
                         mess +=1
 
                 return await ctx.send("Purged {} message(s) sent by me.".format(mess), delete_after=3)
-
             else:
                 return await ctx.send("That is not a vaild flag.")
 
@@ -312,15 +276,12 @@ class developer(commands.Cog, description="Developer commands."):
 
         if guild is None:
             return await ctx.send(f'Invaild guild. Use `{ctx.prefix}dev guilds` to see all guilds I\'m in.')
-
         else:
             await guild.leave()
             await ctx.send(f'Left **{guild.name}** (ID: {guild.id})')
 
 
-    @developer_cmds.command(
-        name='noprefix'
-    )
+    @developer_cmds.command(name='noprefix')
     @commands.is_owner()
     async def dev_noprefix(self, ctx):
         """Toggle on/off no prefix for developers."""
@@ -378,8 +339,6 @@ class developer(commands.Cog, description="Developer commands."):
                 if isinstance(channel, discord.VoiceChannel):
                     voice += 1
 
-                
-        
         embed.add_field(name='Guilds',value=len(self.bot.guilds),inline=True)
         embed.add_field(name='Uptime',value=get_bot_uptime(self.bot,brief=True),inline=True)
 
@@ -615,46 +574,12 @@ class developer(commands.Cog, description="Developer commands."):
         command = self.bot.get_command('eval')
         await command(ctx, body=f'import inspect\nreturn inspect.getsource({object})')
 
-    @commands.command(usage='[--global]')
+    @commands.command(aliases=['reboot', 'off'])
     @is_dev()
-    async def reboot(self, ctx : MyContext, *, flags : str = None):
-        """Restart the bot."""
-        if flags and "--global" in flags:
-            confirm = await ctx.confirm("Are you sure you want to restart the bot?", timeout=30)
-            if confirm is False:
-                return await ctx.send("Canceled.")
-            if confirm is None:
-                return await ctx.send("Timed out.")
-            
-            message = await ctx.send("Rebooting...")
-            if ctx.guild:
-                write_json(
-                    {
-                        "message_id" : message.id,
-                        "channel_id" : message.channel.id,
-                        "dms" : False
-                    },
-                    'restart'
-                )
-                restart_program()
-            else:
-                write_json(
-                    {
-                        "message_id" : message.id,
-                        "channel_id" : message.channel.id,
-                        "dms" : True
-                    },
-                    'restart'
-                )
-                restart_program()
-
-        else:
-            msg = await ctx.send(f"Rebooting `Shard #{ctx.guild.shard_id}`")
-            await self.bot.get_shard(ctx.guild.shard_id).reconnect()
-            await msg.edit(content=f"{self.bot.check} Successfully rebooted `Shard #{ctx.guild.shard_id}`")
-
-
-
+    async def shutdown(self, ctx: MyContext):
+        """Shutdown the bot."""
+        command = self.bot.get_command("jsk shutdown")
+        await command(ctx)
 
 def setup(bot):
     bot.add_cog(developer(bot))

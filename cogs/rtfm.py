@@ -295,7 +295,7 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         if not nodes:
             e = Embed()
             e.color = discord.Colour.yellow()
-            e.description = 'Could not found anything matching that query.'
+            e.description = 'Could not find anything matching that query.'
             e.set_footer(text=f'Query time: {round(query_time, 3)}')
             return await ctx.send(embed=e)
 

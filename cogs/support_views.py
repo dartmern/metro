@@ -8,7 +8,7 @@ from bot import MetroBot
 from utils.custom_context import MyContext
 from utils.converters import BotUser
 from utils.useful import Cooldown, Embed
-from utils.checks import in_support, is_dev
+from utils.decos import in_support, is_dev
 
 
 import typing

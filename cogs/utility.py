@@ -1,14 +1,17 @@
 import re
+from asyncpg import exceptions
 import discord
 from discord.ext import commands, menus
 
 from typing import Dict, List, Optional, Union
+
+from discord.message import Message
 from bot import MetroBot
 from cogs.moderation import Arguments
 
 from utils.calc_tils import NumericStringParser
 from utils.checks import can_execute_action, check_dev
-from utils.converters import RoleConverter
+from utils.converters import DiscordCommand, RoleConverter
 from utils.json_loader import read_json
 from utils.custom_context import MyContext
 from utils.remind_utils import FutureTime, human_timedelta
@@ -210,7 +213,7 @@ def chunkIt(seq, num):
 
 class TodoListSource(menus.ListPageSource):
     def __init__(self, entries, ctx : MyContext):
-        super().__init__(entries, per_page=8)
+        super().__init__(entries, per_page=14)
         self.ctx = ctx
 
     async def format_page(self, menu, entries):
@@ -221,10 +224,8 @@ class TodoListSource(menus.ListPageSource):
 
         todo_list = []
         
-        for page in [
-            f'**[{i + 1}]({entries[i]["jump_url"]} \"Jump to message\").** {entries[i]["text"]}'
-            for i in range(len(entries))]:
-            todo_list.append(page[0:4098])
+        for index, entry in enumerate(entries, start=menu.current_page * self.per_page):
+            todo_list.append(f"**[{index + 1}]({entry['jump_url']} \"Jump to message\").** {entry['text']}")
 
         embed.description = '\n'.join(todo_list)
         return embed
@@ -586,14 +587,14 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         await ctx.check()
         result = await self.bot.loop.run_in_executor(None, self.read_tags, ctx)
         await ctx.paginate(result, per_page=per_page)
-
-        m = chunkIt(result, 5)
+        return
+        m = chunkIt(result, 20)
 
         for i in m:
             e = Embed()
             e.description = ', '.join(i)
             
-            await ctx.author.send(embed=e)
+            #await ctx.author.send(embed=e)
         
         
 
@@ -774,7 +775,6 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
     async def add(self, ctx : MyContext, *, item : commands.clean_content):
         """Add an item to your todo list"""
 
-
         data = await self.bot.db.fetchrow(
             "INSERT INTO todo (user_id, text, jump_url, added_time) VALUES ($1, $2, $3, $4) "
             "ON CONFLICT (user_id, text) WHERE ((user_id)::bigint = $1)"
@@ -783,21 +783,16 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         )
         
         if data['jump_url'] != ctx.message.jump_url:
-
-            embed = Embed()
-            embed.colour = discord.Colour.red()
-            embed.description = (':warning: **That item is already in your todo list:**'
-            f'\n\u200b\u200b\u200b   → [added here]({data["jump_url"]}) ←'
             
-            )
-            return await ctx.send(embed=embed, hide=True)
+            embed = Embed(color=discord.Colour.red())
+            embed.description = "__**That item is already in your todo list.**__"
+            return await ctx.send(embed=embed)
 
         else:
-
-            await ctx.send(
-            '**Added to todo list:**'
-            f'\n\u200b  → {item[0:200]}{"..." if len(item) > 200 else ""}', hide=True
-            )
+            embed = Embed(color=discord.Color.green())
+            embed.description = "__**Added to your todo list**__\n"\
+                "> %s" % item[0:200]
+            await ctx.send(embed=embed)
 
 
     @todo.command(
@@ -813,18 +808,16 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         try:
             to_del = entries[index - 1]
         except:
-            embed = Embed()
-            embed.colour = discord.Colour.red()
-            embed.description = (f":warning: **You do not have a task with the index:** `{index}`"
-            f"\n\n\u200b  → use `{ctx.prefix}todo list` to check your todo list"
-            )
-            return await ctx.send(embed=embed, hide=True)
+            embed = Embed(color=discord.Color.red())
+            embed.description = "__**You do not have a task with that index**__ \n"\
+                f"> Use `{ctx.clean_prefix}todo list` to check your todo list"
+            return await ctx.send(embed=embed)
 
         await self.bot.db.execute("DELETE FROM todo WHERE (user_id, text) = ($1, $2)", ctx.author.id, to_del['text'])
-        return await ctx.send(
-            f'**Deleted task {index}**!'
-            f'\n\u200b  → {to_del["text"][0:1900]}{"..." if len(to_del["text"]) > 1900 else ""}', hide=True
-        )
+        embed = Embed(color=discord.Colour.orange())
+        embed.description = "__**Removed from your todo list**__ \n"\
+            f"> {to_del['text'][0:250]}"
+        return await ctx.send(embed=embed)
         
 
     @todo.command(
@@ -845,14 +838,34 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         count = await self.bot.db.fetchval(
             "WITH deleted AS (DELETE FROM todo WHERE user_id = $1 RETURNING *) SELECT count(*) FROM deleted;", ctx.author.id
         )
-        return await ctx.send(
-            f'{self.bot.check} **|** Removed **{count}** entries.', hide=True
-        )
+        embed = Embed()
+        embed.description = f"__**Cleared {count} entries from your todo list.**"
+        return await ctx.send(embed=embed)
+    
+    @todo.command(name='edit')
+    async def todo_edit(self, ctx: MyContext, index: int, *, text: commands.clean_content) -> discord.Message:
+        """Edit an exisiting todo list entry."""
 
-    @todo.command(
-        name='list',
-        slash_command=True
-    )
+        data = await self.bot.db.fetch("SELECT (text, added_time) FROM todo WHERE user_id = $1 ORDER BY added_time ASC", ctx.author.id)
+        if not data:
+            return await ctx.send("Your todo list is empty.")
+
+        try:
+            to_del = data[index - 1] # Since indexing starts at 0
+        except KeyError:
+            embed = Embed(color=discord.Color.yellow())
+            embed.description = f"__**You do not have a task with the index {index}**__\n"\
+                f"> Use `{ctx.clean_prefix}todo list` to check your todo list"
+            return await ctx.send(embed=embed)
+
+        await self.bot.db.execute("UPDATE todo SET text = $4, jump_url = $3 WHERE user_id = $1 AND text = $2", ctx.author.id, to_del['row'][0], ctx.message.jump_url, text)
+        
+        embed = Embed(color=0x90EE90)
+        embed.description = f"__**Edited todo list entry {index}**__\n"\
+            "> %s" % text[0:200]
+        return await ctx.send(embed=embed)
+
+    @todo.command(name='list')
     async def todo_list(self, ctx : MyContext):
         """Show your todo list."""
 
@@ -860,12 +873,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             "SELECT text, added_time, jump_url FROM todo WHERE user_id = $1 ORDER BY added_time ASC", ctx.author.id
         )
         if not data:
-            embed = Embed()
-            embed.color = discord.Colour.red()
-            embed.description = (":warning: **Your todo-list is empty**"
-                f"\n\n\u200b  → use `{ctx.prefix}todo add <item>` to add to your todo list"
-            )
-            return await ctx.send(embed=embed)
+            return await ctx.send(f"Your todo list is empty.")
 
         menu = SimplePages(source=TodoListSource(entries=data, ctx=ctx), ctx=ctx, hide=True)
         await menu.start()
@@ -894,14 +902,6 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             await ctx.send(f"Archived the message in your DMs!\n{msg.jump_url}")
         except discord.Forbidden:
             await ctx.send("Oops! I couldn't send you a message. Are you sure your DMs are on?")
-
-    async def cog_command_error(self, ctx, error):
-        if isinstance(error, commands.BadArgument):
-            await ctx.send(error)
-        if isinstance(error, commands.TooManyArguments):
-            await ctx.send(
-                f"You called the {ctx.command.name} command with too many arguments."
-            )
 
     async def get_active_timer(self, *, connection=None, days=7):
         query = "SELECT * FROM reminders WHERE expires < (CURRENT_DATE + $1::interval) ORDER BY expires LIMIT 1;"
@@ -1232,6 +1232,8 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
     @commands.Cog.listener()
     async def on_reminder_timer_complete(self, timer):
         author_id, channel_id, message = timer.args
+ 
+        await self.bot.wait_until_ready()
 
         try:
             channel = self.bot.get_channel(int(channel_id)) or (
@@ -1588,6 +1590,32 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             else:
                 to_send = f"```json\n{data}\n```"
             await ctx.send(to_send)
+
+    @commands.command()
+    async def whatcog(self, ctx: MyContext, *, command: DiscordCommand) -> discord.Message:
+        """Show what cog a command belongs to."""
+        return await ctx.send(f"`{command.qualified_name}` belongs to the `{command.cog.qualified_name.capitalize() if command.cog else 'No Category'}` category")
+
+    @commands.command()
+    async def length(self, ctx: MyContext, *, object: str) -> discord.Message:
+        """Get the length of a string."""
+        return await ctx.send(f"That string is `{len(object)}` characters long.")
+
+    @commands.command(name='first-message', aliases=['firstmsg'])
+    @commands.check(Cooldown(1, 3, 1, 2, commands.BucketType.user))
+    async def first_message(self, ctx: MyContext, *, channel: Optional[discord.TextChannel]) -> discord.Message:
+        """Get the first message in this channel."""
+        channel = channel or ctx.channel
+
+        first_message : discord.Message = (await channel.history(limit=1, oldest_first=True).flatten())[0]
+
+        embed = Embed(color=discord.Color.blue())
+        embed.title = f"First message in #{channel.name[0:40]}"
+        embed.description = f"__**Message**__"\
+            f"\nAuthor: {first_message.author.mention} (ID: {first_message.author.id})"\
+            f"\n Sent at: {discord.utils.format_dt(first_message.created_at, 'F')} ({discord.utils.format_dt(first_message.created_at, 'R')})"\
+            f"\n Jump URL: [Click here]({first_message.jump_url} \"Click here to jump to message\")"
+        await ctx.send(embed=embed)
 
 def setup(bot):
     bot.add_cog(utility(bot))

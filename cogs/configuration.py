@@ -1,30 +1,35 @@
-
-from re import X
 import discord
 from discord.ext import commands
 
 import asyncpg
-import json
+
 
 from collections import defaultdict
 
 from typing import Optional, Union
 
-from discord.ext.commands.core import is_owner
 from bot import MetroBot
 
 #Arg parsing stuff
 from cogs.moderation import Arguments
 import shlex
-from utils.checks import check_dev, is_dev
+from utils.checks import check_dev
 
-from utils.converters import ChannelOrRoleOrMember, DiscordCommand, DiscordGuild
-from utils.new_pages import SimplePages
+from utils.converters import ChannelOrRoleOrMember, DiscordCommand, RoleConverter
 from utils.useful import Embed
 from utils.custom_context import MyContext
+from utils.decos import is_dev
 
-class Flags(commands.FlagConverter, prefix='--', delimiter=' '):
-    reason : str
+def mod_check():
+    def predicate(ctx: MyContext):
+        modroles = ctx.bot.modroles.get(ctx.guild.id)
+        if modroles and ctx.author.id in modroles:
+            return True
+        if ctx.channel.permissions_for(ctx.author).manage_guild:
+            return True
+        else:
+            return False
+    return commands.check(predicate)
 
 class configuration(commands.Cog, description='Configure the bot/server.'):
     def __init__(self, bot : MetroBot):

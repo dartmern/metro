@@ -1,3 +1,4 @@
+import datetime
 from typing import Optional
 import discord
 from discord.ext import commands
@@ -9,17 +10,17 @@ from utils.converters import RoleConverter
 from utils.parsing import RoleParser
 from utils.remind_utils import FutureTime, human_timedelta
 from utils.useful import Cooldown, Embed
-
+from cogs.utility import Timer
 
 
 # This cog has parts of code from phencogs
 # https://github.com/phenom4n4n/phen-cogs/blob/master/roleutils/roles.py
 
 def setup(bot : MetroBot):
-    bot.add_cog(roleutils(MetroBot))
+    bot.add_cog(roleutils(bot))
 
 class roleutils(commands.Cog, description=' Manage anything role related.'):
-    def __init__(self, bot : MetroBot) -> None:
+    def __init__(self, bot : MetroBot):
         self.bot = bot
 
     @property
@@ -637,7 +638,7 @@ class roleutils(commands.Cog, description=' Manage anything role related.'):
             raise commands.BadArgument(to_send)
 
         hoisted = hoisted if hoisted is not None else not role.hoist
-        print(hoisted)
+
         await role.edit(hoist=hoisted)
         term = "now longer" if hoisted is False else "now"
         await ctx.send(f"**{role.name}** is {term} hoisted.")
@@ -794,6 +795,41 @@ class roleutils(commands.Cog, description=' Manage anything role related.'):
 
         await ctx.send(to_send)
 
+    @commands.Cog.listener()
+    async def on_temprole_timer_complete(self, timer: Timer):
+        guild_id, author_id, role_id, member_id = timer.args
+
+        await self.bot.wait_until_ready()
+        
+        guild = self.bot.get_guild(guild_id)
+        if guild is None:
+            return # If we can't even find the guild we can't proceed
+
+        role = guild.get_role(role_id)
+        if role is None:
+            return # there's nothing to add if the role is None
+
+        member = await self.bot.get_or_fetch_member(guild, member_id)
+        if member is None:
+            return # member doesn't even exist
+
+        moderator = await self.bot.get_or_fetch_member(guild, author_id)
+        if moderator is None:
+            try:
+                moderator = await self.bot.fetch_user(author_id)
+            except:
+                # moderator request failed (somehow)
+                moderator = f"Mod ID: {author_id}"
+            else:
+                moderator = f"{moderator} (ID: {author_id})"
+        else:
+            moderator = f'{moderator} (ID: {author_id})'
+
+        try:
+            await member.remove_roles(role, reason=f'Automatic temprole timer made on {timer.created_at} by {moderator}')
+        except (discord.Forbidden, discord.HTTPException):
+            pass # Either I don't have permissions at this time or removing the roles failed
+
     @commands.command(name='temprole', usage='<member> <duration> <role>')
     @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.member))
     @commands.has_guild_permissions(manage_roles=True)
@@ -847,5 +883,7 @@ class roleutils(commands.Cog, description=' Manage anything role related.'):
         embed = Embed()
         embed.colour = discord.Colour.blue()
         embed.description = "__**Temporary role added**__"\
-            f"\n{member.mention} was granted the {role.mention} role for {human_timedelta(duration.dt, accuracy=50)}"
+            f"\n{member.mention} was granted the {role.mention} role for {human_timedelta(duration.dt+datetime.timedelta(seconds=.4), accuracy=50)}"
         await ctx.send(embed=embed)
+
+

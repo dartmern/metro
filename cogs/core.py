@@ -192,9 +192,8 @@ class core(commands.Cog, description="Core events."):
         elif isinstance(error, commands.CommandOnCooldown):
 
             if check_dev(ctx.bot, ctx.author):
-                #await ctx.reinvoke()
-                #return
-                pass
+                await ctx.reinvoke()
+                return 
 
             command = ctx.command
             cooldown = discord.utils.find(lambda x: isinstance(x, Cooldown), command.checks) or Cooldown(1, 3, 1, 1,

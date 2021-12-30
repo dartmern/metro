@@ -184,21 +184,8 @@ class MetroBot(commands.AutoShardedBot):
         print(
             f"-----\nLogged in as: {self.user.name} : {self.user.id}\n-----\nMy default prefix{'es are' if len(self.PRE) >= 2 else ' is'}: {', '.join(self.PRE) if len(self.PRE) >= 2 else self.PRE[0]}\n-----")
 
-        data = read_json('restart')
         user = self.get_user(525843819850104842)
 
-        if data['dms']:
-            await user.send("Restart complete!")
-        else:
-            channel = self.get_channel(data["channel_id"])
-            if not channel is None:
-                message = channel.get_partial_message(data["message_id"])
-                try:
-                    await message.edit(content=f'{self.check} Back online!')
-                except discord.NotFound:
-                    await user.send("Restart complete!")
-            else:
-                pass
         self.owner = user
 
 
