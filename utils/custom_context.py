@@ -1,13 +1,15 @@
+import asyncio
 import discord
 from discord.ext import commands, menus
 
 from typing import List, Optional, Union
 
-from discord.ext.commands.converter import Option
+from discord.ext.commands.core import Command, Group
+from discord.ext.commands.errors import CommandError, CommandInvokeError
 
 from utils.new_pages import SimplePageSource, SimplePages
 
-
+import functools
 
 class ConfirmationView(discord.ui.View):
     def __init__(self, *, timeout: float, author_id: int, ctx, delete_after: bool) -> None:
@@ -179,7 +181,22 @@ class MyContext(commands.Context):
         channel = channel or self.channel
         await channel.send(f"{member.mention} {message if message else ''}", delete_after=0.1)
 
-        
-        
+    async def get_help(self, command: commands.Command) -> discord.Embed:
+        help_command = self.bot.help_command
+
+        cmd = help_command.copy()
+        cmd.context = self
+
+
+        try:
+            if hasattr(command, "__cog_commands__"):
+                return await cmd.send_cog_help(command)
+            elif isinstance(command, Group):
+                return await cmd.send_group_help(command)
+            elif isinstance(command, Command):
+                return await cmd.get_command_help(command)
+        except CommandError as e:
+            await cmd.on_help_command_error(self, e)
+    
 
                 

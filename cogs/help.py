@@ -53,9 +53,6 @@ class SupportView(discord.ui.View):
             f'\n You can kindly dismiss this message if you clicked by accident.'
         await self.ctx.send(embed=embed, ephemeral=True, view=self)
     
-    
-
-
 
 class InviteView(discord.ui.View):
     def __init__(self, ctx : MyContext):
@@ -302,7 +299,7 @@ class NewHelpView(discord.ui.View):
         )
         embed.add_field(
             name='Getting Help',
-            value=f'\n • Use `{self.ctx.clean_prefix}help <command>` for some help and examples on any command'\
+            value=f'\n • Use `{self.ctx.clean_prefix}help <command | category>` for some help and examples on any command'\
                 f'\n • Join my [support server]({self.ctx.bot.support}) for additional help'\
                 f'\n • Use the select menu below to view the categories\' commands'\
                 f'\n • Use `{self.ctx.clean_prefix}search <query>` to search for a particular command',
@@ -548,24 +545,18 @@ class ButtonMenuSrc(menus.ListPageSource):
             title = f"`{self.group}` `{self.group.signature}`"
 
         embed = Embed(title=title, description=self.description)
-        docs_url = f"{self.ctx.bot.docs}/{self.group.cog_name}/{(self.group.qualified_name).replace(' ', '/')}"
-        embed.set_author(name='Documentation Link', url=docs_url, icon_url=self.ctx.bot.user.display_avatar.url)
 
 
         cooldown = discord.utils.find(lambda x: isinstance(x, Cooldown), self.group.checks) or Cooldown(1, 3, 1, 1,
                                                                                                      discord.ext.commands.BucketType.user)
 
         default_cooldown_per = cooldown.default_mapping._cooldown.per
-        altered_cooldown_per = cooldown.altered_mapping._cooldown.per
-
         default_cooldown_rate = cooldown.default_mapping._cooldown.rate
-        altered_cooldown_rate = cooldown.altered_mapping._cooldown.rate
 
         embed.add_field(
             name="Cooldowns",
-            value=f"Default: `{default_cooldown_rate}` time(s) every `{default_cooldown_per}` seconds"\
-                    f"\nTester: `{altered_cooldown_rate}` time(s) every `{altered_cooldown_per}` seconds",
-                    inline=False
+            value=f"Default: `{default_cooldown_rate}` time(s) every `{default_cooldown_per}` seconds",
+            inline=False
         )
         embed.add_field(
             name="Aliases",
@@ -664,25 +655,17 @@ class MetroHelp(commands.HelpCommand):
                 description=self.get_doc(command)
             )
 
-        if not command.cog_name == 'Jishaku':
-            docs_url = f"https://metro-discord-bot.gitbook.io/metro-documentation/{command.cog_name}/{command.qualified_name.replace(' ', '/')}"
-            em.set_author(name='Documentation Link', url=docs_url, icon_url='https://cdn.discordapp.com/embed/avatars/1.png')
-
         # Cooldowns
         cooldown = discord.utils.find(lambda x: isinstance(x, Cooldown), command.checks) or Cooldown(1, 3, 1, 1,
                                                                                                      commands.BucketType.user)
 
         default_cooldown_per = cooldown.default_mapping._cooldown.per
-        altered_cooldown_per = cooldown.altered_mapping._cooldown.per
-
         default_cooldown_rate = cooldown.default_mapping._cooldown.rate
-        altered_cooldown_rate = cooldown.altered_mapping._cooldown.rate
 
         em.add_field(
             name="Cooldowns",
-            value=f"Default: `{default_cooldown_rate}` time(s) every `{default_cooldown_per}` seconds"\
-                    f"\nTester: `{altered_cooldown_rate}` time(s) every `{altered_cooldown_per}` seconds",
-                    inline=False
+            value=f"Default: `{default_cooldown_rate}` time(s) every `{default_cooldown_per}` seconds",     
+            inline=False
         )
 
         # Aliases

@@ -787,14 +787,6 @@ class moderation(commands.Cog, description="Moderation commands."):
         if limit > 2000:
             raise commands.BadArgument(f'Too many messages to search. ({limit}/2000)')
 
-        if limit > 250:
-            confirm = await ctx.confirm(f"Are you sure you want to purge `{limit}` messages?")
-            if confirm is False:
-                return await ctx.send("Canceled.")
-            if confirm is None:
-                return await ctx.send("Timed out.")
-            
-
         async with ctx.typing():
             if before is None:
                 before = ctx.message

@@ -219,18 +219,21 @@ class Cooldown:
         return True
 
 
-
-
-def ts_now(type):
+def ts_now(type : Optional[str] = 'f'):
     time =  discord.utils.format_dt(discord.utils.utcnow(), type)
     return time
 
 
+def chunkIt(seq, num):
+    avg = len(seq) / float(num)
+    out = []
+    last = 0.0
 
+    while last < len(seq):
+        out.append(seq[int(last):int(last + avg)])
+        last += avg
 
-
-
-
+    return out
 
 
 from jishaku.shim.paginator_base import EMOJI_DEFAULT

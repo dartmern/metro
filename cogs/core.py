@@ -50,6 +50,7 @@ class core(commands.Cog, description="Core events."):
         self.cooldown_mapping = commands.CooldownMapping.from_cooldown(3, 7, commands.BucketType.user)
         self.blacklist_message_sent = []
         self.error_channel = 912447757212606494
+        self.error_emoji = 'https://images-ext-1.discordapp.net/external/b9E12Jxz-Fmlg25PNTCYYPrXMomcrAhxWu1JTM4MAh4/https/i.imgur.com/9gQ6A5Y.png'
 
     @property
     def emoji(self) -> str:
@@ -57,6 +58,9 @@ class core(commands.Cog, description="Core events."):
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx : MyContext, error):
+
+        embed = Embed()
+        embed.color = discord.Color.red()
 
         if ctx.command and ctx.command.has_error_handler():
             return
@@ -80,14 +84,14 @@ class core(commands.Cog, description="Core events."):
             
             error = error.original
             if isinstance(error, discord.errors.Forbidden):
+                embed.description = "I don't have the permissions to do that."\
+                        "\nThis might be due to me missing permissions in the current channel or server."\
+                        "\nThis might also be a issue with role hierarchy, try moving my role to the top of the role list."
+                embed.set_author(name='Forbidden', icon_url=self.error_emoji)
                 try:
-                    return await ctx.reply(
-                        f"I am missing permissions to do that!"
-                    )
+                    return await ctx.send(embed=embed)
                 except discord.Forbidden:
-                    return await ctx.author.send(
-                        f"I am missing permissions to do that!"
-                    )
+                    return await ctx.author.send(embed=embed)
             else:
                 traceback_string = "".join(traceback.format_exception(
                     etype=None, value=error, tb=error.__traceback__))
@@ -123,33 +127,25 @@ class core(commands.Cog, description="Core events."):
                 except (discord.Forbidden, discord.HTTPException):
                     await channel.send(content='Traceback string was too long to output.', embed=embed, file=discord.File(io.StringIO(traceback_string), filename='traceback.py'))
                 
-        elif isinstance(error, commands.BadArgument):
-            await ctx.send(str(error))
-
         elif isinstance(error, commands.MissingRequiredArgument):
             missing = f"{error.param.name}"
             command = f"{ctx.clean_prefix}{ctx.command} {ctx.command.signature}"
             separator = (' ' * (len([item[::-1] for item in command[::-1].split(missing[::-1], 1)][::-1][0]) - 1)) + (8*' ')
             indicator = ('^' * (len(missing) + 2))
-            await ctx.send(  
-                                     f'> Run **{ctx.prefix}help {ctx.command}** for this command\'s help.'
-                                    f"\n```yaml\nSyntax: {command}\n{separator}{indicator}"
-                                    f'\n{missing} is a required argument that is missing.\n```',
-                                    )
-
-            return
+            message = (f"\n```yaml\nSyntax: {command}\n{separator}{indicator}\n{missing} is a required argument that is missing.\n```")
+                                    
+            return await ctx.send(message, embed=await ctx.get_help(ctx.command))
 
         elif isinstance(error, commands.errors.BotMissingPermissions):
+            missing_perms = ", ".join(["`%s`" % perm.replace('_', ' ').replace('guild', 'server').title() for perm in error.missing_permissions])
+            embed.description = "I am missing the following permissions to run that command: \n%s" % missing_perms
+            
+            embed.set_author(name='Bot Missing Permissions', icon_url=self.error_emoji)
 
-            missing_perms = ', '.join(error.missing_permissions)
             try:
-                return await ctx.send(
-                f"I am missing the `{missing_perms}` permissions to do that."
-            )
+                return await ctx.send(embed=embed)
             except:
-                return await ctx.author.send(
-                f"I am missing the `{missing_perms}` permissions to do that."
-                )
+                return await ctx.author.send(embed=embed)
 
         elif isinstance(error, commands.errors.MissingPermissions):
 
@@ -157,12 +153,10 @@ class core(commands.Cog, description="Core events."):
                 await ctx.reinvoke()
                 return
 
-            missing_perms = ', '.join(error.missing_permissions)
-
-            return await ctx.send(
-                f"You are missing the `{missing_perms}` permission to do that!"
-            )
-
+            missing_perms = ", ".join(["`%s`" % perm.replace('_', ' ').replace('guild', 'server').title() for perm in error.missing_permissions])
+            embed.description = "You are missing the following permissions to run that command: \n%s" % missing_perms
+            
+            return await ctx.send(embed=embed)
 
         elif isinstance(error, commands.CommandNotFound):
             return
@@ -171,23 +165,35 @@ class core(commands.Cog, description="Core events."):
             return
 
         elif isinstance(error, commands.MessageNotFound):
-            return await ctx.send(
-                f"Message not found!"
-            )
+            embed.description = f'Message "{error.argument}" was not found.\n'\
+                "\n__**Acceptable arguments:**__"\
+                "\n - Message URL"\
+                "\n - Message ID (must be in the same channel as message)"\
+                "\n - <Channel ID>-<Message ID> (press shift with developer mode)"
+                
+            embed.set_author(name='Message Not Found', icon_url=self.error_emoji)
+            return await ctx.send(embed=embed)
 
         elif isinstance(error, commands.MemberNotFound):
-            return await ctx.send(
-                f"I couldn't find the member `{error.argument}`\nTry mentioning them and check for spelling."
-            )
+            embed.description = f'Member "{error.argument}" was not found.\n'\
+                "\nAcceptable arguments are as follows:"\
+                f"\nID, mention, name#discrim, name, nickname"
+            embed.set_author(name='Member Not Found', icon_url=self.error_emoji)
+            return await ctx.send(embed=embed)
+           
         elif isinstance(error, commands.RoleNotFound):
-            return await ctx.send(
-                f"I couldn't find the role `{error.argument}`\nTry mentioning the role and check for spelling."
-            )
+            embed.description = f'Role "{error.argument}" was not found.\n'\
+                "\nAcceptable arguments are as follows:"\
+                f"\nID, mention, name"
+            embed.set_author(name='Role Not Found', icon_url=self.error_emoji)
+            return await ctx.send(embed=embed)
 
         elif isinstance(error, commands.ChannelNotFound):
-            return await ctx.send(
-                f"I couldn't find the channel `{error.argument}`\nTry mentioning it and check for spelling."
-            )
+            embed.description = f'Channel "{error.argument}" was not found.\n'\
+                "\nAcceptable arguments are as follows:"\
+                f"ID, mention, name"
+            embed.set_author(name='Channel Not Found', icon_url=self.error_emoji)
+            return await ctx.send(embed=embed)
 
         elif isinstance(error, commands.CommandOnCooldown):
 
@@ -228,12 +234,12 @@ class core(commands.Cog, description="Core events."):
                     return
             else:
                 await ctx.send(embed=em)
-                await asyncio.sleep(1.5)
 
         elif isinstance(error, commands.errors.DisabledCommand):
-            return await ctx.send(
-                str(error)
-            )
+            return await ctx.send(str(error))
+
+        elif isinstance(error, commands.BadArgument):
+            return await ctx.send(str(error))
 
         elif isinstance(error, commands.errors.BadUnionArgument):
             return await ctx.send(str(error))
