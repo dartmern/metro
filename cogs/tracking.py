@@ -40,7 +40,7 @@ class tracking(commands.Cog, description='Module for user and server stats.'):
         
         if self.message_batch:  # Insert every message into the db
             query = """
-                    INSERT INTO messages2 (unix, timestamp,
+                    INSERT INTO messages (unix, timestamp,
                     message_id, author_id, channel_id, server_id)
                     SELECT x.unix, x.timestamp,
                     x.message_id, x.author_id, x.channel_id, x.server_id
