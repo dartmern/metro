@@ -76,7 +76,7 @@ async def load_blacklist():
 
 class MetroBot(commands.AutoShardedBot):
 #class MetroBot(commands.Bot):
-    PRE: tuple = ('m.', '?', 'm?')
+    PRE: tuple = ('m.', 'm?')
 
     def user_blacklisted(self, ctx : MyContext):
         try:
