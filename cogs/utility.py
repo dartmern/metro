@@ -2,7 +2,7 @@ import re
 import discord
 from discord.ext import commands, menus
 
-from typing import Dict, Optional, Union
+from typing import Dict, List, Optional, Union
 
 from bot import MetroBot
 
@@ -14,6 +14,7 @@ from utils.useful import Embed
 from utils.new_pages import SimplePages
 from utils.remind_utils import UserFriendlyTime
 from utils.pages import ExtraPages
+from utils.converters import RoleConverter
 
 from datetime import timedelta
 import json
@@ -29,6 +30,10 @@ import asyncpg
 import yarl
 import inspect
 import unicodedata
+
+class Flags(commands.FlagConverter, delimiter=' ', prefix='--'):
+    ping: Optional[RoleConverter]
+    message: Optional[str] = commands.Flag(aliases=['msg'], name='message')
 
 class StopView(discord.ui.View):
     def __init__(self, ctx : MyContext):
@@ -1139,7 +1144,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         """Manage and create giveaways for your server."""
         await ctx.help()
 
-    @giveaway.command(name='start')
+    @giveaway.command(name='start', usage="<duration> [winners='1'] <prize> [flags]")
     @commands.check(Cooldown(8, 8, 12, 8, commands.BucketType.member))
     @commands.bot_has_permissions(send_messages=True, add_reactions=True)
     @commands.has_guild_permissions(manage_guild=True)
@@ -1150,6 +1155,18 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         If the winners argument is no provided there will be 1 winner.
         """
         await ctx.defer()
+
+        message = ""
+        to_send = ""
+
+        flags = prize.partition("--")[2]
+        prize = prize.split('--')[0]
+        if flags:
+            convertered = await Flags().convert(ctx, "--%s" % flags)
+            if convertered.ping:
+                to_send += convertered.ping.mention
+            if convertered.message:
+                message += convertered.message[0:1950]
         
         if duration.dt < (ctx.message.created_at + datetime.timedelta(seconds=5)):
             return await ctx.send("Duration is too short. Must be at least 5 seconds.")
@@ -1162,7 +1179,12 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
                         f"\n Hosted by: {ctx.author.mention}"
         e.set_footer(text=f'{winners} winner{"s" if winners > 1 else ""}')
 
-        giveaway_message = await ctx.send(":tada: **GIVEAWAY!** :tada:",embed=e)
+        if message:
+            embeds = [Embed(color=discord.Color.blue(), description=message), e]
+        else:
+            embeds = [e]
+
+        giveaway_message = await ctx.send(f":tada: **GIVEAWAY!** :tada: \n{to_send}",embeds=embeds, allowed_mentions=discord.AllowedMentions(roles=True))
         await giveaway_message.add_reaction('\U0001f389')
 
         try:
@@ -1183,8 +1205,12 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             await ctx.send(str(traceback_string))
             return
         e.set_footer(text=f'{winners} winner{"s" if winners > 1 else ""} | Giveaway ID: {timer.id}')
-        await giveaway_message.edit(":tada: **GIVEAWAY!** :tada:",embed=e)
+        if message:
+            embeds = [Embed(color=discord.Color.blue(), description=message), e]
+        else:
+            embeds = [e]
 
+        await giveaway_message.edit(f":tada: **GIVEAWAY!** :tada:\n{to_send}",embeds=embeds, allowed_mentions=discord.AllowedMentions(roles=True))
         return
 
     @giveaway.command(name='list')

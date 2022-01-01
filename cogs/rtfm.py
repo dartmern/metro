@@ -159,8 +159,7 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
             'python': 'https://docs.python.org/3',
             'discord.py-2.0': 'https://discordpy.readthedocs.io/en/master',
             'enhanced-discord.py' : 'https://enhanced-dpy.readthedocs.io/en/latest',
-            'aiohttp' : 'https://docs.aiohttp.org/en/stable/'
-            
+            'aiohttp' : 'https://docs.aiohttp.org/en/stable/',      
         }
 
         if obj is None:
@@ -201,7 +200,7 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         await ctx.send(embed=e, hide=True)
 
 
-    @commands.command(name='rtfm_rewrite', message_command=False, usage='<documentation> [query]')
+    @commands.command(name='rtfm_rewrite', message_command=True, usage='<documentation> [query]')
     async def rtfm_slash(
         self, 
         ctx : MyContext, 
@@ -219,7 +218,7 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         await self.do_rtfm(ctx, docs, query)
         
     
-    @commands.group(name="rtfm",invoke_without_command=True, case_insensitive=True, slash_command=True, aliases=['rtfd'])
+    @commands.group(name="rtfm",invoke_without_command=True, case_insensitive=True, slash_command=True, aliases=['rtfd'], message_command=True)
     @commands.bot_has_permissions(send_messages=True)
     async def rtfm(self, ctx, *, obj : str = None):
         """Gives you a documentation link for a enhanced-discord.py entity.

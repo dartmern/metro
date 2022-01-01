@@ -254,6 +254,15 @@ class BotUser(commands.Converter):
                 raise commands.BadArgument('This is not a bot.')
             return user
 
+class BotUserObject(commands.MemberConverter):
+    async def convert(self, ctx, argument: str) -> discord.Member:
+        user = await super().convert(ctx, argument)
+        if not user.bot:
+            raise commands.BadArgument("This is not a bot.")
+        else:
+            return user
+        
+        
 
 
 

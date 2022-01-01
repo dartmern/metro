@@ -1,6 +1,6 @@
 import itertools
 from re import match
-from typing import Any, List
+from typing import Any, List, Optional
 
 from discord.ext.commands.help import HelpCommand
 from bot import MetroBot
@@ -21,6 +21,7 @@ from difflib import get_close_matches
 
 from utils.custom_context import MyContext
 from utils.useful import Embed, Cooldown, OldRoboPages, get_bot_uptime
+from utils.converters import BotUserObject
 
 class SupportView(discord.ui.View):
     def __init__(self, ctx : MyContext):
@@ -58,6 +59,7 @@ class InviteView(discord.ui.View):
     def __init__(self, ctx : MyContext):
         super().__init__()
         self.ctx = ctx
+        self.client = None
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id == self.ctx.author.id:
@@ -79,21 +81,29 @@ class InviteView(discord.ui.View):
         self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='All', url=discord.utils.oauth_url(self.ctx.bot.user.id, permissions=discord.Permissions(549755813887))))
         await self.ctx.send(embed=embed, view=self)
 
-    async def start(self, interaction: discord.Interaction):
+    async def start(self, interaction: Optional[discord.Interaction] = None, client: Optional[BotUserObject] = None):
+        if interaction:
+            _send = interaction.response.send_message
+        else:
+            _send = self.ctx.send
+
+        client = client or self.ctx.bot.user
+        self.client = client
 
         embed = Embed()
         embed.colour = discord.Colour.blue()
+        embed.set_author(name=client, icon_url=client.display_avatar.url)
         embed.description = "__**Choose a invite option below or press `Create custom permissions`**__"\
             f"\n\nIf you press `Create custom permissions` you are required to enter a vaild discord permissions integer."\
             f'\nYou can use [this calculator](https://discordapi.com/permissions.html) to find the permissions if you are unsure what to put.'
         
-        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='None', url=discord.utils.oauth_url(self.ctx.bot.user.id, permissions=discord.Permissions(0))))
-        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='Basic', url=discord.utils.oauth_url(self.ctx.bot.user.id, permissions=discord.Permissions(140663671873))))
-        self.add_item(discord.ui.Button(style=discord.ButtonStyle.blurple, label='Advanced', url=discord.utils.oauth_url(self.ctx.bot.user.id, permissions=discord.Permissions(140932115831))))
-        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='Admin', url=discord.utils.oauth_url(self.ctx.bot.user.id, permissions=discord.Permissions(8))))
-        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='All', url=discord.utils.oauth_url(self.ctx.bot.user.id, permissions=discord.Permissions(549755813887))))
+        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='None', url=discord.utils.oauth_url(client.id, permissions=discord.Permissions(0))))
+        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='Basic', url=discord.utils.oauth_url(client.id, permissions=discord.Permissions(140663671873))))
+        self.add_item(discord.ui.Button(style=discord.ButtonStyle.blurple, label='Advanced', url=discord.utils.oauth_url(client.id, permissions=discord.Permissions(140932115831))))
+        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='Admin', url=discord.utils.oauth_url(client.id, permissions=discord.Permissions(8))))
+        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='All', url=discord.utils.oauth_url(client.id, permissions=discord.Permissions(549755813887))))
         
-        await interaction.response.send_message(embed=embed, view=self)
+        await _send(embed=embed, view=self)
 
     @discord.ui.button(row=1, label='Enter a custom permission value', style=discord.ButtonStyle.green)
     async def custom_perms(self, button: discord.ui.Button, interaction: discord.Interaction):
@@ -110,7 +120,7 @@ class InviteView(discord.ui.View):
         
         em = Embed()
         em.description = f"Permission Integer: {message.content}"\
-            f"\n Invite URL: {discord.utils.oauth_url(self.ctx.bot.user.id, permissions=discord.Permissions(int(message.content)))}"
+            f"\n Invite URL: {discord.utils.oauth_url(self.client.id, permissions=discord.Permissions(int(message.content)))}"
         await interaction.followup.send(embed=em)
 
     @discord.ui.button(emoji='🗑️', style=discord.ButtonStyle.red, row=1)
@@ -862,9 +872,10 @@ class meta(commands.Cog, description='Get bot stats and information.'):
 
     @commands.command(name='invite',slash_command=True)
     @commands.bot_has_permissions(send_messages=True)
-    async def invite(self, ctx: MyContext):
-        """Get invite links for the bot."""
-        await InviteView(ctx).start_normal()
+    async def invite(self, ctx: MyContext, *, bot: BotUserObject = None):
+        """Get invite links for a bot."""
+        bot = bot or self.bot.user
+        await InviteView(ctx).start(None, bot)
 
     @commands.command()
     @commands.bot_has_permissions(send_messages=True, embed_links=True)

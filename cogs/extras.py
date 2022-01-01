@@ -136,3 +136,4 @@ class extras(commands.Cog, description='Extra commands for your use.'):
         embed.description = f'Your shortened url: {data["data"]["url"]}\nOriginal url: {url}'
         embed.set_author(name='URL Shortner')
         return await ctx.send(embed=embed)
+
