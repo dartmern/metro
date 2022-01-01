@@ -88,7 +88,7 @@ class MuteRoleView(discord.ui.View):
         try:
             await self.ctx.bot.db.execute("INSERT INTO servers (muterole, server_id) VALUES ($1, $2)", muterole.id, self.ctx.guild.id)
         except asyncpg.exceptions.UniqueViolationError:
-            await self.ctx.bot.execute("UPDATE servers SET muterole = $1 WHERE server_id = $2", muterole.id, self.ctx.guild.id)
+            await self.ctx.bot.db.execute("UPDATE servers SET muterole = $1 WHERE server_id = $2", muterole.id, self.ctx.guild.id)
 
         await interaction.edit_original_message(content=f"{self.ctx.bot.check} Created muterole `@{muterole.name}` and set to this guild's muterole.")
 

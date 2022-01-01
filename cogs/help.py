@@ -888,7 +888,7 @@ class meta(commands.Cog, description='Get bot stats and information.'):
         Search through my commands and find that hidden command.
         """
 
-        commands = [command.qualified_name for command in self.bot.walk_commands()]
+        commands = [str(command) for command in self.bot.walk_commands()]
          
         matches = get_close_matches(search_query, commands)
 
