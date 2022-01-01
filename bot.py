@@ -6,6 +6,7 @@ from discord.ext import commands
 from pathlib import Path
 import os
 import asyncpg
+import traceback
 
 import mystbin
 import aiohttp
@@ -59,7 +60,13 @@ async def execute_scripts():
             try:
                 await bot.db.execute(script.read())
             except Exception as e:
-                print(e)
+                etype = type(e)
+                trace = e.__traceback__
+
+                lines = traceback.format_exception(etype, e, trace)
+
+                to_p = ''.join(lines)
+                print(to_p)
 
 async def load_blacklist():
     await bot.wait_until_ready()
