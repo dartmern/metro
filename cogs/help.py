@@ -1,8 +1,9 @@
 import itertools
 from re import match
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from discord.ext.commands.help import HelpCommand
+from discord.member import M
 from bot import MetroBot
 from utils.new_pages import SimplePages
 import discord
@@ -216,7 +217,6 @@ class NewHelpView(discord.ui.View):
         self.select_category.add_option(emoji='📙', label='All commands', value='all_commands')
 
         for category, command in self.data:
-            print(category)
             if category[0] == 'Jishaku':
                 continue
 
@@ -600,12 +600,25 @@ class ButtonMenuSrc(menus.ListPageSource):
         embed.add_field(name='Subcommands',value='\n'.join(sub_commands),inline=False)
 
         if self.extras:
-            examples = self.extras['examples'].replace("[p]", self.prefix)
-            embed.add_field(
-                name='Examples/Usage',
-                value=examples,
-                inline=False
-            )
+            try:
+                examples = self.extras['examples'].replace("[p]", self.prefix)
+                embed.add_field(
+                    name='Examples/Usage',
+                    value=examples,
+                    inline=False
+                )
+            except KeyError:
+                pass
+
+            try:
+                perms: Dict = self.extras['perms']
+                clean_perms = [f"`{perm.replace('_', ' ').replace('guild', 'server').title()}`" for perm in perms.keys()]
+                embed.add_field(
+                    name='Permissions',
+                    value=', '.join(clean_perms)
+                )
+            except KeyError:
+                pass
 
         embed.set_footer(
             text=footer
@@ -697,12 +710,28 @@ class MetroHelp(commands.HelpCommand):
             inline=False
         )
         if command_extras:
-            examples = command_extras['examples'].replace("[p]", self.context.clean_prefix)
-            em.add_field(
-                name='Examples/Usage',
-                value=examples,
-                inline=False
-            )
+            try:
+                examples = command_extras['examples'].replace("[p]", self.context.clean_prefix)
+                em.add_field(
+                    name='Examples/Usage',
+                    value=examples,
+                    inline=False
+                )
+            except KeyError:
+                pass
+
+            try:
+                perms: Dict = command_extras['perms']
+                clean_perms = [f"`{perm.replace('_', ' ').replace('guild', 'server').title()}`" for perm in perms.keys()]
+                em.add_field(
+                    name='Permissions',
+                    value=', '.join(clean_perms),
+                    inline=False
+                )
+            except KeyError:
+                pass
+
+
 
         if not isinstance(command, commands.Group):
             return em

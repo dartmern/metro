@@ -453,7 +453,7 @@ class configuration(commands.Cog, description='Configure the bot/server.'):
         invoke_without_command=True,
         case_insensitive=True,
         usage = '[entities...]',
-        extras = {"examples" : "[p]config ignore #general\n[p]config ignore #support @dartmern @muted\n[p]config ignore ~"}
+        extras = {"examples" : "[p]config ignore #general\n[p]config ignore #support @dartmern @muted\n[p]config ignore ~", "perms" : {"manage_guild" : True}}
     )
     @commands.has_permissions(manage_guild=True)
     async def config_ignore(self, ctx : MyContext, *entities : ChannelOrRoleOrMember):

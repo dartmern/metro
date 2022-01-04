@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS messages
 (
-    indx bigint NOT NULL DEFAULT nextval('messages_index_seq'::regclass),
+    index bigint PRIMARY KEY,
     unix real,
     "timestamp" timestamp without time zone,
     message_id bigint,

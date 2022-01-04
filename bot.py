@@ -1,5 +1,7 @@
 import collections
+from inspect import trace
 from typing import List, Optional, Tuple, Union
+import typing
 import discord
 from discord.ext import commands
 
@@ -187,6 +189,27 @@ class MetroBot(commands.AutoShardedBot):
             self.pres_views = True
 
         self.uptime = discord.utils.utcnow()
+
+        for command in self.walk_commands():
+            if command.checks:
+                try:
+                    check = command.checks[0]
+                    check(0)
+                except Exception as e:
+                    *frames, last_frame = traceback.walk_tb(e.__traceback__)
+                    frame = last_frame[0]
+                    try:
+                        perms : typing.Dict= frame.f_locals['perms']
+                        try:
+                            perms.pop("send_messages")
+                        except KeyError:
+                            pass #No send_messages i guess
+                        if perms:
+                            command.extras['perms'] = perms
+                    except KeyError:
+                        pass #Skip adding it to extras
+            else:
+                continue
 
         print(
             f"-----\nLogged in as: {self.user.name} : {self.user.id}\n-----\nMy default prefix{'es are' if len(self.PRE) >= 2 else ' is'}: {', '.join(self.PRE) if len(self.PRE) >= 2 else self.PRE[0]}\n-----")

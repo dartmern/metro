@@ -1107,3 +1107,76 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         em.set_author(name=member, icon_url=member.display_avatar.url)
         em.description = f"{first_term} {term} nickname{new_nick}"
         return await ctx.send(embed=em)
+
+    @commands.command(name='nuke-channel', aliases=['nuke'])
+    @commands.has_guild_permissions(manage_channels=True)
+    @commands.bot_has_guild_permissions(manage_channels=True)
+    async def nuke_channel(self, ctx: MyContext, *, channel: Optional[discord.TextChannel]):
+        """Nuke a text channel.
+        
+        This deletes the channel and creates the same channel again.
+        """
+        channel = channel or ctx.channel
+
+        confirm = await ctx.confirm(f'Are you sure you want to nuke {channel.mention}', timeout=30.0)
+        if confirm is False:
+            return await ctx.send("Canceled.")
+        if confirm is None:
+            return await ctx.send("Timed out.")
+
+        new_channel = await channel.clone(name=channel.name)
+        await ctx.ghost_ping(ctx.author, channel=new_channel)
+
+        try:
+            await channel.delete(reason=f'Nuke command invoked by: {ctx.author} (ID: {ctx.author.id})')
+        except (discord.HTTPException, discord.Forbidden) as e:
+            return await ctx.send(f"Had an issue with deleting this channel. {e}")
+
+        await new_channel.send(f"Nuke-command ran by: {ctx.author}")
+
+    @commands.group(case_insensitive=True, invoke_without_command=True, aliases=['notes'])
+    @commands.has_guild_permissions(manage_guild=True)
+    async def note(self, ctx: MyContext):
+        """Base command for managing notes.
+        
+        Moderators/admins can add notes to members.
+        For more personal notes please use `reminder` or `todo`.
+
+        Normal members can view their notes with `note list`
+        """
+        await ctx.help()
+
+    @note.command(name='add', aliases=['+'])
+    @commands.has_guild_permissions(manage_guild=True)
+    async def note_add(self, ctx: MyContext, member: discord.Member, *, note: str):
+        """Add a note to a member's notes."""
+        await ctx.send("work in progress. also why are you using the secondary bot.")
+
+    @note.command(name='remove', aliases=['-'])
+    @commands.has_guild_permissions(manage_guild=True)
+    async def note_remove(self, ctx: MyContext, *, id: int):
+        """Remove a note by it's id."""
+        await ctx.send("work in progress. also why are you using the secondary bot.")
+
+    @note.command(name='list', aliases=['show'])
+    async def note_list(self, ctx: MyContext, *, member: Optional[discord.Member]):
+        """
+        Show a member's notes.
+        
+        Don't pass in a member to show your own notes.
+        """
+        member = member or ctx.author
+        await ctx.send("work in progress. also why are you using the secondary bot.")
+
+    @note.command(name='clear', aliases=['wipe'])
+    @commands.has_guild_permissions(manage_guild=True)
+    async def note_clear(self, ctx: MyContext, *, member: discord.Member):
+        """Clear a member's note."""
+        await ctx.send("work in progress. also why are you using the secondary bot.")
+
+    @note.command(name='redo', aliases=['re'])
+    @commands.has_guild_permissions(manage_guild=True)
+    async def note_redo(self, ctx: MyContext, member: discord.Member, *, note: str):
+        """Clear a member's notes and replace with a single note."""
+        await ctx.send("work in progress. also why are you using the secondary bot.")
+    

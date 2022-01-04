@@ -211,10 +211,10 @@ class moderation(commands.Cog, description="Moderation commands."):
             real_reason = f'Reason: {reason}'
 
         if member == ctx.author:
-            return await ctx.send('You cannot kick yourself.')
+            return await ctx.send(f'{self.bot.cross} You cannot kick yourself.')
 
         if not can_execute_action(ctx, ctx.author, member):
-            return await ctx.send('You are not high enough in role hierarchy to ban this member.')
+            return await ctx.send('You are not high enough in role hierarchy to kick this member.')
 
         embed = Embed()
         embed.description = (
@@ -1481,32 +1481,6 @@ class moderation(commands.Cog, description="Moderation commands."):
             await member.send(embed=e)
         except discord.HTTPException:
             pass # DMs off or somehow cannot dm them
-
-    @commands.command(name='nuke-channel', aliases=['nuke'])
-    @commands.has_guild_permissions(manage_channels=True)
-    @commands.bot_has_guild_permissions(manage_channels=True)
-    async def nuke_channel(self, ctx: MyContext, *, channel: Optional[discord.TextChannel]):
-        """Nuke a text channel.
-        
-        This deletes the channel and creates the same channel again.
-        """
-        channel = channel or ctx.channel
-
-        confirm = await ctx.confirm(f'Are you sure you want to nuke {channel.mention}', timeout=30.0)
-        if confirm is False:
-            return await ctx.send("Canceled.")
-        if confirm is None:
-            return await ctx.send("Timed out.")
-
-        new_channel = await channel.clone(name=channel.name)
-        await ctx.ghost_ping(ctx.author, channel=new_channel)
-
-        try:
-            await channel.delete(reason=f'Nuke command invoked by: {ctx.author} (ID: {ctx.author.id})')
-        except (discord.HTTPException, discord.Forbidden) as e:
-            return await ctx.send(f"Had an issue with deleting this channel. {e}")
-
-        await new_channel.send(f"Nuke-command ran by: {ctx.author}")
         
 
 def setup(bot):
