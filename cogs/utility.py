@@ -714,7 +714,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             "WITH deleted AS (DELETE FROM todo WHERE user_id = $1 RETURNING *) SELECT count(*) FROM deleted;", ctx.author.id
         )
         embed = Embed()
-        embed.description = f"__**Cleared {count} entries from your todo list.**"
+        embed.description = f"__**Cleared {count} entries from your todo list.**__"
         return await ctx.send(embed=embed)
     
     @todo.command(name='edit')

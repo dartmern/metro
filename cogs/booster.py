@@ -37,6 +37,8 @@ class boosts(commands.Cog, description='Get booster stats a members'):
                 await self.bot.dispatch('boost', message)
 
     @commands.command()
+    @commands.bot_has_permissions(send_messages=True, embed_links=True)
+    @commands.has_permissions(send_messages=True)
     async def boosters(self, ctx : MyContext):
         """
         View all the wonderful boosters the current guild has.
@@ -76,6 +78,7 @@ class boosts(commands.Cog, description='Get booster stats a members'):
             await ctx.send("This server has no boosters.")
 
     @commands.command(aliases=['boost_since'])
+    @commands.has_permissions(send_messages=True)
     async def boosting_since(self, ctx : MyContext, *, member : Optional[discord.Member] = None):
         """
         View when a member started boosting the server.
@@ -95,6 +98,7 @@ class boosts(commands.Cog, description='Get booster stats a members'):
         )
 
     @commands.command(name='boost_emojis', aliases=['boosting_emojis'])
+    @commands.has_permissions(send_messages=True, embed_links=True)
     async def boost_emojis(self, ctx : MyContext):
         """
         View the boosting emojis and what they mean.

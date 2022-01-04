@@ -1,31 +1,185 @@
 import datetime
+import json
 from typing import Optional
 import discord
+import re
+import stringcase
 from discord.ext import commands
 
 from bot import MetroBot
 from utils.checks import can_execute_action
+from utils.converters import ActionReason, RoleConverter
 from utils.custom_context import MyContext
-from utils.converters import RoleConverter
-from utils.parsing import RoleParser
-from utils.remind_utils import FutureTime, human_timedelta
+from utils.remind_utils import FutureTime, UserFriendlyTime, human_timedelta
 from utils.useful import Cooldown, Embed
+from utils.parsing import RoleParser
 from cogs.utility import Timer
 
 
-# This cog has parts of code from phencogs
+# Parts of lockdown I took from Hecate thx
+# https://github.com/Hecate946/Neutra/blob/main/cogs/mod.py#L365-L477
+# not really but i took ideas from it
+
+# role is mainly from phencogs rewritten for 2.0
 # https://github.com/phenom4n4n/phen-cogs/blob/master/roleutils/roles.py
+# for redbot btw so you might need to make adjustments
 
-def setup(bot : MetroBot):
-    bot.add_cog(roleutils(bot))
+def setup(bot: MetroBot):
+    bot.add_cog(serverutils(bot))
 
-class roleutils(commands.Cog, description=' Manage anything role related.'):
-    def __init__(self, bot : MetroBot):
+class serverutils(commands.Cog, description='Server utilities like role, lockdown, nicknames.'):
+    def __init__(self, bot: MetroBot):
         self.bot = bot
 
     @property
     def emoji(self) -> str:
-        return '<:role:923611835066908712>'
+        return '📓'
+
+    @commands.command(name="lockdown", brief="Lockdown a channel.", aliases=["lock"])
+    @commands.has_permissions(send_messages=True, manage_channels=True)
+    @commands.bot_has_permissions(send_messages=True, manage_channels=True)
+    async def lockdown_cmd(
+            self, ctx : MyContext,
+            channel : Optional[discord.TextChannel] = None, *,
+            duration : UserFriendlyTime(commands.clean_content, default='\u2026') = None):
+        """
+        Locks down a channel by changing permissions for the default role.
+        This will not work if your server is set up improperly.
+        """
+        channel = channel or ctx.channel
+        await ctx.trigger_typing()
+
+        if not channel.permissions_for(ctx.guild.me).read_messages:
+            raise commands.BadArgument(
+                f"I need to be able to read messages in {channel.mention}"
+            )
+        if not channel.permissions_for(ctx.guild.me).send_messages:
+            raise commands.BadArgument(
+                f"I need to be able to send messages in {channel.mention}"
+            )
+
+        query = """
+                SELECT (id)
+                FROM reminders
+                WHERE event = 'lockdown'
+                AND EXTRA->'kwargs'->>'channel_id' = $1; 
+                """
+        data = await self.bot.db.fetchval(query, str(channel.id))
+        if data:
+            raise commands.BadArgument(f"{self.bot.cross} Channel {channel.mention} is already locked.")
+        
+        overwrites = channel.overwrites_for(ctx.guild.default_role)
+        perms = overwrites.send_messages
+        if perms is False:
+            raise commands.BadArgument(f"{self.bot.cross} Channel {channel.mention} is already locked.")
+
+        reminder_cog = self.bot.get_cog('utility')
+        if not reminder_cog:
+            raise commands.BadArgument(f'This feature is currently unavailable.')
+
+        message = await ctx.send(f'Locking {channel.mention} ...')
+        bot_perms = channel.overwrites_for(ctx.guild.me)
+        if not bot_perms.send_messages:
+            bot_perms.send_messages = True
+            await channel.set_permissions(
+                ctx.guild.me, overwrite=bot_perms, reason="For channel lockdown."
+            )
+
+        endtime = duration.dt.replace(tzinfo=None) if duration and duration.dt else None
+
+        if endtime:
+            await reminder_cog.create_timer(
+                endtime,
+                "lockdown",
+                ctx.guild.id,
+                ctx.author.id,
+                ctx.channel.id,
+                perms=perms,
+                channel_id=channel.id,
+                connection=self.bot.db,
+                created=ctx.message.created_at.replace(tzinfo=None)
+            )
+        overwrites.send_messages = False
+        reason = "Channel locked by command."
+        await channel.set_permissions(
+            ctx.guild.default_role,
+            overwrite=overwrites,
+            reason=await ActionReason().convert(ctx, reason),
+        )
+
+        if duration and duration.dt:
+            timefmt = human_timedelta(endtime - datetime.timedelta(seconds=2))
+        else:
+            timefmt = None
+        
+        ft = f" for {timefmt}" if timefmt else ""
+        await message.edit(content=f'{self.bot.check} Channel {channel.mention} locked{ft}')
+        
+    @commands.command(name="unlockdown", brief="Unlock a channel.", aliases=["unlock"])
+    @commands.has_permissions(manage_channels=True)
+    @commands.bot_has_permissions(send_messages=True, manage_channels=True)
+    async def unlockdown_cmd(self,
+                           ctx : MyContext,
+                           channel: discord.TextChannel = None):
+        """
+        Unlocks down a channel by changing permissions for the default role.
+        This will not work if your server is set up improperly
+        """
+
+        channel = channel or ctx.channel
+
+        await ctx.trigger_typing()
+        if not channel.permissions_for(ctx.guild.me).read_messages:
+            raise commands.BadArgument(
+                f"I need to be able to read messages in {channel.mention}"
+            )
+        if not channel.permissions_for(ctx.guild.me).send_messages:
+            raise commands.BadArgument(
+                f"I need to be able to send messages in {channel.mention}"
+            )
+
+        query = """
+                SELECT (id, extra)
+                FROM reminders
+                WHERE event = 'lockdown'
+                AND extra->'kwargs'->>'channel_id' = $1;
+                """
+        s = await self.bot.db.fetchval(query, str(channel.id))
+        if not s:
+            overwrites = channel.overwrites_for(ctx.guild.default_role)
+            perms = overwrites.send_messages
+            if perms is True:
+                return await ctx.send(f"Channel {channel.mention} is already unlocked.")
+            else:
+                pass   
+        else:
+            pass
+           
+        message = await ctx.send(f"Unlocking {channel.mention} ...")
+        if s:
+            task_id = s[0]
+            args_and_kwargs = json.loads(s[1])
+            perms = args_and_kwargs["kwargs"]["perms"]
+            
+
+            query = """
+                    DELETE FROM reminders
+                    WHERE id = $1
+                    """
+            await self.bot.db.execute(query, task_id)
+        reason = "Channel unlocked by command execution."
+
+        overwrites = channel.overwrites_for(ctx.guild.default_role)
+        overwrites.send_messages = None
+        await channel.set_permissions(
+            ctx.guild.default_role,
+            overwrite=overwrites,
+            reason=await ActionReason().convert(ctx, reason),
+        )
+        await message.edit(
+            content=f"{self.bot.check} Channel {channel.mention} unlocked."
+        )
+    
 
     async def cleanup_code(self, content):
         """Automatically removes code blocks from the code."""
@@ -886,4 +1040,70 @@ class roleutils(commands.Cog, description=' Manage anything role related.'):
             f"\n{member.mention} was granted the {role.mention} role for {human_timedelta(duration.dt+datetime.timedelta(seconds=.4), accuracy=50)}"
         await ctx.send(embed=embed)
 
+    @staticmethod
+    def is_cancerous(text: str) -> bool:
+        for segment in text.split():
+            for char in segment:
+                if not (char.isascii() and char.isalnum()):
+                    return True
+        return False
 
+    async def nick_maker(self, old_shit_nick: str):
+        old_shit_nick = self.strip_accs(old_shit_nick)
+        new_cool_nick = re.sub("[^a-zA-Z0-9 \n.]", "", old_shit_nick)
+        new_cool_nick = " ".join(new_cool_nick.split())
+        new_cool_nick = stringcase.lowercase(new_cool_nick)
+        new_cool_nick = stringcase.titlecase(new_cool_nick)
+        if len(new_cool_nick.replace(" ", "")) <= 1 or len(new_cool_nick) > 32:
+            new_cool_nick = "simp name"
+        return new_cool_nick
+
+    @commands.command(aliases=['dc'])
+    @commands.has_guild_permissions(manage_nicknames=True)
+    @commands.bot_has_guild_permissions(manage_nicknames=True)
+    async def decancer(self, ctx: MyContext, *, member: discord.Member):
+        """Remove special/cancerous characters from a user's nickname."""
+
+        old_nick = member.display_name
+        if not self.is_cancerous(old_nick):
+            embed = Embed(color=discord.Colour.red())
+            embed.description = "**%s**'s nickname is already decancered." % member
+            return await ctx.send(embed=embed)
+
+        new_nick = await self.nick_maker(old_nick)
+        if old_nick.lower() != new_nick.lower():
+            try:
+                await member.edit(nick=new_nick, reason=f'Decancer command invoked by: {ctx.author} (ID: {ctx.author.id})')
+            except discord.Forbidden:
+                raise commands.BotMissingPermissions(['manage_nicknames'])
+            else:
+                em = Embed(title='Decancer command', color=discord.Colour.green())
+                em.set_author(name=member, icon_url=member.display_avatar.url)
+                em.add_field(name='Old nick', value=old_nick, inline=False)
+                em.add_field(name='New nick', value=new_nick, inline=False)
+                return await ctx.send(embed=em)
+        else:
+            embed = Embed(color=discord.Colour.red())
+            embed.description = "**%s**'s nickname is already decancered." % member
+            return await ctx.send(embed=embed)
+
+    @commands.command(aliases=['nick'])
+    @commands.bot_has_guild_permissions(manage_nicknames=True)
+    @commands.has_guild_permissions(manage_nicknames=True)
+    async def nickname(self, ctx: MyContext, member: Optional[discord.Member], *, nickname: Optional[str]):
+        """Change a member's nickname. 
+        
+        Passing in no member will change my nickname.
+        Passing in no nickname will remove a nickname if applicable.
+        """
+        member = member or ctx.guild.me
+        await member.edit(nick=nickname, reason=f'Nickname command invoked by: {ctx.author} (ID: {ctx.author.id})')
+
+        term = "my" if member == ctx.guild.me else f"{member.mention}'s"
+        first_term = "Changed" if nickname else "Reset"
+        new_nick = "." if nickname is None else " to **%s**." % nickname 
+
+        em = Embed()
+        em.set_author(name=member, icon_url=member.display_avatar.url)
+        em.description = f"{first_term} {term} nickname{new_nick}"
+        return await ctx.send(embed=em)

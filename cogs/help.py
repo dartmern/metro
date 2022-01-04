@@ -92,31 +92,42 @@ class InviteView(discord.ui.View):
 
         embed = Embed()
         embed.colour = discord.Colour.blue()
-        embed.set_author(name=client, icon_url=client.display_avatar.url)
         embed.description = "__**Choose a invite option below or press `Create custom permissions`**__"\
-            f"\n\nIf you press `Create custom permissions` you are required to enter a vaild discord permissions integer."\
-            f'\nYou can use [this calculator](https://discordapi.com/permissions.html) to find the permissions if you are unsure what to put.'
+            f'\n\nUse [this calculator](https://discordapi.com/permissions.html) to find the permission value if you are unsure what to put.'
         
-        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='None', url=discord.utils.oauth_url(client.id, permissions=discord.Permissions(0))))
-        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='Basic', url=discord.utils.oauth_url(client.id, permissions=discord.Permissions(140663671873))))
-        self.add_item(discord.ui.Button(style=discord.ButtonStyle.blurple, label='Advanced', url=discord.utils.oauth_url(client.id, permissions=discord.Permissions(140932115831))))
-        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='Admin', url=discord.utils.oauth_url(client.id, permissions=discord.Permissions(8))))
-        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='All', url=discord.utils.oauth_url(client.id, permissions=discord.Permissions(549755813887))))
+        if client == self.ctx.bot.user:
+            embed.set_author(name=client, icon_url=client.display_avatar.url)
+        else:
+            embed.set_author(name='Invite %s to your server' % client, icon_url=client.display_avatar.url)
+            embed.set_footer(text='This is inviting %s to your server and not Metro. \nI am not responsible for any damages.' % client)
+        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='None', url=discord.utils.oauth_url(client.id, permissions=discord.Permissions(0), scopes=('bot', 'applications.commands'))))
+        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='Basic', url=discord.utils.oauth_url(client.id, permissions=discord.Permissions(140663671873), scopes=('bot', 'applications.commands'))))
+        self.add_item(discord.ui.Button(style=discord.ButtonStyle.blurple, label='Advanced', url=discord.utils.oauth_url(client.id, permissions=discord.Permissions(140932115831), scopes=('bot', 'applications.commands'))))
+        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='Admin', url=discord.utils.oauth_url(client.id, permissions=discord.Permissions(8), scopes=('bot', 'applications.commands'))))
+        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='All', url=discord.utils.oauth_url(client.id, permissions=discord.Permissions(-1), scopes=('bot', 'applications.commands'))))
         
         await _send(embed=embed, view=self)
 
-    @discord.ui.button(row=1, label='Enter a custom permission value', style=discord.ButtonStyle.green)
+    @discord.ui.button(row=1, label='Create custom permissions', style=discord.ButtonStyle.green)
     async def custom_perms(self, button: discord.ui.Button, interaction: discord.Interaction):
         
         await interaction.response.send_message(f"Please enter a permissions integer: ")
         
         def check(message : discord.Message) -> bool:
-            return message.channel == self.ctx.channel and message.author == self.ctx.author and message.content.isdigit()
+            return message.channel == self.ctx.channel and message.author == self.ctx.author
 
         try:
             message = await self.ctx.bot.wait_for("message", check=check, timeout=30)
         except asyncio.TimeoutError:
             return await interaction.followup.send("Timed out.")
+
+        try:
+            perms = int(message.content)
+        except ValueError:
+            embed = Embed(color=discord.Colour.red())
+            embed.set_author(name='Invaild permission value.')
+            embed.description = "Use [this calculator](https://discordapi.com/permissions.html) to find the permission value if you are unsure what to put."
+            return await interaction.followup.send(embed=embed)
         
         em = Embed()
         em.description = f"Permission Integer: {message.content}"\
@@ -205,6 +216,7 @@ class NewHelpView(discord.ui.View):
         self.select_category.add_option(emoji='📙', label='All commands', value='all_commands')
 
         for category, command in self.data:
+            print(category)
             if category[0] == 'Jishaku':
                 continue
 

@@ -2,14 +2,17 @@ import discord
 from discord.ext import commands
 
 import time
+import re
 
 from bot import MetroBot
 from utils.custom_context import MyContext
 from utils.converters import DiscordCommand
 from utils.useful import Cooldown, Embed, chunkIt
 from utils.calc_tils import NumericStringParser
-from utils.json_loader import get_path
+from utils.json_loader import get_path, read_json
 
+info = read_json('info')
+bitly_token = info['bitly_token']
 
 def setup(bot: MetroBot):
     bot.add_cog(extras(bot))
@@ -52,6 +55,8 @@ class extras(commands.Cog, description='Extra commands for your use.'):
         """
 
         formula = formula.replace('*','x')
+
+        formula = formula.lower().replace('k', '000').replace('m','000000')
         try:
             start = time.perf_counter()
             answer = NumericStringParser().eval(formula)
@@ -66,7 +71,7 @@ class extras(commands.Cog, description='Extra commands for your use.'):
         ping = (end - start) * 1000
 
         embed = Embed()
-        embed.description = f'Input: `{formula}`\nOutput: `{answer}`'
+        embed.description = f'Input: `{formula}`\nOutput: `{answer:,}`'
         embed.set_footer(text=f'Calculated in {round(ping, 1)}ms')
         await ctx.send(embed=embed)
 
