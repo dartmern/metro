@@ -117,7 +117,7 @@ class MetroBot(commands.AutoShardedBot):
             #chunk_guilds_at_startup=False,
             help_command=None,
             slash_commands=True,
-            slash_command_guilds=[812143286457729055, 917580286898888715],
+            slash_command_guilds=[812143286457729055],#, 917580286898888715],
             strip_after_prefix=True,
             #shard_count=10,
             max_messages=5000

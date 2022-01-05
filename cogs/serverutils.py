@@ -1,8 +1,11 @@
 import datetime
 import json
-from typing import Optional
+from typing import Optional, Union
 import discord
 import re
+import pytz
+import unicodedata
+import unidecode
 import stringcase
 from discord.ext import commands
 
@@ -1048,6 +1051,18 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
                     return True
         return False
 
+    @staticmethod
+    def strip_accs(text):
+        try:
+            text = unicodedata.normalize("NFKC", text)
+            text = unicodedata.normalize("NFD", text)
+            text = unidecode.unidecode(text)
+            text = text.encode("ascii", "ignore")
+            text = text.decode("utf-8")
+        except Exception as e:
+            print(e)
+        return str(text)
+
     async def nick_maker(self, old_shit_nick: str):
         old_shit_nick = self.strip_accs(old_shit_nick)
         new_cool_nick = re.sub("[^a-zA-Z0-9 \n.]", "", old_shit_nick)
@@ -1134,31 +1149,58 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
 
         await new_channel.send(f"Nuke-command ran by: {ctx.author}")
 
-    @commands.group(case_insensitive=True, invoke_without_command=True, aliases=['notes'])
-    @commands.has_guild_permissions(manage_guild=True)
+    @commands.group(case_insensitive=True, invoke_without_command=True)
+    @commands.has_guild_permissions(manage_messages=True)
     async def note(self, ctx: MyContext):
         """Base command for managing notes.
         
         Moderators/admins can add notes to members.
         For more personal notes please use `reminder` or `todo`.
 
-        Normal members can view their notes with `note list`
+        Normal members can view their notes with `notes`
         """
         await ctx.help()
 
     @note.command(name='add', aliases=['+'])
-    @commands.has_guild_permissions(manage_guild=True)
-    async def note_add(self, ctx: MyContext, member: discord.Member, *, note: str):
+    @commands.has_guild_permissions(manage_messages=True)
+    async def note_add(self, ctx: MyContext, member: discord.Member, *, note: commands.clean_content):
         """Add a note to a member's notes."""
-        await ctx.send("work in progress. also why are you using the secondary bot.")
 
+        async with ctx.typing():
+            id = await self.bot.db.fetch("SELECT MAX(id) FROM notes")
+            if id[0].get('max') is None:
+                id = 1
+            else:
+                id = int(id[0].get('max')) + 1
+            await self.bot.db.execute(
+                "INSERT INTO notes (id, user_id, text, added_time, author_id) VALUES ($1, $2, $3, $4, $5)", 
+                id, member.id, note, (discord.utils.utcnow().replace(tzinfo=None)), ctx.author.id
+            )      
+            embed = Embed(color=discord.Color.green())
+            embed.description = f"{self.bot.check} __**Note taken.**__ \n> {note}"
+            embed.set_footer(text='Note ID: %s' % id)
+            return await ctx.send(embed=embed)
+        
     @note.command(name='remove', aliases=['-'])
-    @commands.has_guild_permissions(manage_guild=True)
+    @commands.has_guild_permissions(manage_messages=True)
     async def note_remove(self, ctx: MyContext, *, id: int):
-        """Remove a note by it's id."""
-        await ctx.send("work in progress. also why are you using the secondary bot.")
+        """Remove a note by it's id.
+        
+        Use `note list` to show a member's notes."""
+
+        async with ctx.typing():
+            note = await self.bot.db.fetchval("SELECT text FROM notes WHERE id=$1", id)
+            if not note:
+                raise commands.BadArgument("A note with that ID was not found. Use `%snote list [member]` to show a member's notes." % ctx.clean_prefix)
+
+            await self.bot.db.execute("DELETE FROM notes WHERE id = $1", id)
+
+            embed = Embed(color=discord.Colour.red())
+            embed.description = f"{self.bot.cross} __**Deleted note {id}.**__\n> {note}"
+            return await ctx.send(embed=embed)
 
     @note.command(name='list', aliases=['show'])
+    @commands.has_guild_permissions(manage_messages=True)
     async def note_list(self, ctx: MyContext, *, member: Optional[discord.Member]):
         """
         Show a member's notes.
@@ -1166,17 +1208,113 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         Don't pass in a member to show your own notes.
         """
         member = member or ctx.author
-        await ctx.send("work in progress. also why are you using the secondary bot.")
+        
+        async with ctx.typing():
+            notes = await self.bot.db.fetch("SELECT (id, text, added_time, author_id) FROM notes WHERE user_id = $1", member.id)
+            if not notes:
+                raise commands.BadArgument("No notes were found for this member. Use `%snote add <member> <note>` to add a note." % ctx.clean_prefix)
+            
+            embed = Embed()
+            embed.set_author(name="%s's notes" % member, icon_url=member.display_avatar.url)
+            embed.set_footer(text=f"{len(notes)} note{'s.' if len(notes) > 1 else '.'}")
+
+            for note in notes:
+                note_id : int = note['row'][0]
+                note_text : str = note['row'][1]
+                note_added_time : datetime.datetime = pytz.utc.localize(note['row'][2])
+                author_id : int = note['row'][3]
+
+                embed.add_field(name='Note #%s' % note_id, value=f'From <@{author_id}> {discord.utils.format_dt(note_added_time, "R")} \n> {note_text}')
+
+            return await ctx.send(embed=embed)
 
     @note.command(name='clear', aliases=['wipe'])
-    @commands.has_guild_permissions(manage_guild=True)
+    @commands.has_guild_permissions(manage_messages=True)
     async def note_clear(self, ctx: MyContext, *, member: discord.Member):
         """Clear a member's note."""
-        await ctx.send("work in progress. also why are you using the secondary bot.")
+
+        async with ctx.typing():
+            data = await self.bot.db.fetch("SELECT * FROM notes WHERE user_id = $1", member.id)
+            if not data:
+                raise commands.BadArgument("No notes were found for this member. Use `%snote add <member> <note>` to add a note." % ctx.clean_prefix)
+            
+        confirm = await ctx.confirm(f"This will clear **{len(data)}** from {member}'s notes, are you sure?", timeout=30)
+        if confirm is None:
+            return await ctx.send("Timed out.")
+        if confirm is False:
+            return await ctx.send("Canceled.")
+
+        async with ctx.typing():
+            await self.bot.db.execute("DELETE FROM notes WHERE user_id = $1", member.id)
+
+            return await ctx.send(f"Successfully cleared **{len(data)}** notes from {member}")
 
     @note.command(name='redo', aliases=['re'])
-    @commands.has_guild_permissions(manage_guild=True)
+    @commands.has_guild_permissions(manage_messages=True)
     async def note_redo(self, ctx: MyContext, member: discord.Member, *, note: str):
         """Clear a member's notes and replace with a single note."""
-        await ctx.send("work in progress. also why are you using the secondary bot.")
+
+        await ctx.invoke(self.note_clear, member=member)
+        await ctx.invoke(self.note_add, member=member, note=note)
     
+    @commands.command(aliases=['mynotes'])
+    async def notes(self, ctx: MyContext):
+        """View your own notes."""
+        await ctx.invoke(self.note_list, member=ctx.author)
+
+    @commands.command(name='grant', aliases=['grant-permissions'])
+    @commands.has_guild_permissions(administrator=True)
+    @commands.bot_has_guild_permissions(manage_roles=True, manage_channels=True)
+    async def grant_permissions(self, ctx: MyContext, entity: Union[discord.Member, discord.Role], *perms: str):
+        """
+        Grant an entity certain permissions.
+        
+        Entity may be a member or a role.
+        Make sure my top role is above that target role if entity is a role.
+
+        If an entity is a role it edits the permissions on that role.
+        If an entity is a member it edits the current channel's permissions.
+        """
+        
+        if isinstance(entity, discord.Member):
+            if not can_execute_action(ctx, ctx.author, entity):
+                raise commands.BadArgument("You are not high enough in role hierarchy to grant permissions to this member.")
+
+            overwrites = discord.PermissionOverwrite()
+            perms_cleaned = []
+            for perm in perms:
+                if perm.lower().replace("server", "guild").replace(" ", "_") not in dict(discord.Permissions()):
+                    raise commands.BadArgument(f"Invaild permission: {perm}")
+                overwrites.update(**(dict(perm=True)))
+                perms_cleaned.append(perm.title())
+                
+            overwrites = {entity: overwrites}
+            
+            to_send = ", ".join(["`%s`" % perm for perm in perms_cleaned])
+
+            await ctx.channel.edit(overwrites=overwrites)
+            return await ctx.send(f"Granted {to_send} to {entity}")
+
+        elif isinstance(entity, discord.Role):
+            permissions = discord.Permissions()
+            if entity.position >= ctx.author.top_role.position:
+                if ctx.author == ctx.guild.owner:
+                    pass
+                else:
+                    raise commands.BadArgument("You are not high enough in role hierarchy to grant permissions to this role.")
+            
+            to_append = []
+
+            for perm in perms:
+                if perm not in dict(discord.Permissions()):
+                    raise commands.BadArgument("Invaild permission: %s" % perm)
+
+                setattr(permissions, perm, True)
+                to_append.append(perm.title().replace("_", " "))
+
+            to_send = ", ".join(["`%s`" % x for x in to_append])
+            
+            await entity.edit(permissions=permissions)
+            return await ctx.send(f"Granted {to_send} to {entity}")
+
+                

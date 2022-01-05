@@ -9,7 +9,7 @@ from utils.custom_context import MyContext
 from utils.remind_utils import FutureTime, UserFriendlyTime, human_timedelta
 
 from utils.converters import ActionReason, MemberID
-from utils.checks import can_execute_action
+from utils.checks import SUPPORT_GUILD, can_execute_action
 
 from typing import Dict, Optional, Union
 from collections import Counter
@@ -25,12 +25,17 @@ from humanize.time import precisedelta
 from utils import remind_utils
 from utils.useful import Cooldown, Embed
 
+SUPPORT_ROLE = 814018291353124895
+
 def can_block():
     def predicate(ctx : MyContext):
         if ctx.guild is None:
             return False
         
-        return ctx.channel.permissions_for(ctx.author).manage_channels
+        if ctx.channel.permissions_for(ctx.author).manage_channels:
+            return True
+        if ctx.guild.id == SUPPORT_GUILD and SUPPORT_ROLE in map(lambda x: x.id, ctx.author.roles):
+            return True
 
     return commands.check(predicate)
 
@@ -911,7 +916,6 @@ class moderation(commands.Cog, description="Moderation commands."):
 
 
     @commands.command(name='block')
-    @can_block()
     @commands.bot_has_permissions(manage_channels=True, send_messages=True)
     @commands.has_permissions(manage_channels=True, send_messages=True)
     async def block(self, ctx, member : discord.Member = commands.Option(description='member to block')):
@@ -933,7 +937,6 @@ class moderation(commands.Cog, description="Moderation commands."):
 
 
     @commands.command(name='unblock')
-    @can_block()
     @commands.bot_has_permissions(manage_channels=True, send_messages=True)
     @commands.has_permissions(manage_channels=True, send_messages=True)
     async def unblock(self, ctx, member : discord.Member = commands.Option(description='member to unblock')):
@@ -955,8 +958,8 @@ class moderation(commands.Cog, description="Moderation commands."):
 
 
     @commands.command(name='tempblock')
+    @can_block()
     @commands.bot_has_permissions(manage_channels=True, send_messages=True)
-    @commands.has_permissions(manage_channels=True, send_messages=True)
     async def tempblock(self, ctx, member : discord.Member, *, duration : remind_utils.FutureTime):
         """Temporarily blocks a user from your channel.
 

@@ -1477,5 +1477,25 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             f"\n Jump URL: [Click here]({first_message.jump_url} \"Click here to jump to message\")"
         await ctx.send(embed=embed)
 
+    @commands.command(name='embed')
+    @commands.has_guild_permissions(manage_messages=True)
+    async def embed(
+        self, ctx: MyContext, 
+        channel: Optional[discord.TextChannel], 
+        color: Optional[discord.Color] = discord.Colour.blue(), *, text: str
+        ):
+        """Create and send an embed."""
+        channel = channel or ctx.channel
+
+        if not channel.permissions_for(ctx.author).send_messages:
+            raise commands.BadArgument("You cannot send messages in %s therefore you cannot send an embed there." % channel.mention)
+
+        split = text.split("|")
+
+        embed = discord.Embed(title=split[0], description=split[1], color=color)
+        await channel.send(embed=embed)
+        await ctx.check()
+        
+
 def setup(bot):
     bot.add_cog(utility(bot))

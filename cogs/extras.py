@@ -1,3 +1,4 @@
+import json
 import discord
 from discord.ext import commands
 
@@ -10,6 +11,42 @@ from utils.converters import DiscordCommand
 from utils.useful import Cooldown, Embed, chunkIt
 from utils.calc_tils import NumericStringParser
 from utils.json_loader import get_path, read_json
+
+class CodeBlock:
+    missing_error = 'Missing code block. Please use the following markdown\n\\`\\`\\`language\ncode here\n\\`\\`\\`'
+    def __init__(self, argument):
+        try:
+            block, code = argument.split('\n', 1)
+        except ValueError:
+            raise commands.BadArgument(self.missing_error)
+
+        if not block.startswith('```') and not code.endswith('```'):
+            raise commands.BadArgument(self.missing_error)
+
+        language = block[3:]
+        self.command = self.get_command_from_language(language.lower())
+        self.source = code.rstrip('`').replace('```', '')
+
+    def get_command_from_language(self, language):
+        cmds = {
+            'cpp': 'g++ -std=c++1z -O2 -Wall -Wextra -pedantic -pthread main.cpp -lstdc++fs && ./a.out',
+            'c': 'mv main.cpp main.c && gcc -std=c11 -O2 -Wall -Wextra -pedantic main.c && ./a.out',
+            'py': 'python3 main.cpp',
+            'python': 'python3 main.cpp',
+            'haskell': 'runhaskell main.cpp'
+        }
+
+        cpp = cmds['cpp']
+        for alias in ('cc', 'h', 'c++', 'h++', 'hpp'):
+            cmds[alias] = cpp
+        try:
+            return cmds[language]
+        except KeyError as e:
+            if language:
+                fmt = f'Unknown language to compile for: {language}'
+            else:
+                fmt = 'Could not find a language to compile with.'
+            raise commands.BadArgument(fmt) from e
 
 info = read_json('info')
 bitly_token = info['bitly_token']
@@ -142,3 +179,27 @@ class extras(commands.Cog, description='Extra commands for your use.'):
         embed.set_author(name='URL Shortner')
         return await ctx.send(embed=embed)
 
+    @commands.command(name='repl', aliases=['coliru'])
+    @commands.check(Cooldown(1, 4, 1, 3, commands.BucketType.user))
+    async def coliru(self, ctx: MyContext, *, code: CodeBlock):
+        """Compile code through coliru."""
+
+        payload = {
+            'cmd' : code.command,
+            'src' : code.source
+        }
+
+        data = json.dumps(payload)
+
+        async with ctx.typing():
+            async with self.bot.session.post('http://coliru.stacked-crooked.com/compile', data=data) as response:
+                if response.status != 200:
+                    return await ctx.send("Coliru did not response in time.")
+
+                output = await response.text(encoding='utf-8')
+
+                if len(output) < 1992:
+                    return await ctx.send(f'```\n{output}\n```')
+
+                url = await self.bot.mystbin_client.post(output)
+                return await ctx.send("Output was too long: %s" % url)

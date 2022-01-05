@@ -18,6 +18,8 @@ from utils.useful import Cooldown, Embed
 from utils.checks import check_dev
 from utils.custom_context import MyContext
 
+# thanks to leo for the missingrequiredargument handling
+# https://github.com/LeoCx1000/discord-bots/blob/master/DuckBot/cogs/events.py#L201-L208
 
 class ErrorView(discord.ui.View):
     def __init__(self, ctx : MyContext, traceback_string : str):
@@ -153,16 +155,20 @@ class core(commands.Cog, description="Core events."):
                 await ctx.reinvoke()
                 return
 
+            embed.set_author(name='Missing Permissions', icon_url=self.error_emoji)
+
             missing_perms = ", ".join(["`%s`" % perm.replace('_', ' ').replace('guild', 'server').title() for perm in error.missing_permissions])
             embed.description = "You are missing the following permissions to run that command: \n%s" % missing_perms
             
             return await ctx.send(embed=embed)
 
         elif isinstance(error, commands.CommandNotFound):
-            return
+            return # Might change this later and only handle this if the prefix is decently long.
 
-        elif isinstance(error, commands.CheckFailure):
-            return
+        elif isinstance(error, commands.NotOwner):
+            embed.set_author(name='Owner only command', icon_url=self.error_emoji)
+            embed.description = "This command is reserved for developers/owners of %s" % self.bot.user.mention
+            return await ctx.send(embed=embed)
 
         elif isinstance(error, commands.MessageNotFound):
             embed.description = f'Message "{error.argument}" was not found.\n'\
@@ -195,10 +201,28 @@ class core(commands.Cog, description="Core events."):
             embed.set_author(name='Channel Not Found', icon_url=self.error_emoji)
             return await ctx.send(embed=embed)
 
+        elif isinstance(error, commands.errors.BadUnionArgument):
+            def _get_name(x):
+                try:
+                    return x.__name__
+                except AttributeError:
+                    if hasattr(x, "__origin__"):
+                        return repr(x)
+                    return x.__class__.__name__
+
+            to_string = [_get_name(x) for x in error.converters]
+            if len(to_string) > 2:
+                fmt = "{}, or {}".format(", ".join(to_string[:-1]), to_string[-1])
+            else:
+                fmt = " or ".join(to_string)
+            embed.set_author(name='Bad Union Argument', icon_url=self.error_emoji)
+            embed.description = f'I could not convert "{error.param.name}" into a {fmt}.'
+            return await ctx.send(embed=embed)
+
         elif isinstance(error, commands.CommandOnCooldown):
 
             if check_dev(ctx.bot, ctx.author):
-                await ctx.reinvoke()
+                await ctx.reinvoke() # bypass cooldowns for now
                 return 
 
             command = ctx.command
@@ -211,7 +235,7 @@ class core(commands.Cog, description="Core events."):
             default_cooldown_rate = cooldown.default_mapping._cooldown.rate
             altered_cooldown_rate = cooldown.altered_mapping._cooldown.rate
 
-            cooldowns = f""
+            cooldowns = ""
             if default_cooldown_rate is not None:
                 cooldowns += (
                     f"\n\n**Cooldowns:**\nDefault: `{default_cooldown_rate}` time(s) every `{default_cooldown_per}` seconds\nTester: `{altered_cooldown_rate}` time(s) every `{altered_cooldown_per}` seconds"
@@ -235,19 +259,23 @@ class core(commands.Cog, description="Core events."):
             else:
                 await ctx.send(embed=em)
 
+        elif isinstance(error, commands.TooManyArguments):
+            return await ctx.send("Too many arguments were passed to this command!")
+
+        elif isinstance(error, commands.CheckFailure):
+            return
+
         elif isinstance(error, commands.errors.DisabledCommand):
             return await ctx.send(str(error))
 
         elif isinstance(error, commands.BadArgument):
             return await ctx.send(str(error))
 
-        elif isinstance(error, commands.errors.BadUnionArgument):
-            return await ctx.send(str(error))
-
         elif isinstance(error, commands.CommandError):
             return await ctx.send(str(error))
 
         else:
+                # technically this can't be triggered
                 traceback_string = "".join(traceback.format_exception(
                     etype=None, value=error, tb=error.__traceback__))
 
