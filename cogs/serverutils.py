@@ -3,14 +3,16 @@ import json
 from typing import Optional, Union
 import discord
 import re
+from discord.embeds import EmptyEmbed
 import pytz
 import unicodedata
 import unidecode
 import stringcase
+import humanize
 from discord.ext import commands
 
 from bot import MetroBot
-from utils.checks import can_execute_action
+from utils.checks import can_execute_action, check_dev
 from utils.converters import ActionReason, RoleConverter
 from utils.custom_context import MyContext
 from utils.remind_utils import FutureTime, UserFriendlyTime, human_timedelta
@@ -193,25 +195,26 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         # remove `foo`
         return content.strip('` \n')
 
-    async def show_roleinfo(self, role: discord.Role):
+    async def show_roleinfo(self, ctx: MyContext, role: discord.Role):
         if role.guild.chunked is False:
             await role.guild.chunk()
 
         desc = [
             role.mention,
-            f"Member: {len(role.members)} | Position: {role.position}",
-            f"Colour: {role.colour}",
-            f"Hoisted: {role.hoist}",
-            f"Mentionable: {role.mentionable}"
+            f"• __**Members:**__ {len(role.members)}",
+            f"• __**Position:**__ {role.position}"
+            f"• __**Color:**__ {role.colour}",
+            f"• __**Hoisted:**__ {await ctx.emojify(role.hoist)}",
+            f"• __**Mentionable:**__ {await ctx.emojify(role.mentionable)}"
+            f"• __**Created:**__ {discord.utils.format_dt(role.created_at, 'R')}"
         ]
         if role.managed:
-            desc.append(f"Managed: {role.managed}")
+            desc.append(f"• __**Managed:**__ {role.managed}")
         
         embed = Embed()
         embed.colour = role.colour
         embed.title = role.name
         embed.description = "\n".join(desc)
-        embed.timestamp = role.created_at
         embed.set_footer(text=f"ID: {role.id}")
 
         return embed
@@ -755,8 +758,8 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
     @role.command(name='info')
     @commands.bot_has_guild_permissions(embed_links=True)
     async def role_info(self, ctx: MyContext, *, role: RoleConverter):
-        """Show a role's information."""
-        await ctx.send(embed=await self.show_roleinfo(role))
+        """Show all the information about a role."""
+        await ctx.send(embed=await self.show_roleinfo(ctx, role))
 
 
     @role.command(name='color')
@@ -776,7 +779,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             raise commands.BadArgument(to_send)
 
         await role.edit(color=color)
-        await ctx.send(f"Changed **{role.name}**'s color to **{color}**", embed=await self.show_roleinfo(role))
+        await ctx.send(f"Changed **{role.name}**'s color to **{color}**", embed=await self.show_roleinfo(ctx, role))
     
     @role.command(name='hoist')
     @commands.bot_has_guild_permissions(manage_roles=True)
@@ -818,7 +821,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
 
         oldname = role.name
         await role.edit(name=name)
-        await ctx.send(f"Renammed from **{oldname}** to **{name}**.", embed=await self.show_roleinfo(role))
+        await ctx.send(f"Renammed from **{oldname}** to **{name}**.", embed=await self.show_roleinfo(ctx, role))
 
     @role.command(name='create')
     @commands.bot_has_guild_permissions(manage_roles=True)
@@ -837,7 +840,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             raise commands.BadArgument("This server has reached the maximum role limit: [250/250]")
 
         role = await ctx.guild.create_role(name=name, colour=color, hoist=hoist, reason=f'Role create command invoked by: {ctx.author} (ID: {ctx.author.id})')
-        await ctx.send(f"**{role.name}** created.", embed=await self.show_roleinfo(role))
+        await ctx.send(f"**{role.name}** created.", embed=await self.show_roleinfo(ctx, role))
 
     @role.command(name='in')
     @commands.has_guild_permissions(manage_roles=True)
@@ -1317,4 +1320,66 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             await entity.edit(permissions=permissions)
             return await ctx.send(f"Granted {to_send} to {entity}")
 
-                
+    async def userinfo_embed(self, ctx: MyContext, member: discord.Member):
+
+        embed = discord.Embed(color=member.color if member.color not in (None, discord.Color.default()) else discord.Colour.green())
+        embed.set_author(name="%s's User Info" % member, icon_url=member.display_avatar.url)
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text="ID: %s" % member.id)
+
+        embed.add_field(name="\U00002139 General", value=f'__**ID:**__ {member.id} \n__**Username:**__ {member}\n__**Nickname:**__ {await ctx.emojify(member.nick)} {member.nick if member.nick else ""} \n__**Owner:**__ {self.bot.check if member.id == member.guild.owner_id else self.bot.cross} • __**Bot:**__ {await ctx.emojify(member.bot)} \n__**Join Position:**__ {sorted(ctx.guild.members, key=lambda m: m.joined_at or discord.utils.utcnow()).index(member) + 1}')
+
+        embed.add_field(name='<:inviteme:924868244525940807> Created at', value=f'╰ {discord.utils.format_dt(member.created_at, "F")} ({discord.utils.format_dt(member.created_at, "R")})', inline=False)
+        embed.add_field(name='<:joined_at:928188524006608936> Joined at', value=f'╰ {discord.utils.format_dt(member.joined_at, "F")} ({discord.utils.format_dt(member.joined_at, "R")})', inline=True)
+
+        roles = [role.mention for role in member.roles if not role.is_default()]
+        roles.reverse()
+        
+        if roles:
+            roles = ', '.join(roles)
+        else:
+            roles = "This member has no roles."
+
+        embed.add_field(name='<:role:923611835066908712> Roles [%s]' % (len(member.roles) - 1), value=roles, inline=False)
+
+        # 2 fetchvals as it's faster than iterating through the entire table of like 50k messages
+        total_messages = await ctx.bot.db.fetchval("SELECT COUNT(*) as c FROM messages WHERE author_id = $1 AND server_id = $2", ctx.author.id, ctx.guild.id)
+        global_messages = await ctx.bot.db.fetchval("SELECT COUNT(*) as c FROM messages WHERE author_id = $1", ctx.author.id)
+
+        embed.add_field(name='<:messages:928380915560874055> Messages', value=f'`{total_messages}` total messages, `{global_messages}` global messages.')
+        return embed
+        
+    async def serverinfo_embed(self, ctx: MyContext, guild: discord.Guild):
+        if not guild.chunked:
+            await ctx.trigger_typing()
+            await guild.chunk()
+
+        embed = discord.Embed(color=ctx.color)
+        embed.set_author(name=guild.name, icon_url=guild.icon.ur if guild.icon else EmptyEmbed)
+
+        embed.add_field(name='\U00002139 General', value=f"__**ID:**__ {guild.id} \n__**Owner:**__ {guild.owner if guild.owner else 'Not Found'}\n__**Verification Level:**__ {str(guild.verification_level).title()}\n__**Filesize Limit:**__ {humanize.naturalsize(guild.filesize_limit)}\n__**Role count:**__ {len(guild.roles)}")
+
+        embed.add_field(name='<:channels:928388464892842024> Channels', value=f'<:text:928390522182193232> Text: {len([x for x in guild.channels if isinstance(x, discord.TextChannel)])}\n<:voice:928389079266127972> Voice: {len([x for x in guild.channels if isinstance(x, discord.VoiceChannel)])}\n<:category:928391020859772968> Category: {len([x for x in guild.channels if isinstance(x, discord.CategoryChannel)])} \n<:stage:928391073091432458> Stage: {len([x for x in guild.channels if isinstance(x, discord.StageChannel)])}')
+        embed.add_field(name='<:members:908483589157576714> Members', value=f"\U0001f465 Humans: {len(guild.humans)}\n<:bot:925107948789837844> Bots: {len(guild.bots)}\n\U0000267e Total: {len(guild.members)}\n\U0001f4c1 Limit: {guild.max_members}", inline=True)
+
+        embed.add_field(name='<:joined_at:928188524006608936> Created at', value=f"{discord.utils.format_dt(guild.created_at, 'F')} ({discord.utils.format_dt(guild.created_at, 'R')})")
+        
+        return embed
+
+    @commands.command(name='user-info', aliases=['userinfo', 'ui','whois','info'])
+    @commands.bot_has_permissions(send_messages=True)
+    async def user_info(self, ctx, *, member: Optional[discord.Member]):
+        """Shows all the information about the specified user/member."""
+        member = member or ctx.author
+        await ctx.send(embed=await self.userinfo_embed(ctx, member))
+
+    @commands.command(name='role-info', aliases=['roleinfo', 'ri'])
+    async def role_info(self, ctx: MyContext, *, role: RoleConverter):
+        """Show all the information about a role."""
+        await ctx.send(embed=await self.show_roleinfo(ctx, role))
+
+    @commands.command(name='server-info', aliases=['serverinfo', 'guildinfo', 'si'])
+    async def server_info(self, ctx: MyContext):
+        """Show all the information about the current guild."""
+        await ctx.send(embed=await self.serverinfo_embed(ctx, ctx.guild))
+        

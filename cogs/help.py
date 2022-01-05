@@ -913,9 +913,11 @@ class meta(commands.Cog, description='Get bot stats and information.'):
 
     @commands.command(name='invite',slash_command=True)
     @commands.bot_has_permissions(send_messages=True)
-    async def invite(self, ctx: MyContext, *, bot: BotUserObject = None):
+    async def invite(self, ctx: MyContext, *, bot: discord.User = None):
         """Get invite links for a bot."""
         bot = bot or self.bot.user
+        if not bot.bot:
+            raise commands.BadArgument("This is not a bot.")
         await InviteView(ctx).start(None, bot)
 
     @commands.command()

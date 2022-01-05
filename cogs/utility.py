@@ -345,80 +345,6 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             return await ctx.send('Output too long to display.')
         await ctx.send(msg)
 
-
-    @commands.command(aliases=['ui','whois','info'])
-    @commands.bot_has_permissions(send_messages=True)
-    async def userinfo(self, ctx, member : Union[discord.Member, discord.User, None]):
-        """
-        Shows all the information about the specified user.
-        If user isn't specified, it defaults to the author.
-        """
-
-        if isinstance(member, discord.User):
-
-            member = member or ctx.author   
-
-            embed = discord.Embed(
-                description=member.mention,
-                timestamp=discord.utils.utcnow()
-            )
-            embed.add_field(
-                name='Joined at',
-                value='N/A',
-                inline=True
-            )
-            embed.add_field(
-                name='Created at',
-                value=f"{discord.utils.format_dt(member.created_at)}\n({discord.utils.format_dt(member.created_at, 'R')})",
-                inline=False
-            )
-            embed.set_thumbnail(url=member.avatar.url)
-            embed.set_author(name=member, icon_url=member.avatar.url)
-            embed.set_footer(text=f'User ID: {member.id}')
-
-            return await ctx.send(embed=embed)
-
-
-
-        member = member or ctx.author
-
-        embed = discord.Embed(
-            description=member.mention,
-            timestamp=discord.utils.utcnow()
-        )
-        embed.add_field(
-            name="Joined at",
-            value=f"{discord.utils.format_dt(member.joined_at)}\n({discord.utils.format_dt(member.joined_at, 'R')})",
-            inline=True
-        )
-        embed.add_field(
-            name="Created at",
-            value=f"{discord.utils.format_dt(member.created_at)}\n({discord.utils.format_dt(member.created_at, 'R')})",
-            inline=True
-
-        )
-        embed.set_thumbnail(url=member.avatar.url)
-        embed.set_author(name=member, icon_url=member.avatar.url)
-        embed.set_footer(text=f'User ID: {member.id}')
-
-        roles = member.roles[1:30]
-
-        if roles:
-            embed.add_field(
-                name=f"Roles [{len(member.roles) - 1}]",
-                value=" ".join(f"{role.mention}" for role in roles),
-                inline=False,
-            )
-        else:
-            embed.add_field(
-                name=f"Roles [{len(member.roles) - 1}]",
-                value="This member has no roles",
-                inline=False,
-            )
-
-        await ctx.send(embed=embed)
-
-
     @commands.group(
         name='prefix',
         case_insensitive=True,
@@ -933,13 +859,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
         return timer
 
-    @commands.group(
-        aliases=['remind','rm'],
-        usage="<when>",
-        invoke_without_command=True,
-        slash_command=True
-
-    )
+    @commands.group(aliases=['remind','rm'], usage="<when>", invoke_without_command=True, slash_command=True)
     @commands.bot_has_permissions(send_messages=True)
     async def reminder(self, ctx, *, when : UserFriendlyTime(commands.clean_content, default='\u2026')):
         """Reminds you of something after a certain amount of time.
@@ -968,44 +888,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         except Exception as e:
             return await ctx.send(str(e))
 
-        delta = human_timedelta(when.dt - datetime.timedelta(seconds=2))
-        #dunno why it's off by 3 seconds but this should fix
-        await ctx.send(f'Alright, I will remind you about {when.arg} in {delta}\nTimer id: {timer.id}')
-
-    @reminder.command(
-        aliases=['remind','rm'],
-        usage="<when>",
-        slash_command=True
-
-    )
-    @commands.bot_has_permissions(send_messages=True)
-    async def create(self, ctx, *, when : UserFriendlyTime(commands.clean_content, default='\u2026')):
-        """Reminds you of something after a certain amount of time.
-
-        The input can be any direct date (e.g. YYYY-MM-DD) or a human
-        readable offset. Examples:
-
-        - "next thursday at 3pm do something funny"
-        - "do the dishes tomorrow"
-        - "in 3 days do the thing"
-        - "2d unmute someone"
-
-        Times are in UTC.
-        """
-
-        timer = await self.create_timer(
-            when.dt,
-            "reminder",
-            ctx.author.id,
-            ctx.channel.id,
-            when.arg,
-            connection=self.bot.db,
-            created=ctx.message.created_at,
-            message_id=ctx.message.id
-        )
-        
-        delta = human_timedelta(when.dt - datetime.timedelta(seconds=2))
-        #dunno why it's off by 3 seconds but this should fix
+        delta = human_timedelta(when.dt)
         await ctx.send(f'Alright, I will remind you about {when.arg} in {delta}\nTimer id: {timer.id}')
 
     @reminder.command(

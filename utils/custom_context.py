@@ -198,5 +198,11 @@ class MyContext(commands.Context):
         except CommandError as e:
             await cmd.on_help_command_error(self, e)
     
+    @property
+    def color(self):
+        return self.me.color if self.me.color not in (discord.Color.default(), discord.Embed.Empty, None)\
+            else discord.Color.blue()
 
-                
+    @property
+    def colour(self):
+        return self.color

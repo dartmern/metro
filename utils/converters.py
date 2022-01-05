@@ -8,6 +8,10 @@ from unidecode import unidecode
 
 from utils.checks import can_execute_action
 
+async def prettify(ctx, arg):
+    pretty_arg = await commands.clean_content().convert(ctx, str(arg))
+    return pretty_arg
+
 def is_admin(ctx):
     if (
         ctx.author.id in ctx.bot.constants.admins
@@ -31,8 +35,6 @@ class BoolConverter(commands.Converter):
 
         raise commands.BadArgument('whetever')
 
-
-
 class MemberConverter(commands.Converter):
     async def convert(self, ctx, argument):
         try:
@@ -42,9 +44,7 @@ class MemberConverter(commands.Converter):
                 lambda x: x.name.lower() == argument.lower(), ctx.guild.members
             )
             if m is None:
-                raise commands.BadArgument(
-                    f"{argument} is not a valid member or member ID"
-                )
+                raise commands.MemberNotFound(argument)
 
         if not can_execute_action(ctx, ctx.author, m):
             raise commands.BadArgument(
@@ -53,10 +53,9 @@ class MemberConverter(commands.Converter):
         return m
 
 
-
 #for multiban (only takes ids and turns into all members)
 class MemberID(commands.Converter):
-    async def convert(self, ctx, argument):
+    async def convert(self, ctx, argument) -> discord.Member:
         try:
             m = await commands.MemberConverter().convert(ctx, argument)
         except commands.BadArgument:
@@ -74,10 +73,8 @@ class MemberID(commands.Converter):
             raise commands.BadArgument('You cannot do this action on this user due to role hierarchy.')
         return m
 
-
-
 class ActionReason(commands.Converter):
-    async def convert(self, ctx, argument):
+    async def convert(self, ctx, argument) -> str:
         ret = f'Action requested by {ctx.author} (ID: {ctx.author.id})\nReason: {argument}'
 
         if len(ret) > 512:
@@ -122,14 +119,6 @@ class RoleConverter(commands.RoleConverter):
         sorted_result = sorted(result, key=lambda r: r[1], reverse=True)
         return sorted_result[0][0]
 
-
-
-
-async def prettify(ctx, arg):
-    pretty_arg = await commands.clean_content().convert(ctx, str(arg))
-    return pretty_arg
-
-
 class DiscordCommand(commands.Converter):
     """
     Basic command converter.
@@ -142,7 +131,6 @@ class DiscordCommand(commands.Converter):
                 f"Command `{await prettify(ctx, argument)}` not found."
             )
         return command
-
 
 class ChannelOrRoleOrMember(commands.Converter):
     """
@@ -166,11 +154,6 @@ class ChannelOrRoleOrMember(commands.Converter):
                     raise commands.BadArgument(
                         f"Entity `{await prettify(ctx, argument)}` is an invalid input. Please specify a channel, role, or user."
                     )
-
-
-
-
-
 
 class DiscordGuild(commands.Converter):
     """Match guild_id, or guild name exact, only if author is in the guild."""
