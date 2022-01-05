@@ -1176,8 +1176,8 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             else:
                 id = int(id[0].get('max')) + 1
             await self.bot.db.execute(
-                "INSERT INTO notes (id, user_id, text, added_time, author_id) VALUES ($1, $2, $3, $4, $5)", 
-                id, member.id, note, (discord.utils.utcnow().replace(tzinfo=None)), ctx.author.id
+                "INSERT INTO notes (id, guild_id, user_id, text, added_time, author_id) VALUES ($1, $2, $3, $4, $5, $6)", 
+                id, ctx.guild.id, member.id, note, (discord.utils.utcnow().replace(tzinfo=None)), ctx.author.id
             )      
             embed = Embed(color=discord.Color.green())
             embed.description = f"{self.bot.check} __**Note taken.**__ \n> {note}"
@@ -1192,7 +1192,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         Use `note list` to show a member's notes."""
 
         async with ctx.typing():
-            note = await self.bot.db.fetchval("SELECT text FROM notes WHERE id=$1", id)
+            note = await self.bot.db.fetchval("SELECT text FROM notes WHERE id=$1 AND guild_id = $2", id, ctx.guild.id)
             if not note:
                 raise commands.BadArgument("A note with that ID was not found. Use `%snote list [member]` to show a member's notes." % ctx.clean_prefix)
 
@@ -1213,7 +1213,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         member = member or ctx.author
         
         async with ctx.typing():
-            notes = await self.bot.db.fetch("SELECT (id, text, added_time, author_id) FROM notes WHERE user_id = $1", member.id)
+            notes = await self.bot.db.fetch("SELECT (id, text, added_time, author_id) FROM notes WHERE user_id = $1 AND guild_id = $2", member.id, ctx.guild.id)
             if not notes:
                 raise commands.BadArgument("No notes were found for this member. Use `%snote add <member> <note>` to add a note." % ctx.clean_prefix)
             
@@ -1237,7 +1237,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         """Clear a member's note."""
 
         async with ctx.typing():
-            data = await self.bot.db.fetch("SELECT * FROM notes WHERE user_id = $1", member.id)
+            data = await self.bot.db.fetch("SELECT * FROM notes WHERE user_id = $1 AND guild_id = $2", member.id, ctx.guild.id)
             if not data:
                 raise commands.BadArgument("No notes were found for this member. Use `%snote add <member> <note>` to add a note." % ctx.clean_prefix)
             
@@ -1248,7 +1248,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             return await ctx.send("Canceled.")
 
         async with ctx.typing():
-            await self.bot.db.execute("DELETE FROM notes WHERE user_id = $1", member.id)
+            await self.bot.db.execute("DELETE FROM notes WHERE user_id = $1 AND guild_id = $2", member.id)
 
             return await ctx.send(f"Successfully cleared **{len(data)}** notes from {member}")
 
@@ -1343,8 +1343,8 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         embed.add_field(name='<:role:923611835066908712> Roles [%s]' % (len(member.roles) - 1), value=roles, inline=False)
 
         # 2 fetchvals as it's faster than iterating through the entire table of like 50k messages
-        total_messages = await ctx.bot.db.fetchval("SELECT COUNT(*) as c FROM messages WHERE author_id = $1 AND server_id = $2", ctx.author.id, ctx.guild.id)
-        global_messages = await ctx.bot.db.fetchval("SELECT COUNT(*) as c FROM messages WHERE author_id = $1", ctx.author.id)
+        total_messages = await ctx.bot.db.fetchval("SELECT COUNT(*) as c FROM messages WHERE author_id = $1 AND server_id = $2", member.id, ctx.guild.id)
+        global_messages = await ctx.bot.db.fetchval("SELECT COUNT(*) as c FROM messages WHERE author_id = $1", member.id)
 
         embed.add_field(name='<:messages:928380915560874055> Messages', value=f'`{total_messages}` total messages, `{global_messages}` global messages.')
         return embed
