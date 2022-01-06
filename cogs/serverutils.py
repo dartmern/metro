@@ -21,13 +21,16 @@ from utils.parsing import RoleParser
 from cogs.utility import Timer
 
 
-# Parts of lockdown I took from Hecate thx
+# Parts of lockdown/unlockdown I took from Hecate thx
 # https://github.com/Hecate946/Neutra/blob/main/cogs/mod.py#L365-L477
-# not really but i took ideas from it
 
 # role is mainly from phencogs rewritten for 2.0
 # https://github.com/phenom4n4n/phen-cogs/blob/master/roleutils/roles.py
 # for redbot btw so you might need to make adjustments
+
+# user-info & server-info have great insparation from leo tyty
+# https://github.com/LeoCx1000/discord-bots/blob/master/DuckBot/cogs/utility.py#L575-L682
+# https://github.com/LeoCx1000/discord-bots/blob/master/DuckBot/cogs/utility.py#L707-L716
 
 def setup(bot: MetroBot):
     bot.add_cog(serverutils(bot))
@@ -1153,21 +1156,20 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         await new_channel.send(f"Nuke-command ran by: {ctx.author}")
 
     @commands.group(case_insensitive=True, invoke_without_command=True)
-    @commands.has_guild_permissions(manage_messages=True)
     async def note(self, ctx: MyContext):
         """Base command for managing notes.
         
-        Moderators/admins can add notes to members.
-        For more personal notes please use `reminder` or `todo`.
-
-        Normal members can view their notes with `notes`
-        """
+        Use the `note list` command to view a member's notes.
+        You may only delete notes that you added.
+        
+        If there is a complaint with this please ping <@525843819850104842>"""
         await ctx.help()
 
     @note.command(name='add', aliases=['+'])
-    @commands.has_guild_permissions(manage_messages=True)
     async def note_add(self, ctx: MyContext, member: discord.Member, *, note: commands.clean_content):
         """Add a note to a member's notes."""
+        if member == ctx.author:
+            raise commands.BadArgument("You cannot add notes to yourself.")
 
         async with ctx.typing():
             id = await self.bot.db.fetch("SELECT MAX(id) FROM notes")
@@ -1185,25 +1187,29 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             return await ctx.send(embed=embed)
         
     @note.command(name='remove', aliases=['-'])
-    @commands.has_guild_permissions(manage_messages=True)
     async def note_remove(self, ctx: MyContext, *, id: int):
         """Remove a note by it's id.
         
-        Use `note list` to show a member's notes."""
+        Use `note list` to show a member's notes.
+        You may only delete notes that you added unless you have `Manage Guild`."""
 
         async with ctx.typing():
-            note = await self.bot.db.fetchval("SELECT text FROM notes WHERE id=$1 AND guild_id = $2", id, ctx.guild.id)
+            note = await self.bot.db.fetchval("SELECT (text, author_id) FROM notes WHERE id = $1 AND guild_id = $2", id, ctx.guild.id)
             if not note:
                 raise commands.BadArgument("A note with that ID was not found. Use `%snote list [member]` to show a member's notes." % ctx.clean_prefix)
+            if note[1] != ctx.author.id:
+                if ctx.author_permissions().manage_guild:
+                    pass #by pass for mods
+                else:
+                    raise commands.BadArgument("You may only delete notes that **you** added.")
 
             await self.bot.db.execute("DELETE FROM notes WHERE id = $1", id)
 
             embed = Embed(color=discord.Colour.red())
-            embed.description = f"{self.bot.cross} __**Deleted note {id}.**__\n> {note}"
+            embed.description = f"{self.bot.cross} __**Deleted note {id}.**__\n> {note[0]}"
             return await ctx.send(embed=embed)
 
     @note.command(name='list', aliases=['show'])
-    @commands.has_guild_permissions(manage_messages=True)
     async def note_list(self, ctx: MyContext, *, member: Optional[discord.Member]):
         """
         Show a member's notes.
@@ -1232,9 +1238,11 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             return await ctx.send(embed=embed)
 
     @note.command(name='clear', aliases=['wipe'])
-    @commands.has_guild_permissions(manage_messages=True)
+    @commands.has_guild_permissions(manage_guild=True)
     async def note_clear(self, ctx: MyContext, *, member: discord.Member):
-        """Clear a member's note."""
+        """Clear a member's notes.
+        
+        This may only be invoked by a staff member."""
 
         async with ctx.typing():
             data = await self.bot.db.fetch("SELECT * FROM notes WHERE user_id = $1 AND guild_id = $2", member.id, ctx.guild.id)
@@ -1253,7 +1261,6 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             return await ctx.send(f"Successfully cleared **{len(data)}** notes from {member}")
 
     @note.command(name='redo', aliases=['re'])
-    @commands.has_guild_permissions(manage_messages=True)
     async def note_redo(self, ctx: MyContext, member: discord.Member, *, note: str):
         """Clear a member's notes and replace with a single note."""
 

@@ -5,10 +5,10 @@ import parsedatetime as pdt
 import datetime
 from dateutil.relativedelta import relativedelta
 
-
-
-
-
+# this utils file is mainly helper functions from R. Danny
+# https://github.com/Rapptz/RoboDanny/blob/1fb95d76d1b7685e2e2ff950e11cddfc96efbfec/cogs/utils/time.py
+# mainly anything to do with time converting including the UserFriendlyTime class found in lots of my commands
+# all credit goes to danny for making it
 
 class plural:
     def __init__(self, value):
