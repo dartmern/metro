@@ -184,6 +184,12 @@ class Timer:
     def human_delta(self):
         return human_timedelta(self.created_at)
 
+    @property
+    def author_id(self):
+        if self.args:
+            return int(self.args[0])
+        return None
+
     def __repr__(self):
         return f"<Timer created={self.created_at} expires={self.expires} event={self.event}>"
 
@@ -984,6 +990,11 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         query = """DELETE FROM reminders WHERE event = 'reminder' AND extra #>> '{args,0}' = $1;"""
 
         await self.bot.db.execute(query, author_id)
+
+        if self._current_timer and self._current_timer.author_id == ctx.author.id:
+            self._task.cancel()
+            self._task = self.bot.loop.create_task(self.dispatch_timers())
+
         await ctx.send(f'Successfully deleted **{total}** reminder(s)')
         
     

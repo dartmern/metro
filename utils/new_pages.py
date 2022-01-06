@@ -216,8 +216,6 @@ class RoboPages(discord.ui.View):
         self.stop()
 
 
-
-
 class SimplePages(RoboPages):
     """
     A simple pagination session reminiscent of the old Pages interface.
@@ -227,7 +225,6 @@ class SimplePages(RoboPages):
     def __init__(self, source : menus.ListPageSource, *, ctx: commands.Context, hide : bool = False):
         super().__init__(source, ctx=ctx, hide=hide)
         self.embed = discord.Embed(colour=0x1ABC9C)
-
 
 class SimplePageSource(menus.ListPageSource):
     async def format_page(self, menu, entries):
