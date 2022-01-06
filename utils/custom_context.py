@@ -31,7 +31,8 @@ class ConfirmationView(discord.ui.View):
         self.confirm.disabled = True
         self.cancel.disabled = True
         self.value = None
-        await self.message.edit(view=self)
+        if self.message:
+            await self.message.edit(view=self)
 
     @discord.ui.button(label='Confirm', style=discord.ButtonStyle.green)
     async def confirm(self, button: discord.ui.Button, interaction: discord.Interaction):

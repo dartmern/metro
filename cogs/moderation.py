@@ -78,12 +78,11 @@ class MuteRoleView(discord.ui.View):
     @discord.ui.button(label='Create new mute role', style=discord.ButtonStyle.blurple, row=0)
     async def _(self, button : discord.ui.Button, interaction : discord.Interaction):
         
-        message = await interaction.response.send_message(f"<a:mtyping:904156199967158293> Creating muterole and setting permissions across the server...")
-        for item in self.children:
-            if isinstance(item, discord.ui.Button):
-                item.disabled = True
-        await interaction.message.edit(view=self)
-        #Create the role
+        await interaction.response.defer()
+        await interaction.delete_original_message()
+
+        message = await self.ctx.reply(f"<a:mtyping:904156199967158293> Creating muterole and setting permissions across the server...\n> This may take up to 5 minutes to setup completly.")
+
         muterole = await self.ctx.guild.create_role(name='Muted', reason='Muterole setup [Invoked by: {0} (ID: {0.id})]'.format(self.ctx.author))
 
         overwrites = {"send_messages": False}
@@ -95,20 +94,19 @@ class MuteRoleView(discord.ui.View):
         except asyncpg.exceptions.UniqueViolationError:
             await self.ctx.bot.db.execute("UPDATE servers SET muterole = $1 WHERE server_id = $2", muterole.id, self.ctx.guild.id)
 
-        await interaction.edit_original_message(content=f"{self.ctx.bot.check} Created muterole `@{muterole.name}` and set to this guild's muterole.")
+        await message.delete(silent=True)
+        await self.ctx.reply(content=f"{self.ctx.bot.check} Created muterole `@{muterole.name}` and set to this guild's muterole.")
 
 
     @discord.ui.button(label='Set existing mute role', style=discord.ButtonStyle.green, row=0)
     async def __(self, button : discord.ui.Button, interaction : discord.Interaction):
 
-        for item in self.children:
-            if isinstance(item, discord.ui.Button):
-                item.disabled = True
-        await interaction.message.edit(view=self)
+        await interaction.response.defer()
+        await interaction.delete_original_message()
 
-        e = Embed()
+        e = Embed(color=self.ctx.color)
         e.description = 'Please send the mention/id/name of the role to be set.'
-        await interaction.response.send_message(embed=e)
+        wait_for_message = await self.ctx.reply(embed=e)
 
         def check(message : discord.Message):
             return message.author == self.ctx.message.author and message.channel == self.ctx.channel
@@ -116,39 +114,35 @@ class MuteRoleView(discord.ui.View):
         try:
             role_string : discord.Message = await self.ctx.bot.wait_for('message', check=check, timeout=30.0)
         except asyncio.TimeoutError:
-            return await interaction.followup.send('Timed out.')
+            await wait_for_message.delete(silent=True)
+            return await self.ctx.reply('Timed out.')
         try:
             role = await commands.RoleConverter().convert(self.ctx, role_string.content)
+            await wait_for_message.delete(silent=True)
         except commands.RoleNotFound:
-            return await interaction.edit_original_message(content='Could not convert that into a role.', embeds=[])
+            await wait_for_message.delete(silent=True)
+            return await self.ctx.reply(content='Could not convert that into a role.', embeds=[])
         
         try:
             await self.ctx.bot.db.execute("INSERT INTO servers (muterole, server_id) VALUES ($1, $2)", role.id, self.ctx.guild.id)
         except asyncpg.exceptions.UniqueViolationError:
             await self.ctx.bot.db.execute("UPDATE servers SET muterole = $1 WHERE server_id = $2", role.id, self.ctx.guild.id)
 
-        return await interaction.edit_original_message(content=f'{self.ctx.bot.check} Successfully updated `@{role.name}` to the mutedrole.', embeds=[])
+        return await self.ctx.reply(content=f'{self.ctx.bot.check} Successfully updated `@{role.name}` to the mutedrole.', embeds=[])
 
 
     @discord.ui.button(label='Remove existing muted role', style=discord.ButtonStyle.danger, row=0, custom_id='remove_muterole')
     async def ___(self, button : discord.ui.Button, interaction : discord.Interaction):
 
-        if not self.role_id:
-            await interaction.response.send_message(f"This guild does not have a mute role configured yet.", ephemeral=True)
-            for item in self.children:
-                if isinstance(item, discord.ui.Button):
-                    if item.custom_id == 'remove_muterole':
-                        item.disabled = True
-            await interaction.message.edit(view=self)
-            return
+        await interaction.response.defer()
 
-        for item in self.children:
-            if isinstance(item, discord.ui.Button):
-                item.disabled = True
-        await interaction.message.edit(view=self)
+        if not self.role_id:
+            return await interaction.followup.send(f"This guild does not have a mute role configured yet.", ephemeral=True)
+
+        await interaction.delete_original_message()
 
         # Give a confirmation on deleting this role from database
-        confirm = await self.ctx.confirm('Are you sure you want to remove the existing mutedrole for this guild?', interaction=interaction)
+        confirm = await self.ctx.confirm('Are you sure you want to remove the existing mutedrole for this guild?')
         if confirm is None:
             return
         if confirm is False:
@@ -157,11 +151,8 @@ class MuteRoleView(discord.ui.View):
         # Remove from db
         await self.ctx.bot.db.execute("DELETE FROM servers WHERE muterole = $1", self.role_id)
 
-        await interaction.followup.send(f":wastebasket: Removed the existing mutedrole for this guild.")
-        for item in self.children:
-            if isinstance(item, discord.ui.Button):
-                item.disabled = True
-        return await interaction.message.edit(view=self)
+        await self.ctx.reply(f":wastebasket: Removed the existing mutedrole for this guild.")
+
 
     @discord.ui.button(emoji='\U00002753', style=discord.ButtonStyle.gray, row=1)
     async def ____(self, button : discord.ui.Button, interaction : discord.Interaction):
@@ -512,8 +503,7 @@ class moderation(commands.Cog, description="Moderation commands."):
         if reminder_cog is None:
             return await ctx.send('This function is not available at this time. Try again later.')
         
-        delta = human_timedelta(duration.dt - datetime.timedelta(seconds=3))
-        until = f"for {delta}"
+        delta = discord.utils.format_dt(duration.dt, 'R')
 
         if member == ctx.author:
             return await ctx.send(f'{self.bot.cross} You cannot ban yourself!')
@@ -522,7 +512,7 @@ class moderation(commands.Cog, description="Moderation commands."):
 
         embed = Embed()
         embed.description = (f'You were tempbanned from **{ctx.guild.name}**'
-                                f'\nDuration: {delta}'
+                                f'\nExpires: {delta}'
                                 f'\nAction requested by: {ctx.author} (ID: {ctx.author.id})'
         )
       
@@ -539,7 +529,7 @@ class moderation(commands.Cog, description="Moderation commands."):
 
         await ctx.guild.ban(member, reason=converted_action)
 
-        timer = await reminder_cog.create_timer(duration.dt, 'tempban', ctx.guild.id,
+        await reminder_cog.create_timer(duration.dt, 'tempban', ctx.guild.id,
                                                                     ctx.author.id,
                                                                     member.id,
                                                                     connection=self.bot.db,
@@ -547,7 +537,7 @@ class moderation(commands.Cog, description="Moderation commands."):
         )
 
         embed = Embed()
-        embed.description = f'**{ctx.author.mention}** has tempbanned **{member}**\nDuration: {delta}\n{real_reason}'
+        embed.description = f'**{ctx.author.mention}** has tempbanned **{member}**\nExpires: {delta}\n{real_reason}'
         embed.set_footer(text=f'ID: {member.id} | DM successful: {success}')
         
         await ctx.send(embed=embed)
@@ -984,8 +974,6 @@ class moderation(commands.Cog, description="Moderation commands."):
                                         ctx.channel.id, member.id,
                                         connection=self.bot.db,
                                         created=created_at
-
-
         )
 
         reason = f'Tempblocked by {ctx.author} (ID: {ctx.author.id}) until {duration.dt}'
@@ -995,7 +983,7 @@ class moderation(commands.Cog, description="Moderation commands."):
         except:
             return await ctx.cross()
         else:
-            delta = human_timedelta(duration.dt - datetime.timedelta(seconds=2))
+            delta = human_timedelta(duration.dt)
             await ctx.send(f'Blocked {member} for {delta}')
 
     @commands.Cog.listener()
@@ -1356,7 +1344,6 @@ class moderation(commands.Cog, description="Moderation commands."):
             )
         return await ctx.send(embed=embed)
 
-        
 
     @commands.command(name='selfmute')
     @commands.guild_only()
@@ -1395,10 +1382,10 @@ class moderation(commands.Cog, description="Moderation commands."):
 
         created_at = ctx.message.created_at
         if duration.dt < (created_at + datetime.timedelta(minutes=5)):
-            raise commands.BadArgument("Duration is too short. Must be at least 5 minutes and less than 1 day.")
+            raise commands.BadArgument("Duration is too short. Must be at least 5 minutes.")
 
         if duration.dt > (created_at + datetime.timedelta(days=1)):
-            raise commands.BadArgument("Duration is too long. Must be at least 5 minutes and less than 1 day.")
+            raise commands.BadArgument("Duration is too long. Must be less than 1 day.")
 
         ftime = human_timedelta(duration.dt, accuracy=50)
 
@@ -1419,7 +1406,7 @@ class moderation(commands.Cog, description="Moderation commands."):
 
         await self.bot.db.fetchval("DELETE FROM reminders WHERE event = 'mute' AND extra->'kwargs'->>'user_id' = $1", str(ctx.author.id))
         try:
-            timer = await reminder_cog.create_timer(
+            await reminder_cog.create_timer(
                         duration.dt.replace(tzinfo=None),
                         "mute",
                         ctx.guild.id,
@@ -1432,8 +1419,6 @@ class moderation(commands.Cog, description="Moderation commands."):
             ) 
         except Exception as e:
             return await ctx.send(str(e))
-            
-
 
     @commands.Cog.listener()
     async def on_mute_timer_complete(self, timer):
@@ -1484,7 +1469,6 @@ class moderation(commands.Cog, description="Moderation commands."):
             await member.send(embed=e)
         except discord.HTTPException:
             pass # DMs off or somehow cannot dm them
-        
 
 def setup(bot):
     bot.add_cog(moderation(bot))

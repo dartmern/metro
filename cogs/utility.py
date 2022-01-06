@@ -122,7 +122,7 @@ class MySource(menus.ListPageSource):
         embed= Embed()
 
         for i in entries:
-            embed.add_field(name=f'ID: {i.get("id")}:  in {human_timedelta(i.get("expires"))}',value=i.get("?column?"),inline=False)
+            embed.add_field(name=f'ID: {i.get("id")}: {discord.utils.format_dt((i.get("expires")).replace(tzinfo=datetime.timezone.utc), "R")}',value=i.get("?column?"),inline=False)
 
         embed.set_footer(text=f'{len(entries)} reminder{"s" if len(entries) > 1 else ""}')
 
@@ -875,7 +875,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         Times are in UTC.
         """
         try:
-            timer = await self.create_timer(
+            await self.create_timer(
             when.dt,
             "reminder",
             ctx.author.id,
@@ -888,8 +888,8 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         except Exception as e:
             return await ctx.send(str(e))
 
-        delta = human_timedelta(when.dt)
-        await ctx.send(f'Alright, I will remind you about {when.arg} in {delta}\nTimer id: {timer.id}')
+        delta = discord.utils.format_dt(when.dt, 'R')
+        await ctx.send(f'Alright, {ctx.author.mention} I will remind you {delta} about: \n> {when.arg}')
 
     @reminder.command(
         name='list',
@@ -1000,20 +1000,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         except (discord.HTTPException, discord.NotFound):
             return
 
-        try:
-            author = self.bot.get_user(int(author_id)) or (
-                await self.bot.fetch_user(int(author_id))
-            )
-        except (discord.HTTPException, discord.NotFound):
-            return
-
-        message_id = timer.kwargs.get("message_id")
-
-
-        guild_id = channel.guild.id if isinstance(channel, (discord.TextChannel, discord.Thread)) else '@me'
-
-        
-        msg = f"<@{author_id}>, {timer.human_delta}, you wanted me to remind you about: {message}"
+        msg = f"<@{author_id}>, {discord.utils.format_dt(timer.created_at.replace(tzinfo=datetime.timezone.utc), 'R')}, you wanted me to remind you about: \n> {message}"
 
         try:
             await channel.send(msg)
