@@ -1,3 +1,4 @@
+import asyncio
 import discord
 from discord.ext import commands
 
@@ -604,9 +605,10 @@ class developer(commands.Cog, description="Developer commands."):
 
         message = await ctx.send("Restarting...")
 
-        command = self.bot.get_command("jsk git")
-        await ctx.invoke(command, argument=codeblock_converter('pull https://github.com/dartmern/metro master --allow-unrelated-histories'))
+        command = self.bot.get_command("jsk shell")
+        await ctx.invoke(command, argument=codeblock_converter('git pull https://github.com/dartmern/metro master --allow-unrelated-histories'))
 
+        await asyncio.sleep(10)
         write_json({"id":message.id, "channel":message.channel.id}, 'restart')
 
         restart_program()
