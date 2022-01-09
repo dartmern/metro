@@ -200,11 +200,11 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         await ctx.send(embed=e, hide=True)
 
 
-    @commands.command(name='rtfm_rewrite', message_command=True, usage='<documentation> [query]')
+    @commands.command(name='rtfm', usage='<documentation> [query]')
     async def rtfm_slash(
         self, 
         ctx : MyContext, 
-        docs : Literal['enhanced-discord.py', 'discord.py', 'discord.py-2.0', 'aiohttp', 'python'] = commands.Option(description='Documentation you wish to search on.'),
+        documentation : Literal['enhanced-discord.py', 'discord.py', 'discord.py-2.0', 'aiohttp', 'python'] = commands.Option(default='enhanced-discord.py',description='Documentation you wish to search on.'),
         query : Optional[str] = commands.Option(default=None, description='Query to search for.')
         ):
         """
@@ -215,55 +215,8 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         If a desired documention is not listed please send `dartmern#7563` a message.
         """
         
-        await self.do_rtfm(ctx, docs, query)
+        await self.do_rtfm(ctx, documentation, query)
         
-    
-    @commands.group(name="rtfm",invoke_without_command=True, case_insensitive=True, slash_command=True, aliases=['rtfd'], message_command=True)
-    @commands.bot_has_permissions(send_messages=True)
-    async def rtfm(self, ctx, *, obj : str = None):
-        """Gives you a documentation link for a enhanced-discord.py entity.
-        Events, objects, and functions are all supported through a
-        a cruddy fuzzy algorithm.
-        """
-
-        await self.do_rtfm(ctx, 'enhanced-discord.py', obj)
-
-    @rtfm.command(name="python",aliases=["py"],slash_command=True)
-    @commands.bot_has_permissions(send_messages=True)
-    async def rtfm_py(self, ctx, *, object : str = commands.Option(default=None,description='Object to search for')):
-        """Gives you a documentation link for a Python entity."""
-
-        await self.do_rtfm(ctx, "python", object)
-
-    @rtfm.command(name="master",aliases=["2.0"],slash_command=True)
-    @commands.bot_has_permissions(send_messages=True)
-    async def rtfm_master(self, ctx, *, object : str = commands.Option(default=None,description='Object to search for')):
-        """Gives you a documentation link for a discord.py entity. (master branch)"""
-
-        await self.do_rtfm(ctx, "discord.py-2.0", object)
-
-
-    @rtfm.command(name='dpy',aliases=['discordpy', 'discord.py'],slash_command=True)
-    @commands.bot_has_permissions(send_messages=True)
-    async def rtfm_dpy(self, ctx, *, object : str = commands.Option(default=None,description='Object to search for')):
-        """Gives you a documentation link for a discord.py entity."""
-
-        await self.do_rtfm(ctx, "discord.py", object)
-
-
-    @rtfm.command(name='edpy',slash_command=True)
-    @commands.bot_has_permissions(send_messages=True)
-    async def rtfm_edpy(self, ctx, *, object : str = commands.Option(default=None,description='Object to search for')):
-        """Gives you a documentation link for a ed-py entity."""
-
-        await self.do_rtfm(ctx, 'enhanced-discord.py', object)
-
-    @rtfm.command(name='aiohttp',slash_command=True)
-    @commands.bot_has_permissions(send_messages=True)
-    async def rtfm_aiohttp(self, ctx, *, object : str = commands.Option(default=None, description='Object to search for')):
-        """Gives you documentation link for a aiohttp entity."""
-
-        await self.do_rtfm(ctx, 'aiohttp', object)
 
     @commands.command(name='rtfs')
     @commands.check(Cooldown(3, 8, 4, 8, commands.BucketType.user))

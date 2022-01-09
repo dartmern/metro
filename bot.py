@@ -337,9 +337,3 @@ if __name__ == "__main__":
     bot.loop.create_task(load_blacklist())
     bot.loop.create_task(execute_scripts())
     bot.run(token)
-
-
-
-
-
-
