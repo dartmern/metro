@@ -140,6 +140,7 @@ class MetroBot(commands.AutoShardedBot):
         self.started = False
 
         self.db = asyncpg.Pool = self.loop.run_until_complete(create_db_pool(user, password, database, host, port))
+        self.uptime = discord.utils.utcnow()
 
         #Cache
         self.prefixes = {}
@@ -188,8 +189,6 @@ class MetroBot(commands.AutoShardedBot):
             
             self.pres_views = True
 
-        self.uptime = discord.utils.utcnow()
-
         for command in self.walk_commands():
             if command.checks:
                 try:
@@ -215,6 +214,15 @@ class MetroBot(commands.AutoShardedBot):
             f"-----\nLogged in as: {self.user.name} : {self.user.id}\n-----\nMy default prefix{'es are' if len(self.PRE) >= 2 else ' is'}: {', '.join(self.PRE) if len(self.PRE) >= 2 else self.PRE[0]}\n-----")
 
         user = self.get_user(525843819850104842)
+        data = read_json("restart")
+        if data:
+            channel = self.get_channel(data['channel'])
+            message = channel.get_partial_message(data['id'])
+            
+            try:
+                await message.edit(content=f'{self.emotes["check"]} Restart complete...')
+            except discord.HTTPException:
+                pass # eh it's fine
 
         self.owner = user
 
@@ -312,6 +320,7 @@ print(f"{cwd}\n-----")
 
 bot = MetroBot()
 
+bot.emotes = {"check" : '<:mCheck:819254444197019669>', "cross" : '<:mCross:819254444217860116>'}
 bot.check = "<:mCheck:819254444197019669>"
 bot.cross = "<:mCross:819254444217860116>"
 

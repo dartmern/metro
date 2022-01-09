@@ -8,6 +8,7 @@ import time
 import os
 import io
 import datetime
+import sys
 import itertools
 import copy
 import os
@@ -18,10 +19,16 @@ from contextlib import redirect_stdout
 
 import jishaku 
 from jishaku.paginators import WrappedPaginator
+from jishaku.codeblocks import codeblock_converter
 
 from utils.decos import is_dev
 from utils.custom_context import MyContext
 from utils.useful import Embed, fuzzy, BaseMenu, pages, get_bot_uptime
+from utils.json_loader import write_json
+
+def restart_program():
+    python = sys.executable
+    os.execl(python, python, * sys.argv)
 
 class TabularData:
     def __init__(self):
@@ -580,6 +587,20 @@ class developer(commands.Cog, description="Developer commands."):
         """Shutdown the bot."""
         command = self.bot.get_command("jsk shutdown")
         await command(ctx)
+
+    @commands.command()
+    @commands.is_owner()
+    async def update(self, ctx: MyContext):
+        """Update the bot."""
+
+        message = await ctx.send("Restarting...")
+
+        command = self.bot.get_command("jsk git")
+        await ctx.invoke(command, argument=codeblock_converter('pull https://github.com/dartmern/metro master --allow-unrelated-histories'))
+
+        write_json('restart', {"id":message.id, "channel":message.channel.id})
+
+        restart_program()
 
 def setup(bot):
     bot.add_cog(developer(bot))
