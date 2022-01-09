@@ -1,9 +1,7 @@
 import itertools
-from re import match
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from discord.ext.commands.help import HelpCommand
-from discord.member import M
 from bot import MetroBot
 from utils.new_pages import SimplePages
 import discord
@@ -15,7 +13,6 @@ import contextlib
 
 import asyncio
 import psutil
-import copy
 import time
 
 from difflib import get_close_matches
@@ -23,6 +20,15 @@ from difflib import get_close_matches
 from utils.custom_context import MyContext
 from utils.useful import Embed, Cooldown, OldRoboPages, get_bot_uptime
 from utils.converters import BotUserObject
+
+"""
+Hey, I highly discourage you taking code from this cog
+mainly because of the bad practices I use that don't
+always mean efficiency. Parts of it just isn't smart
+but just me being lazy like the cog description and emojis
+for the help command. If you have questions please ping
+dartmern#7563 in my support server or in discord.py #playground.
+"""
 
 class SupportView(discord.ui.View):
     def __init__(self, ctx : MyContext):
@@ -773,9 +779,9 @@ class MetroHelp(commands.HelpCommand):
             cog = command.cog
             if cog is None: return [no_category, 'Commands that do not have a category.']
             try:
-                to_return = [cog.qualified_name, cog.description, cog.emoji]
+                to_return = [cog.qualified_name, cog.description.split('\n')[0], cog.emoji]
                 if cog.emoji == '':
-                    return [cog.qualified_name, cog.description]
+                    return [cog.qualified_name, cog.description.split('\n')[0]]
                 else:
                     return to_return
             except AttributeError:

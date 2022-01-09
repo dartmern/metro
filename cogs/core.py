@@ -12,6 +12,7 @@ import traceback
 
 import datetime as dt
 from bot import MetroBot
+from cogs.stars import StarError
 from utils import errors
 
 from utils.useful import Cooldown, Embed
@@ -60,12 +61,14 @@ class core(commands.Cog, description="Core events."):
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx : MyContext, error):
-
         embed = Embed()
         embed.color = discord.Color.red()
 
         if ctx.command and ctx.command.has_error_handler():
             return
+    
+        elif isinstance(error, StarError):
+            return await ctx.send(str(error))
 
         elif isinstance(error, errors.UserBlacklisted):
             if ctx.interaction:
@@ -262,6 +265,7 @@ class core(commands.Cog, description="Core events."):
 
         elif isinstance(error, commands.TooManyArguments):
             return await ctx.send("Too many arguments were passed to this command!")
+
 
         elif isinstance(error, commands.CheckFailure):
             return
