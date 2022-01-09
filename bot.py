@@ -116,13 +116,13 @@ class MetroBot(commands.AutoShardedBot):
             owner_ids=[525843819850104842],
             #chunk_guilds_at_startup=False,
             help_command=None,
-            slash_commands=True,
+            #slash_commands=True,
             slash_command_guilds=[812143286457729055],#, 917580286898888715],
             strip_after_prefix=True,
             #shard_count=10,
             max_messages=5000
         )
-        self.session = aiohttp.ClientSession()
+        self.session = aiohttp.ClientSession(trust_env=True)
         self.mystbin_client = mystbin.Client()
 
         self.add_check(self.user_blacklisted)

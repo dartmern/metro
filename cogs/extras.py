@@ -1,4 +1,5 @@
 import json
+from typing import Optional
 import discord
 from discord.ext import commands
 
@@ -7,10 +8,13 @@ import re
 
 from bot import MetroBot
 from utils.custom_context import MyContext
-from utils.converters import DiscordCommand
+from utils.converters import DiscordCommand, ImageConverter
 from utils.useful import Cooldown, Embed, chunkIt
 from utils.calc_tils import NumericStringParser
 from utils.json_loader import get_path, read_json
+
+data = read_json("info")
+or_api_token = data['openrobot_api_key']
 
 class CodeBlock:
     missing_error = 'Missing code block. Please use the following markdown\n\\`\\`\\`language\ncode here\n\\`\\`\\`'
@@ -203,3 +207,56 @@ class extras(commands.Cog, description='Extra commands for your use.'):
 
                 url = await self.bot.mystbin_client.post(output)
                 return await ctx.send("Output was too long: %s" % url)
+
+    @commands.command(name='nsfw-check')
+    @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.user))
+    async def nsfw_check(self, ctx: MyContext, *, image: Optional[str]):
+        """
+        Check for NSFW in an image.
+        
+        This command is powered by [OpenRobo API](https://api.openrobot.xyz/api/docs#operation/do_nsfw_check_api_nsfw_check_get)
+        """
+
+        url = (
+            await ImageConverter().convert(ctx, image)
+            or ctx.author.display_avatar.url
+        )
+
+        async with self.bot.session.get("https://api.openrobot.xyz/api/nsfw-check", headers={'Authorization' : or_api_token},params = {'url' : url}) as response:
+            if response.status != 200:
+                return await ctx.send("Openrobot API returned a bad result.")
+
+            response_data = await response.json()
+        
+        embed = discord.Embed()
+        embed.description = f"Is NSFW: {'<:mCheck:819254444197019669>' if response_data['nsfw_score'] > 0.25 else '<:mCross:819254444217860116>'}"
+        embed.add_field(name='<:online:819254444151537665> Safe Score', value=f"`{round(100 - (response_data['nsfw_score']*100), 2)}%`")
+        embed.add_field(name='<:dnd:819254444028854324> Unsafe Score', value=f"`{round(response_data['nsfw_score']*100, 2)}%`")
+        embed.set_image(url=url)
+        await ctx.send(embed=embed)
+
+
+    @commands.command(name='screenshot', aliases=['ss'])
+    @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.user))
+    async def screenshot(self, ctx: MyContext, *, url: str):
+        """
+        Get a screenshot of a website.
+        
+        This command is powered by [Pop Cat API](https://popcat.xyz/api)
+        """
+
+        x = re.findall(
+                r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+",
+                url,
+            )
+        if not x:
+            raise commands.BadArgument("You must include a vaild url string.")
+
+        async with ctx.typing():
+            async with self.bot.session.get(f"https://api.popcat.xyz/screenshot", params={"url" : url}) as response:
+                if response.status != 200:
+                    raise commands.BadArgument("Pop Cat API returned a bad response. Try again later.")
+
+            
+            return await ctx.send(response)
+

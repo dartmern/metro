@@ -1362,7 +1362,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             await guild.chunk()
 
         embed = discord.Embed(color=ctx.color)
-        embed.set_author(name=guild.name, icon_url=guild.icon.ur if guild.icon else EmptyEmbed)
+        embed.set_author(name=guild.name, icon_url=guild.icon.url if guild.icon else EmptyEmbed)
 
         embed.add_field(name='\U00002139 General', value=f"__**ID:**__ {guild.id} \n__**Owner:**__ {guild.owner if guild.owner else 'Not Found'}\n__**Verification Level:**__ {str(guild.verification_level).title()}\n__**Filesize Limit:**__ {humanize.naturalsize(guild.filesize_limit)}\n__**Role count:**__ {len(guild.roles)}")
 

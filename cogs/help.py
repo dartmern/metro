@@ -338,7 +338,7 @@ class NewHelpView(discord.ui.View):
             name=self.ctx.author.name + " | Help Menu",
             icon_url=self.ctx.author.display_avatar.url,
         )
-        embed.set_footer(text=f'Made by {self.bot.owner} with 💖 and discord.py')
+        embed.set_footer(text=f'Made by {self.bot.owner if self.bot.owner else "dartmern#7563"} with 💖 and discord.py')
         return embed
 
     @discord.ui.select(placeholder='Please select a category...', row=0)

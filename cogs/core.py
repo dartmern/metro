@@ -128,6 +128,7 @@ class core(commands.Cog, description="Core events."):
                     await channel.send(embeds=embeds)
                 except (discord.Forbidden, discord.HTTPException):
                     await channel.send(content='Traceback string was too long to output.', embed=embed, file=discord.File(io.StringIO(traceback_string), filename='traceback.py'))
+                return 
                 
         elif isinstance(error, commands.MissingRequiredArgument):
             missing = f"{error.param.name}"
