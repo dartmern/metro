@@ -222,7 +222,6 @@ class hypixel(commands.Cog, description='Get stats from hypixel api'):
                 return await ctx.send(embed=embed)
 
 
-
     @commands.command()
     @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.user))
     async def profiles(self, ctx : MyContext, *, username : str):
@@ -253,24 +252,8 @@ class hypixel(commands.Cog, description='Get stats from hypixel api'):
 
                 return await ctx.send(embed=embed)
 
-    @commands.group(
-        name='rewrite',
-        invoke_without_command=True,
-        case_insensitive=True
-    )
-    @commands.check(Cooldown(4, 30, 6, 30, commands.BucketType.user))
-    async def hypixel_rewrite(self, ctx : MyContext):
-        """
-        Testing commands for hypixel api interaction rewrite.
-        
-        Commands will have same name but be under the `rewrite` group command.
-        The cooldowns have been changed to `4/30s` and `6/30s`.
 
-        If ther are any bugs please join my [`support server`](https://discord.gg/2ceTMZ9qJh) to report them
-        """
-        await ctx.help()
-
-    @hypixel_rewrite.command(name='profile')
+    @commands.command(name='profile')
     @commands.check(Cooldown(4, 30, 6, 30, commands.BucketType.user))
     async def rewrite_profile(
         self, 
@@ -392,114 +375,3 @@ class hypixel(commands.Cog, description='Get stats from hypixel api'):
 
         
         return await ctx.send(embed=embed, view=View(ctx, res, profile, username.lower(), profile_str))
-                        
-
-    @commands.command()
-    @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.user))
-    async def profile(self, ctx : MyContext, username : str, profile : str):
-        """
-        View profile stats of a minecraft user.
-        Powered by Hypixel API.
-        
-        To view all your profiles use the `profiles` command.
-        """
-        profile = profile.lower()
-        
-        vaild_profiles = ['Apple', 'Banana', 'Blueberry', 'Coconut', 'Cucumber', 'Grapes', 'Kiwi', 'Lemon', 'Lime', 'Mango', 'Orange', 'Papaya', 'Pear', 'Peach', 'Pineapple', 'Pomegranate', 'Raspberry', 'Strawberry', 'Tomato', 'Watermelon', 'Zucchini']
-
-        def check(m):
-            return m.channel == ctx.channel and m.author == ctx.author
-
-        async with ctx.typing():
-
-            if profile.capitalize() not in vaild_profiles:
-                raise commands.BadArgument("That is not a vaild profile name.")
-
-            uuid = await self.uuid_from_username(username)
-
-            if not self.skills_cache:           
-                async with self.bot.session.get("https://api.hypixel.net/resources/skyblock/skills") as s:
-                    await self.handle_status_codes(s)
-
-                    res = await s.json()
-                    self.skills_cache = res
-
-
-            async with self.bot.session.get(f"https://api.hypixel.net/skyblock/profiles?key=" + hypixel_api_key + "&uuid=" + uuid) as s:
-                await self.handle_status_codes(s)
-
-                res = await s.json()
-
-                for x in res["profiles"]:
-                    if x["cute_name"] == profile.capitalize():
-                        profile_uuid = x["profile_id"]
-                        break
-
-            async with self.bot.session.get(f"https://api.hypixel.net/skyblock/profile?key=" + hypixel_api_key + "&profile=" + profile_uuid) as s:
-                
-                await self.handle_status_codes(s)
-
-                res = await s.json()
-                
-                embed = Embed()
-                embed.title = username
-                embed.url = f'https://sky.shiiyu.moe/{username.lower()}/{profile}'
-
-                try:
-                    banking = round(res["profile"]["banking"]["balance"] ,1)
-                except KeyError:
-                    banking = 'No Data Found'
-                try:
-                    purse = round(res["profile"]["members"][uuid]["coin_purse"], 1)
-                except KeyError:
-                    purse = 'No Data Found'
-
-                total_skill = []
-                skills = ['FARMING', 'COMBAT', 'FISHING', 'ENCHANTING', 'MINING', 'FORAGING', 'ALCHEMY']
-                for skill in skills:
-                    levels = self.skills_cache["collections"][skill]["levels"]
-                    for i in levels:
-                        skil = f'experience_skill_{skill.lower()}'
-                        if i["totalExpRequired"] > res["profile"]["members"][uuid][skil]:
-                            index_of_next = (i["level"])
-                            index_of_before = (i["level"]) - 1
-                            #print(index_of_next)
-                            #print(levels)
-                            #print(type(levels))
-                            level = levels[index_of_next]
-                            print(i["totalExpRequired"])
-
-                            dif = level["totalExpRequired"] - res["profile"]["members"][uuid][skil]
-                            l = dif + levels[index_of_before]['totalExpRequired']
-                            ski = level["totalExpRequired"] / l
-                            skill_ = i["level"] * ski
-                            total_skill.append(skill_)
-                            break
-                
-                print(total_skill)
-                skill_total = 0
-                for x in total_skill:
-                    skill_total += x
-
-                skill_av = skill_total / len(skills)
-                    
-
-                #write_json(res, 'solo')
-                #print("H")
-                
-
-                embed.description = f"<:fairy_soul:913249554097393665> **Fariy Souls:** {res['profile']['members'][uuid]['fairy_souls_collected']}/227"\
-                                    f"\u2800\u2800\u2800\u2800\u2800\u2800 **Skill Average:** {round(skill_av, 1)}"
-                embed.add_field(name='Purse', value=f'<:piggy_bank:913245005085286400> `{purse:,}`',inline=True)
-                embed.add_field(name='Bank', value=f'<:gold:913245371650682920> `{banking:,}`')
-                embed.set_footer(text='This data is cached and can take up to 5 minutes to refresh.')
-                embed.set_image(url=f'https://mc-heads.net/avatar/{uuid}')
-            
-
-                return await ctx.send(embed=embed)
-
-                write_json(res, 'request')
-
-                print("DONE!")
-                
-
