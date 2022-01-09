@@ -20,6 +20,7 @@ from contextlib import redirect_stdout
 import jishaku 
 from jishaku.paginators import WrappedPaginator
 from jishaku.codeblocks import codeblock_converter
+from cogs.serverutils import serverutils
 
 from utils.decos import is_dev
 from utils.custom_context import MyContext
@@ -361,6 +362,14 @@ class developer(commands.Cog, description="Developer commands."):
     async def dev_cache(self, ctx):
         await ctx.send(f"I have cached `{len(self.bot.cached_messages)}/5000` messages.")
 
+    @developer_cmds.command(name='serverinfo', aliases=['si'])
+    @is_dev()
+    async def dev_si(self, ctx: MyContext, *, guild: discord.Guild):
+        """Get info about a server id."""
+        serverutils_cog: serverutils = self.bot.get_cog("serverutils")
+        if not serverutils_cog:
+            raise commands.BadArgument("Serverutils cog is not loaded at the moment...")
+        await ctx.send(embed=await serverutils_cog.serverinfo_embed(ctx, guild))
 
     @commands.command(name='delete',aliases=['d'])
     @commands.bot_has_permissions(send_messages=True)
