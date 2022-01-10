@@ -1328,6 +1328,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             return await ctx.send(f"Granted {to_send} to {entity}")
 
     async def userinfo_embed(self, ctx: MyContext, member: discord.Member):
+        """This function returns a embed for a discord.Member instance."""
 
         embed = discord.Embed(color=member.color if member.color not in (None, discord.Color.default()) else discord.Colour.green())
         embed.set_author(name="%s's User Info" % member, icon_url=member.display_avatar.url)
@@ -1357,9 +1358,13 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         return embed
         
     async def serverinfo_embed(self, ctx: MyContext, guild: discord.Guild):
+        """This function returns a embed for a discord.Guild instance."""
+
         if not guild.chunked:
             await ctx.trigger_typing()
             await guild.chunk()
+
+        messages = await ctx.bot.db.fetchval("SELECT COUNT(*) as c FROM messages WHERE server_id = $1", ctx.guild.id)
 
         embed = discord.Embed(color=ctx.color)
         embed.set_author(name=guild.name, icon_url=guild.icon.url if guild.icon else EmptyEmbed)
@@ -1371,6 +1376,19 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
 
         embed.add_field(name='<:joined_at:928188524006608936> Created at', value=f"{discord.utils.format_dt(guild.created_at, 'F')} ({discord.utils.format_dt(guild.created_at, 'R')})")
         
+        embed.add_field(name='<:messages:928380915560874055> Messages', value=f"`{int(messages):,}` messages")
+        return embed
+
+    async def channelinfo_embed(
+        self, ctx: MyContext, 
+        channel: Union[discord.TextChannel, discord.VoiceChannel, discord.StageChannel]):
+        """This function returns a embed for a Text/Voice/Stage channel instance."""
+
+        messages = await ctx.bot.db.fetchval("SELECT COUNT(*) as c FROM messages WHERE channel_id = $1 AND server_id = $2", channel.id, ctx.guild.id)
+        
+        embed = discord.Embed(color=discord.Colour.light_gray(), title=f'#{channel.name}')
+        embed.add_field(name='\U00002139 General', value=f"__**Mention:**__ {channel.mention} \n__**Name:**__ {channel.name} \n__**ID:**__ {channel.id}\n__**Type:**__ {str(channel.type).title()}\n__**Created on:**__ {discord.utils.format_dt(channel.created_at, 'F')} ({discord.utils.format_dt(channel.created_at, 'R')})")
+        embed.add_field(name='<:messages:928380915560874055> Messages', value=f'`{int(messages):,}` total messages', inline=False)
         return embed
 
     @commands.command(name='user-info', aliases=['userinfo', 'ui','whois','info'])
@@ -1389,4 +1407,14 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
     async def server_info(self, ctx: MyContext):
         """Show all the information about the current guild."""
         await ctx.send(embed=await self.serverinfo_embed(ctx, ctx.guild))
+
+    @commands.command(name='channel-info', aliases=['channelinfo', 'ci'])
+    async def channel_info(
+        self, ctx: MyContext, *, 
+        channel: Union[discord.TextChannel, discord.VoiceChannel, discord.StageChannel, None]):
+        """Show all the information about a channel.
+        
+        This channel can be a voice or text channel."""
+        channel = channel or ctx.channel
+        await ctx.send(embed=await self.channelinfo_embed(ctx, channel))
         

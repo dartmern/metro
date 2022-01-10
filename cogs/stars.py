@@ -475,7 +475,7 @@ class stars(commands.Cog, description='Manage and create starboard commands. \nT
         if channel is None or not isinstance(channel, (discord.Thread, discord.TextChannel)):
             return
 
-        async with self.bot.pool.acquire(timeout=300.0) as con:
+        async with self.bot.db.acquire(timeout=300.0) as con:
             starboard = await self.get_starboard(channel.guild.id, connection=con)
             if starboard.channel is None:
                 return

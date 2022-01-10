@@ -96,6 +96,7 @@ class VoteView(discord.ui.View):
             # Basically I send a request to see if they are on both bot lists but don't if it's my bot obv.
 
         embed = Embed()
+        embed.set_author(name=self.bot, icon_url=self.bot.display_avatar.url)
         embed.description = f"**top.gg**: {self.top_gg}"\
             f"\n**discordbotlist.com**: {self.discordbotlist}"\
             f"\n\nThank you for voting it really helps grow and develop {self.bot.name}."\
