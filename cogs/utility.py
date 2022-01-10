@@ -1487,7 +1487,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
                 for key, value in self.highlight.items(): 
                     if message.guild.id != value[0]:
                         return
-                    if str(key).lower() in final_message: #and message.author.id != value[1]:
+                    if str(key).lower() in final_message and message.author.id != value[1]:
                         e = await self.generate_context(message, key)
                         user = message.guild.get_member(value[1])
                         if user is not None and message.channel.permissions_for(user).read_messages:
