@@ -41,6 +41,21 @@ class LibraryConverter(commands.Converter):
         else:
             raise commands.UserInputError("Must be one of `enhanced-discord.py`, `discord.py`, `discord.py-2.0`, `twitchio`, `wavelink`, or `aiohttp`")
 
+class RTFMConverter(commands.Converter):
+    async def convert(self, _, param):
+        if param.lower() in ("edpy", "enhanced-discord.py"):
+            return "enhanced-discord.py"
+        if param.lower() in ("dpy", "discordpy", "discord.py"):
+            return "discord.py"
+        elif param.lower() in ("dpy2", "discord.py2", "discordpy2"):
+            return "discord.py-2.0"
+        elif param.lower() in ("ahttp", "aiohttp"):
+            return "aiohttp"
+        elif param.lower() in ("python", "py", "python.org"):
+            return "python"
+        else:
+            return None
+
 
 class SphinxObjectFileReader:
     # Inspired by Sphinx's InventoryFileReader
@@ -200,22 +215,45 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         await ctx.send(embed=e, hide=True)
 
 
-    @commands.command(name='rtfm', usage='<documentation> [query]')
-    async def rtfm_slash(
-        self, 
-        ctx : MyContext, 
-        documentation : Literal['enhanced-discord.py', 'discord.py', 'discord.py-2.0', 'aiohttp', 'python'] = commands.Option(default='enhanced-discord.py',description='Documentation you wish to search on.'),
-        query : Optional[str] = commands.Option(default=None, description='Query to search for.')
-        ):
-        """
-        Search for a documentation link for a documention you wish.
+    @commands.group(name="rtfm",invoke_without_command=True, case_insensitive=True, slash_command=True, aliases=['rtfd'])
+    @commands.bot_has_permissions(send_messages=True)
+    async def rtfm(self, ctx, *, obj : str = None):
+        """Gives you a documentation link for a enhanced-discord.py entity.
         Events, objects, and functions are all supported through a
         a cruddy fuzzy algorithm.
-
-        If a desired documention is not listed please send `dartmern#7563` a message.
         """
-        
-        await self.do_rtfm(ctx, documentation, query)
+
+        await self.do_rtfm(ctx, 'enhanced-discord.py', obj)
+
+    @rtfm.command(name="python",aliases=["py"],slash_command=True)
+    @commands.bot_has_permissions(send_messages=True)
+    async def rtfm_py(self, ctx, *, object : str = commands.Option(default=None,description='Object to search for')):
+        """Gives you a documentation link for a Python entity."""
+
+        await self.do_rtfm(ctx, "python", object)
+
+    @rtfm.command(name="master",aliases=["2.0"],slash_command=True)
+    @commands.bot_has_permissions(send_messages=True)
+    async def rtfm_master(self, ctx, *, object : str = commands.Option(default=None,description='Object to search for')):
+        """Gives you a documentation link for a discord.py entity. (master branch)"""
+
+        await self.do_rtfm(ctx, "discord.py-2.0", object)
+
+
+    @rtfm.command(name='dpy',aliases=['discordpy', 'discord.py'],slash_command=True)
+    @commands.bot_has_permissions(send_messages=True)
+    async def rtfm_dpy(self, ctx, *, object : str = commands.Option(default=None,description='Object to search for')):
+        """Gives you a documentation link for a discord.py entity."""
+
+        await self.do_rtfm(ctx, "discord.py", object)
+
+
+    @rtfm.command(name='edpy',slash_command=True)
+    @commands.bot_has_permissions(send_messages=True)
+    async def rtfm_edpy(self, ctx, *, object : str = commands.Option(default=None,description='Object to search for')):
+        """Gives you a documentation link for a ed-py entity."""
+
+        await self.do_rtfm(ctx, 'enhanced-discord.py', object)
         
 
     @commands.command(name='rtfs')

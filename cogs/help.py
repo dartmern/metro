@@ -63,9 +63,16 @@ class SupportView(discord.ui.View):
         await self.ctx.send(embed=embed, ephemeral=True, view=self)
 
 class VoteView(discord.ui.View):
-    def __init__(self, ctx: MyContext):
+    def __init__(self, ctx: MyContext, bot: discord.User, *, bot_instance: MetroBot):
         super().__init__(timeout=180)
         self.ctx = ctx
+        self.bot: discord.User = bot  # This is a discord.User which is confirmed to be a *bot* 
+                                    # THIS IT NOT AN INSTANCE OF METRO BUT CAN BE
+
+        self.top_gg: str = None # both of these vars will get something in the start method
+        self.discordbotlist: str = None
+
+        self.bot_instance = bot_instance
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id == self.ctx.author.id:
@@ -76,10 +83,22 @@ class VoteView(discord.ui.View):
     async def start(self):
         """Start up the view."""
 
+        if self.bot == self.bot_instance.user:
+            self.top_gg = f"https://top.gg/bot/{self.bot.id}/vote"
+            self.discordbotlist = f"https://discordbotlist.com/bots/{self.bot.id}"
+        else:
+            top_gg_response = await self.bot_instance.session.get(f"https://top.gg/bot/{self.bot.id}/vote")
+            self.top_gg = f"https://top.gg/bot/{self.bot.id}/vote" if top_gg_response.status == 200 else "Not Found"
+
+            discordbotlistresponse = await self.bot_instance.session.get(f"https://discordbotlist.com/bots/{self.bot.id}")
+            self.discordbotlist = f"https://discordbotlist.com/bots/{self.bot.id}" if discordbotlistresponse.status == 200 else "Not Found"
+
+            # Basically I send a request to see if they are on both bot lists but don't if it's my bot obv.
+
         embed = Embed()
-        embed.description = f"**top.gg**: https://top.gg/bot/{self.ctx.bot.user.id}/vote"\
-            f"\n**discordbotlist.com**: https://discordbotlist.com/bots/metro-2111"\
-            f"\n\nThank you for voting it really helps grow and develop the bot."\
+        embed.description = f"**top.gg**: {self.top_gg}"\
+            f"\n**discordbotlist.com**: {self.discordbotlist}"\
+            f"\n\nThank you for voting it really helps grow and develop {self.bot.name}."\
             f"\n- You can click the button below to set a reminder to vote in 12 hours."
 
         await self.ctx.send(embed=embed, view=self)
@@ -93,7 +112,7 @@ class VoteView(discord.ui.View):
         cmd = self.ctx.bot.get_command("reminder")
         if not cmd:
             return await interaction.response.send_message("This feature is currently not available.")
-        await self.ctx.invoke(cmd, when=await UserFriendlyTime().convert(self.ctx, '12 hours Vote for Metro\n**top.gg**: <https://top.gg/bot/788543184082698252>\n**discordbotlist.com**: <https://discordbotlist.com/bots/metro-2111>'))
+        await self.ctx.invoke(cmd, when=await UserFriendlyTime().convert(self.ctx, f'12 hours Vote for {self.bot.name}\n**top.gg**: <{self.top_gg}>\n**discordbotlist.com**: <{self.discordbotlist}>'))
         
 
 class InviteView(discord.ui.View):
@@ -997,9 +1016,12 @@ class meta(commands.Cog, description='Get bot stats and information.'):
             await ctx.send("No matches were found. Try again with a different query.")
             
     @commands.command()
-    async def vote(self, ctx: MyContext):
+    async def vote(self, ctx: MyContext, *, bot: Optional[discord.User]):
         """Get vote links for the bot."""
-        view = VoteView(ctx)
+        bot = bot or self.bot.user
+        if not bot.bot:
+            raise commands.BadArgument("This is not a bot.")
+        view = VoteView(ctx, bot, bot_instance=self.bot)
         await view.start()
 
     @commands.command()
