@@ -18,6 +18,7 @@ import time
 from difflib import get_close_matches
 
 from utils.custom_context import MyContext
+from utils.remind_utils import UserFriendlyTime
 from utils.useful import Embed, Cooldown, OldRoboPages, get_bot_uptime
 from utils.converters import BotUserObject
 
@@ -60,7 +61,40 @@ class SupportView(discord.ui.View):
             f'\n Joining is completely at your own will. \nThis message is here to protect people from accidentally joining.'\
             f'\n You can kindly dismiss this message if you clicked by accident.'
         await self.ctx.send(embed=embed, ephemeral=True, view=self)
-    
+
+class VoteView(discord.ui.View):
+    def __init__(self, ctx: MyContext):
+        super().__init__(timeout=180)
+        self.ctx = ctx
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id == self.ctx.author.id:
+            return True
+        await interaction.response.send_message('This pagination menu cannot be controlled by you, sorry!', ephemeral=True)
+        return False
+
+    async def start(self):
+        """Start up the view."""
+
+        embed = Embed()
+        embed.description = f"**top.gg**: https://top.gg/bot/{self.ctx.bot.user.id}"\
+            f"\n**discordbotlist.com**: https://discordbotlist.com/bots/metro-2111"\
+            f"\n\nThank you for voting it really helps grow and develop the bot."\
+            f"\n- You can click the button below to set a reminder to vote in 12 hours."
+
+        await self.ctx.send(embed=embed, view=self)
+
+    @discord.ui.button(label='Reminder', style=discord.ButtonStyle.green)
+    async def foo(self, button: discord.ui.Button, interaction: discord.Interaction):
+        button.disabled = True
+        await interaction.message.edit(view=self)
+        await interaction.response.defer()
+        
+        cmd = self.ctx.bot.get_command("reminder")
+        if not cmd:
+            return await interaction.response.send_message("This feature is currently not available.")
+        await self.ctx.invoke(cmd, when=await UserFriendlyTime().convert(self.ctx, '12 hours Vote for Metro\n**top.gg**: <https://top.gg/bot/788543184082698252>\n**discordbotlist.com**: <https://discordbotlist.com/bots/metro-2111>'))
+        
 
 class InviteView(discord.ui.View):
     def __init__(self, ctx : MyContext):
@@ -962,8 +996,12 @@ class meta(commands.Cog, description='Get bot stats and information.'):
         else:
             await ctx.send("No matches were found. Try again with a different query.")
             
+    @commands.command()
+    async def vote(self, ctx: MyContext):
+        """Get vote links for the bot."""
+        view = VoteView(ctx)
+        await view.start()
 
-    
 
 
 def setup(bot):
