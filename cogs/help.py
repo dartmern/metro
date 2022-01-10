@@ -1002,6 +1002,51 @@ class meta(commands.Cog, description='Get bot stats and information.'):
         view = VoteView(ctx)
         await view.start()
 
+    @commands.command()
+    async def privacy(self, ctx: MyContext):
+        """Privacy for the bot."""
+
+        desc = ""
+
+        desc += (
+            """
+            - By interacting with Metro which will be refered to as "bot", 
+            you agree that your messages including attachments will be recorded 
+            (except message content) and your user id (to identify you). This 
+            data is encrypted in a secure database that only developers have 
+            access to. The bot collects this data for moderation purpose and to 
+            track stats with the tracking module which tracks message count. If
+            you do not consent to having your data tracking please join the
+            bot's support server. The bot does not collect data like presences, 
+            statuses, about me, connections about you.
+            """
+        )
+        desc +=(
+            """
+            - By inviting Metro to your server you agree that your guild's 
+            messages are recorded (except message content) for stat purposes. 
+            You can view this in the tracking module (message count). The bot 
+            will not store but access guild member count and channel count for 
+            bot stats which you may view on my help command.
+            """
+        )
+        desc += (
+            """
+            \nIf you have any privacy concerns you may view the source code
+            for **any** command with the `source` command. You can view
+            the entire github repository by clicking [here](https://github.com/dartmern/metro) <:github:744345792172654643>
+            """
+        )
+        desc += (
+            """
+            \nAny concerns? Join my [support server](https://discord.gg/2ceTMZ9qJh) if you have any concerns or issues.
+            """
+        )
+        embed = discord.Embed(color=ctx.color)
+        embed.description = desc
+        await ctx.reply(embed=embed)
+        
+
 
 
 def setup(bot):
