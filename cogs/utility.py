@@ -246,7 +246,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         self._current_timer = None
         self._task = bot.loop.create_task(self.dispatch_timers())
 
-        self.highlight = {}
+        self.highlight = defaultdict(list)
 
         bot.loop.create_task(self.load_highlight())
 
@@ -1474,6 +1474,8 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
     async def highlight_core(self, message: discord.Message):
         """The core of highlight."""
 
+        # If you wanna call this inefficient idc. it works fine for me
+
         if message.guild is None:
             return
         if message.author.bot:
@@ -1490,6 +1492,8 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
                     if str(key).lower() in final_message and message.author.id != value[1]:
                         e = await self.generate_context(message, key)
                         user = message.guild.get_member(value[1])
+                        if user is not None and user in message.mentions:
+                            continue
                         if user is not None and message.channel.permissions_for(user).read_messages:
                             ctx = await self.bot.get_context(message)
                             if ctx.prefix is not None:
@@ -1498,9 +1502,6 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             except RuntimeError:
                 pass # Can't do shit really
 
-        
-    
-        
 
 def setup(bot):
     bot.add_cog(utility(bot))

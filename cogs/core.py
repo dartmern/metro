@@ -120,6 +120,8 @@ class core(commands.Cog, description="Core events."):
                     embed.description = f'```yaml\nby: {ctx.author} (id: {ctx.author.id})'\
                                         f'\ncommand: {ctx.message.content[0:1500]}\n```'  
 
+                embed.color = discord.Colour.blue() if ctx.author.id in ctx.bot.owner_ids else discord.Colour.yellow()
+
                 traceback_embed = Embed(color=discord.Colour.red())
                 traceback_embed.title = 'Full Traceback'
                 traceback_embed.description = f'```py\n{traceback_string}\n```'  

@@ -262,7 +262,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         if not can_execute_action(ctx, ctx.author, member):
             return await ctx.send('You are not high enough in role hierarchy to give roles to this member.')
 
-        if role.position > ctx.guild.me.top_role.position:
+        if role.position >= ctx.guild.me.top_role.position:
             to_send = ""
             to_send += (
                 f"\🔴 I am unable to add this role due to discord hierarchy rules."
@@ -291,7 +291,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         if not can_execute_action(ctx, ctx.author, member):
             return await ctx.send('You are not high enough in role hierarchy to remove roles to this member.')
 
-        if role.position > ctx.guild.me.top_role.position:
+        if role.position >= ctx.guild.me.top_role.position:
             to_send = ""
             to_send += (
                 f"\🔴 I am unable to remove this role due to discord hierarchy rules."
@@ -314,7 +314,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
     async def role_addmulti(self, ctx: MyContext, role: RoleConverter, *members: discord.Member):
         """Add a role to multiple members."""
 
-        if role.position > ctx.guild.me.top_role.position:
+        if role.position >= ctx.guild.me.top_role.position:
             to_send = ""
             to_send += (
                 f"\🔴 I am unable to add this role due to discord hierarchy rules."
@@ -354,7 +354,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
     async def role_removemulti(self, ctx: MyContext, role : RoleConverter, *members: discord.Member):
         """Remove a role from multiple members."""
 
-        if role.position > ctx.guild.me.top_role.position:
+        if role.position >= ctx.guild.me.top_role.position:
             to_send = ""
             to_send += (
                 f"\🔴 I am unable to remove this role due to discord hierarchy rules."
@@ -394,7 +394,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
     async def role_all(self, ctx: MyContext, *, role: RoleConverter):
         """Add a role to all members of the guild."""
 
-        if role.position > ctx.guild.me.top_role.position:
+        if role.position >= ctx.guild.me.top_role.position:
             to_send = ""
             to_send += (
                 f"\🔴 I am unable to add roles due to discord hierarchy rules."
@@ -450,7 +450,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
     async def role_rall(self, ctx: MyContext, *, role: RoleConverter):
         """Remove a role from all members of the guild."""
 
-        if role.position > ctx.guild.me.top_role.position:
+        if role.position >= ctx.guild.me.top_role.position:
             to_send = ""
             to_send += (
                 f"\🔴 I am unable to remove roles due to discord hierarchy rules."
@@ -506,7 +506,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
     async def role_bots(self, ctx: MyContext, *, role: RoleConverter):
         """Add a role to all bots in the guild."""
 
-        if role.position > ctx.guild.me.top_role.position:
+        if role.position >= ctx.guild.me.top_role.position:
             to_send = ""
             to_send += (
                 f"\🔴 I am unable to add roles due to discord hierarchy rules."
@@ -562,7 +562,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
     async def role_rbots(self, ctx: MyContext, *, role: RoleConverter):
         """Remove a role from all bots in the guild."""
 
-        if role.position > ctx.guild.me.top_role.position:
+        if role.position >= ctx.guild.me.top_role.position:
             to_send = ""
             to_send += (
                 f"\🔴 I am unable to remove roles due to discord hierarchy rules."
@@ -618,7 +618,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
     async def role_humans(self, ctx: MyContext, *, role: RoleConverter):
         """Add a role to all humans in the guild."""
 
-        if role.position > ctx.guild.me.top_role.position:
+        if role.position >= ctx.guild.me.top_role.position:
             to_send = ""
             to_send += (
                 f"\🔴 I am unable to add roles due to discord hierarchy rules."
@@ -674,7 +674,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
     async def role_rhumans(self, ctx: MyContext, *, role: RoleConverter):
         """Remove a role from all humans in the guild."""
 
-        if role.position > ctx.guild.me.top_role.position:
+        if role.position >= ctx.guild.me.top_role.position:
             to_send = ""
             to_send += (
                 f"\🔴 I am unable to remove roles due to discord hierarchy rules."
@@ -771,7 +771,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
     async def role_color(self, ctx: MyContext, role: RoleConverter, *, color: discord.Color):
         """Change a role's color."""
 
-        if role.position > ctx.guild.me.top_role.position:
+        if role.position >= ctx.guild.me.top_role.position:
             to_send = ""
             to_send += (
                 f"\🔴 I am unable to edit this role due to discord hierarchy rules."
@@ -790,7 +790,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
     async def role_hoist(self, ctx: MyContext, role: RoleConverter, hoisted: bool = None):
         """Toggle a role's hoist status."""
 
-        if role.position > ctx.guild.me.top_role.position:
+        if role.position >= ctx.guild.me.top_role.position:
             to_send = ""
             to_send += (
                 f"\🔴 I am unable to edit this role due to discord hierarchy rules."
@@ -812,7 +812,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
     async def role_rename(self, ctx: MyContext, role: RoleConverter, *, name: str):
         """Rename a role's name."""
 
-        if role.position > ctx.guild.me.top_role.position:
+        if role.position >= ctx.guild.me.top_role.position:
             to_send = ""
             to_send += (
                 f"\🔴 I am unable to edit this role due to discord hierarchy rules."
@@ -1010,7 +1010,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         if role in member.roles:
             return await ctx.send("This member already has that role. \nIf you want to extend the temprole duration remove the role first.")
 
-        if role.position > ctx.guild.me.top_role.position:
+        if role.position >= ctx.guild.me.top_role.position:
             to_send = ""
             to_send += (
                 f"\🔴 I am unable to remove roles due to discord hierarchy rules."
