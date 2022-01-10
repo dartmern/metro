@@ -77,7 +77,7 @@ class VoteView(discord.ui.View):
         """Start up the view."""
 
         embed = Embed()
-        embed.description = f"**top.gg**: https://top.gg/bot/{self.ctx.bot.user.id}"\
+        embed.description = f"**top.gg**: https://top.gg/bot/{self.ctx.bot.user.id}/vote"\
             f"\n**discordbotlist.com**: https://discordbotlist.com/bots/metro-2111"\
             f"\n\nThank you for voting it really helps grow and develop the bot."\
             f"\n- You can click the button below to set a reminder to vote in 12 hours."

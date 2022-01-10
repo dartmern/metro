@@ -1,8 +1,9 @@
+from collections import defaultdict
 import re
 import discord
 from discord.ext import commands, menus
 
-from typing import Dict, List, Optional, Union
+from typing import Dict, Optional
 
 from bot import MetroBot
 
@@ -244,6 +245,13 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         self._have_data = asyncio.Event(loop=bot.loop)
         self._current_timer = None
         self._task = bot.loop.create_task(self.dispatch_timers())
+
+        self.highlight = {}
+
+        bot.loop.create_task(self.load_highlight())
+
+        self.regex_pattern = re.compile('([^\s\w]|_)+')
+        self.website_regex = re.compile("https?:\/\/[^\s]*")
 
     def cog_unload(self):
         self._task.cancel()
@@ -1358,24 +1366,140 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             f"\n Jump URL: [Click here]({first_message.jump_url} \"Click here to jump to message\")"
         await ctx.send(embed=embed)
 
-    @commands.command(name='embed')
-    @commands.has_guild_permissions(manage_messages=True)
-    async def embed(
-        self, ctx: MyContext, 
-        channel: Optional[discord.TextChannel], 
-        color: Optional[discord.Color] = discord.Colour.blue(), *, text: str
-        ):
-        """Create and send an embed."""
-        channel = channel or ctx.channel
+    async def load_highlight(self):
+        await self.bot.wait_until_ready()
+        self.highlight = {}
 
-        if not channel.permissions_for(ctx.author).send_messages:
-            raise commands.BadArgument("You cannot send messages in %s therefore you cannot send an embed there." % channel.mention)
+        query = """
+                SELECT * FROM highlight
+                """
+        records = await self.bot.db.fetch(query)
+        if records:
+            for record in records:
+                self.highlight[record['text']] = (record['guild_id'], record['author_id'])
 
-        split = text.split("|")
+    @commands.group(name='highlight', invoke_without_command=True, case_insensitive=True, aliases=['hl'])
+    @commands.guild_only()
+    async def highlight(self, ctx: MyContext):
+        """Highlight word notifications."""
+        await ctx.help()
 
-        embed = discord.Embed(title=split[0], description=split[1], color=color)
-        await channel.send(embed=embed)
-        await ctx.check()
+    @highlight.command(name='add', aliases=['+'])
+    @commands.guild_only()
+    async def highlight_add(self, ctx: MyContext, *, word: commands.clean_content):
+        """
+        Add a word to your highlight list.
+        
+        For the best experience delete your message so people don't know your highlights.
+        """
+        word = word.lower() # remove the pain in the ass of highlight
+
+        if len(word) < 2:
+            raise commands.BadArgument("Word needs to be at least 2 characters long.")
+        if len(word) > 50:
+            raise commands.BadArgument("Word needs to be less than 50 characters long.")
+        
+        data = await self.bot.db.fetchval("SELECT highlight FROM highlight WHERE author_id = $1 AND guild_id = $2 AND text = $3", ctx.author.id, ctx.guild.id, word)
+        if data:
+            raise commands.BadArgument(f'"{word}" is already in your highlights list.')
+        
+        await self.bot.db.execute("INSERT INTO highlight (author_id, text, guild_id) VALUES ($1, $2, $3)", ctx.author.id, word, ctx.guild.id)
+        self.highlight[word] = (ctx.guild.id, ctx.author.id)
+
+        await ctx.send(f"{self.bot.emotes['check']} Added \"{word}\" to your highlights.", delete_after=5)
+        await asyncio.sleep(4)
+        await ctx.message.delete(silent=True)
+
+    @highlight.command(name='remove', aliases=['-'])
+    @commands.guild_only()
+    async def highlight_remove(self, ctx: MyContext, *, word: commands.clean_content):
+        """Remove a word from your highlight list."""
+        word = word.lower()
+
+        status = await self.bot.db.execute("DELETE FROM highlight WHERE author_id = $1 AND text = $2 AND guild_id = $3", ctx.author.id, word, ctx.guild.id)
+        if status != 'DELETE 1':
+            raise commands.BadArgument(f"{self.bot.emotes['cross']} The word \"{word}\" is not in your highlight list.")
+        
+        del self.highlight[word]
+        await ctx.send(f"{self.bot.emotes['check']} Removed \"{word}\" from your highlight list.")
+
+    @highlight.command(name='list', aliases=['show', 'display'])
+    @commands.guild_only()
+    async def highlight_list(self, ctx: MyContext):
+        """
+        Show your highlight list.
+        
+        This list will be removed after 7 seconds for your privacy.
+        """
+        data = await self.bot.db.fetch("SELECT text FROM highlight WHERE author_id = $1 AND guild_id = $2", ctx.author.id, ctx.guild.id)
+        
+        embed = discord.Embed(color=discord.Color.yellow())
+        embed.set_author(name=f'{ctx.author}\'s highlights', icon_url=ctx.author.display_avatar.url)
+        embed.description = "\n".join([x['text'] for x in data])
+        embed.set_footer(text=f'This message will get deleted in 7 seconds so people don\'t know your highlights.')
+        await ctx.send(embed=embed, delete_after=7)
+        await asyncio.sleep(6)
+        await ctx.message.delete(silent=True)
+
+    @highlight.command(name='clear', aliases=['wipe'])
+    @commands.guild_only()
+    async def highlight_clear(self, ctx: MyContext):
+        """Clear your highlights."""
+
+        data = await self.bot.db.fetch("SELECT * FROM highlight WHERE author_id = $1 AND guild_id = $2", ctx.author.id, ctx.guild.id)
+        if not data:
+            raise commands.BadArgument(f"{self.bot.emotes['cross']} You have no highlights to clear...")
+
+        confirm = await ctx.confirm("Are you sure you want to clear your highlight list?")
+        if confirm is False:
+            return await ctx.send("Canceled.")
+        if confirm is None:
+            return await ctx.send("Timed out.")
+        
+        await self.bot.db.execute("DELETE FROM highlight WHERE author_id = $1 AND guild_id = $2", ctx.author.id, ctx.guild.id)
+        await self.load_highlight() # whatever
+
+        await ctx.send(f"{self.bot.emotes['check']} Cleared all your highlights.")
+
+    async def generate_context(self, msg, hl):
+        fmt = []
+        async for m in msg.channel.history(limit=5):
+            time = m.created_at.strftime("%H:%M:%S")
+            fmt.append(f"**[{time}] {m.author.name}:** {m.content[:200]}")
+        e = discord.Embed(title=f"**{hl}**", description='\n'.join(fmt[::-1]))
+        e.add_field(name='Jump to', value=f"[Jump!]({m.jump_url})")
+        return e
+
+    @commands.Cog.listener("on_message")
+    async def highlight_core(self, message: discord.Message):
+        """The core of highlight."""
+
+        if message.guild is None:
+            return
+        if message.author.bot:
+            return
+
+        final_message = self.website_regex.sub('', message.content.lower())
+        final_message = self.regex_pattern.sub('', final_message)
+
+        if self.highlight:
+            try:
+                for key, value in self.highlight.items(): 
+                    if message.guild.id != value[0]:
+                        return
+                    if str(key).lower() in final_message: #and message.author.id != value[1]:
+                        e = await self.generate_context(message, key)
+                        user = message.guild.get_member(value[1])
+                        if user is not None and message.channel.permissions_for(user).read_messages:
+                            ctx = await self.bot.get_context(message)
+                            if ctx.prefix is not None:
+                                continue
+                            await user.send(f"In {message.channel.mention}, you were mentioned with the highlighted word \"{key}\"", embed=e)
+            except RuntimeError:
+                pass # Can't do shit really
+
+        
+    
         
 
 def setup(bot):
