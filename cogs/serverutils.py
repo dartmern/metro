@@ -13,13 +13,14 @@ from discord.ext import commands
 
 from bot import MetroBot
 from utils.checks import can_execute_action, check_dev
-from utils.converters import ActionReason, RoleConverter
+from utils.converters import ActionReason, ImageConverter, RoleConverter
 from utils.custom_context import MyContext
 from utils.remind_utils import FutureTime, UserFriendlyTime, human_timedelta
 from utils.useful import Cooldown, Embed
 from utils.parsing import RoleParser
 from cogs.utility import Timer
 
+EMOJI_RE = re.compile(r"(<(a)?:[a-zA-Z0-9_]+:([0-9]+)>)") 
 
 # Parts of lockdown/unlockdown I took from Hecate thx
 # https://github.com/Hecate946/Neutra/blob/main/cogs/mod.py#L365-L477
@@ -31,6 +32,7 @@ from cogs.utility import Timer
 # user-info & server-info have great insparation from leo tyty
 # https://github.com/LeoCx1000/discord-bots/blob/master/DuckBot/cogs/utility.py#L575-L682
 # https://github.com/LeoCx1000/discord-bots/blob/master/DuckBot/cogs/utility.py#L707-L716
+
 
 def setup(bot: MetroBot):
     bot.add_cog(serverutils(bot))
@@ -1079,7 +1081,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             new_cool_nick = "simp name"
         return new_cool_nick
 
-    @commands.command(aliases=['dc'])
+    @commands.command(aliases=['dehoist', 'dc'])
     @commands.has_guild_permissions(manage_nicknames=True)
     @commands.bot_has_guild_permissions(manage_nicknames=True)
     async def decancer(self, ctx: MyContext, *, member: discord.Member):
@@ -1418,3 +1420,113 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         channel = channel or ctx.channel
         await ctx.send(embed=await self.channelinfo_embed(ctx, channel))
         
+    @commands.group(name='emoji', invoke_without_command=True, case_insensitive=True)
+    async def _emoji(self, ctx: MyContext):
+        """Base command for managing emojis."""
+        await ctx.help()
+
+    @_emoji.command(name='list', aliases=['show'], usage="[--ids]")
+    async def emoji_list(self, ctx: MyContext, *, flags: Optional[str]):
+        """List all the emojis in the guild.
+        
+        Apply the `--ids` flags if you want emoji ids"""
+
+        to_paginate = []
+        if flags and "--ids" in flags:
+            for emoji in ctx.guild.emojis:
+                to_paginate.append(f"{emoji} `:{emoji.name}:` `<{'a' if emoji.animated else ''}:{emoji.name}:{emoji.id}>`")
+        else:
+            for emoji in ctx.guild.emojis:
+                to_paginate.append(f"{emoji} `:{emoji.name}:`")
+
+        await ctx.paginate(to_paginate, per_page=16)
+
+
+    @_emoji.command(name='add', aliases=['create', '+'])
+    @commands.has_guild_permissions(manage_emojis=True)
+    @commands.bot_has_guild_permissions(manage_emojis=True)
+    async def emoji_add(self, ctx: MyContext, name: str, *, url: Optional[str]):
+        """Add a custom emoji."""
+        if ctx.message.attachments:
+            async with ctx.typing():
+                    
+                image = await ctx.message.attachments[0].read()
+                try:
+                    discord.utils._get_mime_type_for_image(image)
+                except discord.errors.InvalidArgument:
+                    raise commands.BadArgument("Not a vaild image or had trouble reading it.")
+        else:
+            if not url:
+                raise commands.BadArgument("Please attach a image or a url...")
+            try:
+                async with self.bot.session.get(url) as resp:
+                    image = await resp.read()
+            except Exception as e:
+                return await ctx.send(f"Had an issue reading this url: {e}")
+
+        try:
+            await ctx.guild.create_custom_emoji(
+                name=name,
+                image=image,
+                reason=f'Emoji add command invoked by: {ctx.author} (ID: {ctx.author.id})'
+            )
+        except discord.HTTPException:
+            raise commands.BadArgument("I have having trouble creating this emoji. Permissions error?")
+        else:
+            await ctx.check()
+
+    @_emoji.command(name='remove', aliases=['delete', '-'])
+    @commands.has_guild_permissions(manage_emojis=True)
+    @commands.bot_has_guild_permissions(manage_emojis=True)
+    async def emoji_remove(self, ctx: MyContext, *, emoji: discord.Emoji):
+        """Delete a emoji."""
+        if emoji.guild != ctx.guild:
+            raise commands.BadArgument("The emoji needs to be in this guild.")
+        try:
+            await emoji.delete(reason=f'Emoji delete command invoked by: {ctx.author} (ID: {ctx.author.id})')
+        except discord.HTTPException:
+            raise commands.BadArgument("I have having trouble deleting this emoji. Permissions error?")
+        else:
+            await ctx.check()
+
+    @_emoji.command(name='rename')
+    @commands.has_guild_permissions(manage_emojis=True)
+    @commands.bot_has_guild_permissions(manage_emojis=True)
+    async def emoji_rename(self, ctx: MyContext, emoji: discord.Emoji, *, name: str):
+        """Rename an emoji."""
+        if emoji.guild != ctx.guild:
+            raise commands.BadArgument("The emoji needs to be in this guild.")  
+        try:
+            await emoji.edit(name=name, reason=f"Emoji edit command invoked by: {ctx.author} (ID: {ctx.author.id})")
+        except discord.HTTPException:
+            raise commands.BadArgument("I have having trouble creating this emoji. Permissions error?")
+        else:
+            await ctx.check()
+
+    @_emoji.command(name='steal')
+    @commands.has_guild_permissions(manage_emojis=True)
+    @commands.bot_has_guild_permissions(manage_emojis=True)
+    async def emoji_steal(self, ctx: MyContext, name: str, *, message: Optional[discord.Message]):
+        """Add an emoji from a specified messages."""
+
+        if not message:
+            message = getattr(ctx.message.reference, 'resolved', None)
+        if not message:
+            raise commands.BadArgument("Please provide a message or reply to one...")
+
+        emoji = EMOJI_RE.search(message.content)
+        if not emoji:
+            raise commands.BadArgument("No emojis were founds in this message.")
+        url = (
+            "https://cdn.discordapp.com/emojis/"
+            f"{emoji.group(3)}.{'gif' if emoji.group(2) else 'png'}?v=1"
+        )
+        async with self.bot.session.get(url) as r:
+            data = await r.read()
+        try:
+            await ctx.guild.create_custom_emoji(name=name, image=data, reason=f'Emoji steal command invoked by: {ctx.author.id} (ID: {ctx.author.id})')
+            await ctx.check()
+        except discord.InvalidArgument:
+            raise commands.BadArgument("Discord returned invaild data.")
+        except discord.HTTPException:
+            raise commands.BadArgument("I have having trouble creating this emoji. Permissions error?")

@@ -104,7 +104,6 @@ class tags(commands.Cog, description='Manage and create tags'):
         status = await self.bot.db.execute("DELETE FROM tags WHERE name = $3 AND owner_id = $2 AND guild_id = $1", ctx.guild.id, ctx.author.id, name)
         if status == "DELETE 0":
             raise commands.BadArgument("Could not remove a tag with that name.")
-        print(status)
         await ctx.send("Removed that tag.")
 
     @tag.command(name='list')

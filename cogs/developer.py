@@ -25,7 +25,7 @@ from cogs.serverutils import serverutils
 
 from utils.decos import is_dev
 from utils.custom_context import MyContext
-from utils.useful import Embed, fuzzy, BaseMenu, pages, get_bot_uptime
+from utils.useful import Embed, fuzzy, pages, get_bot_uptime
 from utils.json_loader import write_json
 
 def restart_program():
@@ -193,13 +193,12 @@ class developer(commands.Cog, description="Developer commands."):
         """
 
         if not search:
-            paginator = commands.Paginator(prefix=None, suffix=None, max_size=500)
+            to_paginate = []
             for guild in sorted(self.bot.guilds, key=lambda guild: len(guild.members), reverse=True):
-                summary = f"GUILD: {guild.name} [{guild.id}]\nOWNER: {guild.owner} [{guild.owner_id}]\nMEMBERS: {len(guild.members)}\nSHARD_ID: {guild.shard_id}\n"
-                paginator.add_line(summary)
+                summary = f"__**Guild:**__ {guild.name} [{guild.id}]\n__**Owner:**__ {guild.owner} [{guild.owner_id}]\n__**Members:**__ {len(guild.members)} <:members:908483589157576714> total | {len(guild.humans)} \U0001f465 humans | {len(guild.bots)} <:bot:925107948789837844> bots\n\n"
+                to_paginate.append(summary)
 
-            menu = BaseMenu(source=show_result(paginator.pages))
-            await menu.start(ctx)
+            await ctx.paginate(to_paginate)
         else:
             collection = {guild.name: guild.id for guild in self.bot.guilds}
             found = fuzzy.finder(search, collection, lazy=False)[:5]
@@ -356,12 +355,6 @@ class developer(commands.Cog, description="Developer commands."):
         
 
         await ctx.send(embed=embed)
-
-
-    @developer_cmds.command(name='cache')
-    @is_dev()
-    async def dev_cache(self, ctx):
-        await ctx.send(f"I have cached `{len(self.bot.cached_messages)}/5000` messages.")
 
     @developer_cmds.command(name='serverinfo', aliases=['si'])
     @is_dev()

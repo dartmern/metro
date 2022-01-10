@@ -186,6 +186,13 @@ class core(commands.Cog, description="Core events."):
             embed.set_author(name='Message Not Found', icon_url=self.error_emoji)
             return await ctx.send(embed=embed)
 
+        elif isinstance(error, commands.EmojiNotFound):
+            embed.description = f"Emoji \"{error.argument}\" was not found.\n"\
+                "\nAcceptable arguments are as follows:"\
+                f"\nID, emoji itself, name"
+            embed.set_author(name='Emoji Not Found', icon_url=self.error_emoji)
+            return await ctx.send(embed=embed)
+
         elif isinstance(error, commands.MemberNotFound):
             embed.description = f'Member "{error.argument}" was not found.\n'\
                 "\nAcceptable arguments are as follows:"\

@@ -17,57 +17,6 @@ from utils.remind_utils import human_timedelta
 
 PAGE_REGEX = r'(Page)?(\s)?((\[)?((?P<current>\d+)/(?P<last>\d+))(\])?)'
 
-class BaseMenu(menus.MenuPages):
-    def __init__(self, source, *, generate_page=True, **kwargs):
-        super().__init__(source, delete_message_after=kwargs.pop('delete_message_after', True), **kwargs)
-        self.info = False
-        self._generate_page = generate_page
-
-    @menus.button('◀️', position=First(1))
-    async def _go_before(self, payload):
-        await self.show_checked_page(self.current_page - 1)
-    @menus.button('▶️', position=Last(0))
-    async def _go_next(self, payload):
-        await self.show_checked_page(self.current_page + 1)
-    @menus.button('⏹️', position=First(2))
-    async def _stop(self, payload):
-        self.stop()
-
-    async def _get_kwargs_format_page(self, page):
-        value = await discord.utils.maybe_coroutine(self._source.format_page, self, page)
-        if self._generate_page:
-            value = self.generate_page(value, self._source.get_max_pages())
-        if isinstance(value, dict):
-            return value
-        elif isinstance(value, str):
-            return { 'content': value, 'embed': None }
-        elif isinstance(value, discord.Embed):
-            return { 'embed': value, 'content': None }
-
-    async def _get_kwargs_from_page(self, page):
-        dicts = await self._get_kwargs_format_page(page)
-        dicts.update({'allowed_mentions': discord.AllowedMentions(replied_user=False)})
-        return dicts
-
-    def generate_page(self, content, maximum):
-        if maximum > 0:
-            page = f"Page {self.current_page + 1}/{maximum}"
-            if isinstance(content, discord.Embed):
-                if embed_dict := getattr(content, "_author", None):
-                    if not re.match(PAGE_REGEX, embed_dict["name"]):
-                        embed_dict["name"] += f"[{page.replace('Page ', '')}]"
-                    return content
-                return content.set_author(name=page)
-            elif isinstance(content, str) and not re.match(PAGE_REGEX, content):
-                return f"{page}\n{content}"
-        return content
-
-    async def send_initial_message(self, ctx, channel):
-        page = await self._source.get_page(0)
-        kwargs = await self._get_kwargs_from_page(page)
-        return await ctx.reply(**kwargs)
-
-
 
 class OldRoboPages(menus.MenuPages):
     def __init__(self, source):
