@@ -148,7 +148,14 @@ class MetroBot(commands.AutoShardedBot):
 
         #Tracking
         self.message_stats = collections.Counter()
-
+        
+        #Emojis
+        self.emotes = {
+            "check" : '<:mCheck:819254444197019669>', 
+            "cross" : '<:mCross:819254444217860116>',
+            'minus' : '<:mminus:904450883587276870>',
+            'plus' : '<:mplus:904450883633426553>'
+        }
 
     async def add_to_blacklist(self, ctx : MyContext, member : Union[discord.Member, discord.User], reason : str = None, *, silent : bool = False):
         if check_dev(self, member):
@@ -320,7 +327,7 @@ print(f"{cwd}\n-----")
 
 bot = MetroBot()
 
-bot.emotes = {"check" : '<:mCheck:819254444197019669>', "cross" : '<:mCross:819254444217860116>'}
+
 bot.check = "<:mCheck:819254444197019669>"
 bot.cross = "<:mCross:819254444217860116>"
 
