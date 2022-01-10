@@ -1406,9 +1406,8 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         await self.bot.db.execute("INSERT INTO highlight (author_id, text, guild_id) VALUES ($1, $2, $3)", ctx.author.id, word, ctx.guild.id)
         self.highlight[word] = (ctx.guild.id, ctx.author.id)
 
-        await ctx.send(f"{self.bot.emotes['check']} Added \"{word}\" to your highlights.", delete_after=5)
-        await asyncio.sleep(4)
-        await ctx.message.delete(silent=True)
+        await ctx.send(f"{self.bot.emotes['check']} Added to your highlights.\n> It is recommended to delete your message so your highlights are private.")
+        await ctx.message.delete(delay=8, silent=True)
 
     @highlight.command(name='remove', aliases=['-'])
     @commands.guild_only()
@@ -1436,10 +1435,12 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         embed = discord.Embed(color=discord.Color.yellow())
         embed.set_author(name=f'{ctx.author}\'s highlights', icon_url=ctx.author.display_avatar.url)
         embed.description = "\n".join([x['text'] for x in data])
-        embed.set_footer(text=f'This message will get deleted in 7 seconds so people don\'t know your highlights.')
-        await ctx.send(embed=embed, delete_after=7)
+        embed.set_footer(text=f'This message will get edited after 7 seconds so people don\'t know your highlights.')
+        message = await ctx.send(embed=embed)
         await asyncio.sleep(6)
-        await ctx.message.delete(silent=True)
+        embed.description = "Highlights edited to hide highlights. Run the command again to see them."
+        embed.color = discord.Color.orange()
+        await message.edit(embed=embed)
 
     @highlight.command(name='clear', aliases=['wipe'])
     @commands.guild_only()
