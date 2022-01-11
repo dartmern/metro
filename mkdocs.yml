@@ -1,0 +1,20 @@
+site_name: Metro's Documentation
+theme: 
+  name: 'material'
+  logo: 'images/metro_icon.png'
+  features:
+    - tabs
+    - instant
+  palette:
+    scheme: preference
+    primary: 'Blue Grey'
+    accent: 'Cyan'
+  font:
+    text: 'Roboto'
+    code: 'Fira Mono'
+  
+repo_name: 'metro'
+repo_url: 'https://github.com/dartmern/metro_docs'
+
+
+copyright: 'Copyright &copy; 2022 - Present, dartmern. All Rights Reserved.'

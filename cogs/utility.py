@@ -205,7 +205,7 @@ bitly_token = info_file['bitly_token']
 
 class TodoListSource(menus.ListPageSource):
     def __init__(self, entries, ctx : MyContext):
-        super().__init__(entries, per_page=14)
+        super().__init__(entries, per_page=16)
         self.ctx = ctx
 
     async def format_page(self, menu, entries):
@@ -1503,6 +1503,25 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             except RuntimeError:
                 pass # Can't do shit really
 
+    @commands.command(name='embed')
+    @commands.has_permissions(manage_messages=True)
+    async def _embed(self, ctx: MyContext, *, argument: str):
+        """
+        Post an embed from json.
+        
+        [Click here](https://embedbuilder.nadekobot.me/) to build your embed,
+        then click copy and paste that as an argument for this command.
+
+        :warning: **This mystbin part is still under development** :warning:
+        If the message is too long please post it in a [mystbin](https://mystb.in/)
+        and post the mystbin link as your argument.
+        """
+        try:
+            embed = discord.Embed.from_dict(json.loads(argument))
+            await ctx.send(embed=embed)
+            return await ctx.check()
+        except Exception as e:
+            return await ctx.send(str(e))
 
 def setup(bot):
     bot.add_cog(utility(bot))

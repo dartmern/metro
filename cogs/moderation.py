@@ -456,26 +456,34 @@ class moderation(commands.Cog, description="Moderation commands."):
 
 
 
-    @commands.command(aliases=['sm'])
+    @commands.command(aliases=['sm'], usage="[duration] [--silent]")
     @commands.has_guild_permissions(manage_channels=True)
     @commands.bot_has_permissions(send_messages=True, manage_channels=True)
-    async def slowmode(self, ctx, time : TimeConverter=None):
+    async def slowmode(self, ctx, duration: Optional[TimeConverter], *, flags: Optional[str]):
         """Change the slowmode for the current channel."""
 
-        if time:
-            delta = datetime.timedelta(seconds=int(time))
+        if duration:
+            delta = datetime.timedelta(seconds=int(duration))
             timeconverter = precisedelta(
                 delta, minimum_unit="seconds", suppress=["microseconds"]
             )
-            if time < 21601:
-                await ctx.channel.edit(slowmode_delay=int(time))
-                await ctx.send(f"Set the slowmode delay to `{timeconverter}`")
+            if duration < 21601:
+                await ctx.channel.edit(slowmode_delay=int(duration))
+                if "--silent" in flags:
+                    await ctx.message.delete(silent=True)
+                else:
+                    await ctx.send(f"Set the slowmode delay to `{timeconverter}`")
             else:
+                if "--silent" in flags:
+                    return
                 raise commands.BadArgument("Slowmode delay must be more than 1 second and less than 6 hours.")
 
         else:
             await ctx.channel.edit(slowmode_delay=0)
-            await ctx.send(f"Removed the slowmode for this channel")
+            if "--silent" in flags:
+                await ctx.message.delete(silent=True)
+            else:
+                await ctx.send(f"Removed the slowmode for this channel")
 
 
     @commands.command()
