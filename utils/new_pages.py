@@ -215,6 +215,8 @@ class RoboPages(discord.ui.View):
         await interaction.delete_original_message()
         self.stop()
 
+        await self.ctx.message.add_reaction(self.ctx.bot.emotes['check'])
+
 
 class SimplePages(RoboPages):
     """
