@@ -1393,7 +1393,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         embed.add_field(name='<:messages:928380915560874055> Messages', value=f'`{int(messages):,}` total messages', inline=False)
         return embed
 
-    @commands.command(name='user-info', aliases=['userinfo', 'ui','whois','info'])
+    @commands.command(name='user-info', aliases=['userinfo', 'ui','whois'])
     @commands.bot_has_permissions(send_messages=True)
     async def user_info(self, ctx, *, member: Optional[discord.Member]):
         """Shows all the information about the specified user/member."""

@@ -1025,6 +1025,12 @@ class meta(commands.Cog, description='Get bot stats and information.'):
         view = VoteView(ctx, bot, bot_instance=self.bot)
         await view.start()
 
+    @commands.command(name='bot-info', aliases=['botinfo', 'bi', 'info'])
+    async def _bot_info(self, ctx: MyContext):
+        """Get all the information about me."""
+        embed = await NewHelpView(ctx, {}, ctx.bot.help_command).bot_info_embed()
+        await ctx.reply(embed=embed)
+
     @commands.command()
     async def privacy(self, ctx: MyContext):
         """Privacy for the bot."""

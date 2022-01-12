@@ -9,6 +9,7 @@
 | rtfm discord.py | Gives you a documentation link for a discord.py entity. | `/rtfm discord.py [object]` | dpy, discordpy
 | rtfm master | Gives you a documentation link for a discord.py 2.0 entity | `/rtfm master [object]` | 2.0
 | rtfm python | Gives you a documentation link for a python entity | `/rtfm python [object]` | py
+| rtfm aiohttp | Gives you a documentation ilnk for a aiohttp entity | `/rtfm aiohttp [object]` 
 
 #
 #### Not inputting a search object will return the base url instead.

@@ -161,7 +161,6 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         for key, page in page_types.items():
             sub = cache[key] = {}
             async with self.bot.session.get(page + '/objects.inv') as resp:
-                print(await resp.json())
                 if resp.status != 200:
                     raise RuntimeError('Cannot build rtfm lookup table, try again later.')
 
@@ -257,6 +256,13 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         """Gives you a documentation link for a ed-py entity."""
 
         await self.do_rtfm(ctx, 'enhanced-discord.py', object)
+
+    @rtfm.command(name='aiohttp')
+    @commands.bot_has_guild_permissions(send_messages=True)
+    async def rtfm_aiohttp(self, ctx: MyContext, *, object: str= None):
+        """Gives you a documentation ilnk for a aiohttp entity"""
+
+        await self.do_rtfm(ctx, 'aiohttp', object)
         
 
     @commands.command(name='rtfs')

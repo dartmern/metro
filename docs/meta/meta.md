@@ -5,7 +5,8 @@
 
 | Name | Description | Usage | Aliases |
 | :--- | :--- | :--- | :---
-| uptime | Get the bot's uptime | `/uptime`
+| uptime | Get the bot's uptime | `/uptime` 
+| botinfo | Get all the information about me. | `/botinfo` | botinfo, bi, info
 | ping | Show the bot's latency in milliseconds. | `/ping`
 | invite | Get invite links for a bot. | `/invite [bot='Metro']` |
 | support | Get support server invite | `/support` |
