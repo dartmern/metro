@@ -11,130 +11,12 @@ from utils.useful import Cooldown, Embed
 from utils.decos import in_support, is_dev
 
 
-import typing
-import asyncio
+
 
 SUPPORT_GUILD = 812143286457729055
 TESTER_ROLE = 861141649265262592
- 
-class RoleView(discord.ui.View):
-    def __init__(self, bot) -> None:
-        super().__init__(timeout=None)
-        self.bot = bot
-
-    @discord.ui.button(label='Metro Updates', style=discord.ButtonStyle.blurple, row=0, custom_id='metro_updates_button')
-    async def metro_updates_button(self, button: discord.ui.Button, interaction: discord.Interaction):
-        
-        guild = self.bot.get_guild(812143286457729055)
-
-        role = guild.get_role(828795116000378931)
-        if role in interaction.user.roles:
-            
-            embed = Embed()
-            embed.description = 'Removed **Metro Updates** from your roles.'
-            embed.color = discord.Colour.red()
-            await interaction.user.remove_roles(role)
-            return await interaction.response.send_message(embed=embed, ephemeral=True)
-
-        else:
-
-            embed = Embed()
-            embed.description = 'Added **Metro Updates** to your roles.'
-            embed.color = discord.Colour.green()
-            await interaction.user.add_roles(role)
-            return await interaction.response.send_message(embed=embed, ephemeral=True)
-
-
-
-    @discord.ui.button(label='Server Annoucements', style=discord.ButtonStyle.blurple, row=1, custom_id='server_annoucements_button')
-    async def server_annoucements_button(self, button: discord.ui.Button, interaction: discord.Interaction):
-        
-        guild = self.bot.get_guild(812143286457729055)
-
-        role = guild.get_role(828795624945614858)
-        if role in interaction.user.roles:
-            
-            embed = Embed()
-            embed.description = 'Removed **Server Annoucements** from your roles.'
-            embed.color = discord.Colour.red()
-            await interaction.user.remove_roles(role)
-            return await interaction.response.send_message(embed=embed, ephemeral=True)
-
-        else:
-
-            embed = Embed()
-            embed.description = 'Added **Server Annoucements** to your roles.'
-            embed.color = discord.Colour.green()
-            await interaction.user.add_roles(role)
-            return await interaction.response.send_message(embed=embed, ephemeral=True)
-
-
-class TesterButton(discord.ui.View):
-    def __init__(self, bot) -> None:
-        super().__init__(timeout=None)
-        self.bot = bot
-
-    @discord.ui.button(label='Tester', style=discord.ButtonStyle.blurple, custom_id='metro_tester')
-    async def tester_button(self, button : discord.ui.Button, interaction : discord.Interaction):
-
-        guild = self.bot.get_guild(812143286457729055)
-
-        role = guild.get_role(861141649265262592)
-        if role in interaction.user.roles:
-
-            embed = Embed()
-            embed.description = 'Removed **Tester** from your roles.'
-            embed.color = discord.Colour.red()
-            await interaction.user.remove_roles(role)
-            return await interaction.response.send_message(embed=embed, ephemeral=True)
-
-        else:
-            embed = Embed()
-            embed.description = 'Added **Tester** to your roles.'
-            embed.color = discord.Colour.green()
-            await interaction.user.add_roles(role)
-            return await interaction.response.send_message(embed=embed, ephemeral=True)
-
-            
-class AllRoles(discord.ui.View):
-    def __init__(self, bot) -> None:
-        super().__init__(timeout=None)
-        self.bot = bot
-
-    @discord.ui.button(label='Check my roles', style=discord.ButtonStyle.green, custom_id='all_roles')
-    async def tester_button(self, button : discord.ui.Button, interaction : discord.Interaction):
-
-        guild = self.bot.get_guild(812143286457729055)
-
-        updates = guild.get_role(828795116000378931)
-        annoucements = guild.get_role(828795624945614858)
-        tester = guild.get_role(861141649265262592)
-
-        if updates in interaction.user.roles:
-            updates_y_n = self.bot.check
-        else:
-            updates_y_n = self.bot.cross
-
-        if annoucements in interaction.user.roles:
-            annouce_y_n = self.bot.check
-        else:
-            annouce_y_n = self.bot.cross
-
-        if tester in interaction.user.roles:
-            test_y_n = self.bot.check
-        else:
-            test_y_n = self.bot.cross
-
-
-        embed = Embed()
-        embed.title = 'Your Roles:'
-        embed.description = f'**Metro Updates:** {updates_y_n} \n**Annoucements:** {annouce_y_n}\n\n**Tester:** {test_y_n}'
- 
-        await interaction.response.send_message(embed=embed, ephemeral=True)
-
-
-        
-
+BOTS_ROLE = 904872199943491596
+BOT_REQUESTS_CHANNEL = 904184918840602684
 
 class support(commands.Cog, description='Support only commands.'):
     def __init__(self, bot : MetroBot):
@@ -151,39 +33,59 @@ class support(commands.Cog, description='Support only commands.'):
             return
 
         if member.bot:
-            await member.add_roles(discord.Object(id=904872199943491596))
+            await member.add_roles(discord.Object(id=BOTS_ROLE))
 
+    @commands.Cog.listener()
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+        if payload.guild_id != SUPPORT_GUILD:
+            return 
 
-    @commands.command(hidden=True)
-    @commands.is_owner()
-    @is_dev()
-    async def support_roles(self, ctx : MyContext):
+        if payload.channel_id != BOT_REQUESTS_CHANNEL:
+            return
 
-        await ctx.message.delete(silent=True)
+        if self.bot.user.id == 795373951043633232:
+            return 
 
-        roles_channel = self.bot.get_channel(828466726659948576)
+        if str(payload.emoji) == "<:mCheck:819254444197019669>":
+            channel = (
+                self.bot.get_channel(payload.channel_id) or
+                await self.bot.fetch_channel(payload.channel_id)
+            )
+            guild = self.bot.get_guild(SUPPORT_GUILD) # We're gonna assume it's the support server because we won't even be here
+            message = await channel.fetch_message(payload.message_id)
+            
+            author_id = message.embeds[0].footer.text
+            bot_id = message.embeds[0].author.name
 
-        embed = Embed()
-        embed.title = 'Self-Roles'
-        embed.description = 'Click on a button to add/remove that role.'
+            author = await self.bot.get_or_fetch_member(guild, author_id)
 
-        tester_embed = Embed()
-        tester_embed.title = 'Self-Roles'
-        tester_embed.description = 'Click on a button to add/remove that role.'
+            embed = discord.Embed(color=discord.Colour.green())
+            embed.description = f"The bot you requested, <@{bot_id}> was added to **{guild.name}**"
 
-        view = RoleView(ctx.bot)
-        tester_view = TesterButton(ctx.bot)
-        all_roles = AllRoles(ctx.bot)
+            
+            await author.send(embed=embed)
 
-        roles = Embed()
-        roles.title='Check your roles'
-        roles.description = 'Click below to see the roles you have'
+        if str(payload.emoji) == "<:mCross:819254444217860116>":
+            channel = (
+                self.bot.get_channel(payload.channel_id) or
+                await self.bot.fetch_channel(payload.channel_id)
+            )
+            guild = await self.bot.get_guild(SUPPORT_GUILD) # We're gonna assume it's the support server because we won't even be here
+            message = await channel.fetch_message(payload.message_id)
+            
+            author_id = message.embeds[0].footer.text
+            bot_id = message.embeds[0].author.name
 
-        await roles_channel.send(embed=embed, view=view)
-        await roles_channel.send(embed=tester_embed, view=tester_view)
-        await roles_channel.send(embed=roles, view=all_roles)
+            author = await self.bot.get_or_fetch_member(guild, author_id)
 
-
+            embed = discord.Embed(color=discord.Colour.green())
+            embed.description = f"The bot you requested, <@{bot_id}> was rejected from **{guild.name}**"
+            
+            try:
+                await author.send(embed=embed)
+            except discord.HTTPException:
+                pass
+            
 
     @commands.command(hidden=True)
     @commands.check(Cooldown(1, 10, 1, 10, bucket=commands.BucketType.member))

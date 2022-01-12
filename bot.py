@@ -10,6 +10,7 @@ import os
 import async_cse
 import asyncpg
 import traceback
+from discord.ext.commands.converter import Option
 
 import mystbin
 import aiohttp
@@ -132,7 +133,6 @@ class MetroBot(commands.AutoShardedBot):
         self.add_check(self.user_blacklisted)
 
         self.maintenance = False
-        self.pres_views = False
 
         self.invite = 'https://discord.com/api/oauth2/authorize?client_id=788543184082698252&permissions=0&scope=applications.commands%20bot'
         self.support = 'https://discord.gg/2ceTMZ9qJh'
@@ -190,15 +190,6 @@ class MetroBot(commands.AutoShardedBot):
 
     async def on_ready(self):
         await self.wait_until_ready()
-
-        from cogs.support_views import RoleView, TesterButton, AllRoles
-
-        if not self.persistent_views:
-            self.add_view(TesterButton(self))
-            self.add_view(RoleView(self))
-            self.add_view(AllRoles(self))
-            
-            self.pres_views = True
 
         for command in self.walk_commands():
             if command.checks:
@@ -292,7 +283,7 @@ class MetroBot(commands.AutoShardedBot):
             await self.db.fetch('SELECT prefix from prefixes WHERE guild_id = $1', message.guild.id)]) or self.PRE
 
 
-    async def get_or_fetch_member(self, guild, member_id):
+    async def get_or_fetch_member(self, guild, member_id) -> Optional[discord.Member]:
         """Looks up a member in cache or fetches if not found.
         Parameters
         -----------
