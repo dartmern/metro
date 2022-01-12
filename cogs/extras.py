@@ -6,6 +6,7 @@ from discord.ext import commands
 
 import time
 import re
+import async_cse # google
 
 from bot import MetroBot
 from utils.custom_context import MyContext
@@ -16,6 +17,7 @@ from utils.json_loader import get_path, read_json
 
 data = read_json("info")
 or_api_token = data['openrobot_api_key']
+google_token = data['google_token']
 
 class WebhookConverter(commands.Converter):
   async def convert(self, ctx: commands.Context, argument: str) -> discord.Webhook:
@@ -261,3 +263,23 @@ class extras(commands.Cog, description='Extra commands for your use.'):
         message = await ctx.send(f"**{ctx.author}** is asking a question: \n> {question}")
         await message.add_reaction('\U0001f44d')
         await message.add_reaction('\U0001f44e')
+
+    @commands.command()
+    @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.user))
+    async def google(self, ctx: MyContext, *, query: str):
+        """Search google using it's API."""
+
+        async with ctx.typing():
+            start = time.perf_counter()
+            results = await self.bot.google_client.search(query, safesearch=False)
+            end = time.perf_counter()
+
+            ping = (end - start) * 1000
+
+            embed = discord.Embed(color=ctx.color)
+            embed.set_author(name=f'Google search: {query}')
+            for result in results[:5]:
+                embed.add_field(name=result.title, value=f'{result.url}\n{result.description}', inline=False)
+            embed.set_footer(text=f'Queried in {round(ping, 2)} milliseconds. | Safe Search: Disabled')
+            return await ctx.send(embed=embed)
+            

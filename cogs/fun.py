@@ -1,13 +1,17 @@
-from typing import Optional
+from typing import Any, Optional, Union
 import discord
+
 from discord.ext import commands
 from bot import MetroBot
+from utils.checks import SUPPORT_GUILD, TESTER_ROLE
 
 from utils.useful import Embed
 
 import random
+import asyncio
 
 from utils.custom_context import MyContext
+
 
 
 class fun(commands.Cog, description="Fun commands!"):
@@ -17,6 +21,8 @@ class fun(commands.Cog, description="Fun commands!"):
     @property
     def emoji(self) -> str:
         return '😄'
+
+
 
     @commands.command()
     @commands.bot_has_permissions(send_messages=True)
@@ -63,10 +69,6 @@ class fun(commands.Cog, description="Fun commands!"):
             colour=discord.Color.random(),
         )
         await ctx.send(embed=em)
-
-    @commands.command(name='google')
-    async def google(self, ctx : MyContext, *, query : str):
-        await ctx.send(f"https://www.google.com/search?q={query.replace(' ','+')}")
 
 
 def setup(bot):

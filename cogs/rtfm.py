@@ -53,6 +53,8 @@ class RTFMConverter(commands.Converter):
             return "aiohttp"
         elif param.lower() in ("python", "py", "python.org"):
             return "python"
+        elif param.lower() in ("aiohttp", "ahttp"):
+            return "aiohttp"
         else:
             return None
 
@@ -159,6 +161,7 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         for key, page in page_types.items():
             sub = cache[key] = {}
             async with self.bot.session.get(page + '/objects.inv') as resp:
+                print(await resp.json())
                 if resp.status != 200:
                     raise RuntimeError('Cannot build rtfm lookup table, try again later.')
 
@@ -174,7 +177,7 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
             'python': 'https://docs.python.org/3',
             'discord.py-2.0': 'https://discordpy.readthedocs.io/en/master',
             'enhanced-discord.py' : 'https://enhanced-dpy.readthedocs.io/en/latest',
-            'aiohttp' : 'https://docs.aiohttp.org/en/stable/',      
+            'aiohttp' : 'https://docs.aiohttp.org/en/stable/'  
         }
 
         if obj is None:
@@ -298,28 +301,6 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         e.title = 'API result'
         e.set_footer(text=f'Powered by iDevision API • Query time: {round(query_time, 3)}')
         await ctx.send(embed=e)
-
-    @commands.command()
-    async def docs(self, ctx : MyContext, *, command : Optional[str] = None):
-        """
-        Search through Metro's documentation.
-        
-        [Metro Documentation](https://metro-discord-bot.gitbook.io/metro-documentation/)
-        """
-        if command is None:
-            return await ctx.send(f"My full documentation: <{self.bot.docs}>")
-        command_object : commands.Command = self.bot.get_command(command)
-        if not command_object:
-            raise commands.BadArgument("That is not a vaild command.")
-
-        command = command_object.qualified_name.replace(" ", "/")
-        
-        em = Embed()
-        em.colour = discord.Colour.yellow()
-        em.set_author(name='Full Documentation Link', url=self.bot.docs)
-        em.description = f"Your searched command: \nhttps://metro-discord-bot.gitbook.io/metro-documentation/{command}"
-        em.set_footer(text='If the page is not found, the command is not documentated yet and will be soon.')
-        await ctx.send(embed=em)
 
 
 def setup(bot):

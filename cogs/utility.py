@@ -1021,11 +1021,18 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
         msg = f"<@{author_id}>, {discord.utils.format_dt(timer.created_at.replace(tzinfo=datetime.timezone.utc), 'R')}, you wanted me to remind you about: \n> {message}"
 
-        try:
-            await channel.send(msg)
-        except discord.HTTPException:
-            return
+        guild_id = channel.guild.id if isinstance(channel, (discord.TextChannel, discord.Thread)) else '@me'
+        message_id = timer.kwargs.get("message_id")
 
+        jump_url = f"https://discord.com/channels/{guild_id}/{channel_id}/{message_id}"
+        view = discord.ui.View()
+        view.add_item(discord.ui.Button(url=jump_url, label='Jump to original message'))
+
+        try:
+            await channel.send(msg, view=view)
+        except discord.HTTPException:
+            pass
+        
     @commands.group(name='giveaway', aliases=['gaw', 'g'], invoke_without_command=True, case_insensitive=True)
     @commands.bot_has_permissions(send_messages=True, add_reactions=True)
     @commands.has_guild_permissions(manage_guild=True)

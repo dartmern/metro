@@ -7,6 +7,7 @@ from discord.ext import commands
 
 from pathlib import Path
 import os
+import async_cse
 import asyncpg
 import traceback
 
@@ -41,6 +42,8 @@ host = database_info['host']
 port = database_info['port']
 
 token = info_file['bot_token']
+
+google_token = info_file['google_token']
 
 async def create_db_pool(user, password, database, host, port) -> asyncpg.Pool:
     details = {
@@ -124,6 +127,7 @@ class MetroBot(commands.AutoShardedBot):
         )
         self.session = aiohttp.ClientSession(trust_env=True)
         self.mystbin_client = mystbin.Client()
+        self.google_client = async_cse.Search(google_token)
 
         self.add_check(self.user_blacklisted)
 
