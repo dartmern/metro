@@ -35,6 +35,12 @@ class Game(discord.ui.View):
 
         self.a = {}
 
+    async def interaction_check(self, interaction: discord.Interaction):
+        if interaction.user != self.ctx.author:
+            return await interaction.response.send_message("This is not your game...", ephemeral=True)
+        else:
+            return True
+
     async def start(self):
         for _ in range(1, 26):
             self.add_item(GameButton(label='\u200b', disabled=True, my_id=_))#, custom_id=_))

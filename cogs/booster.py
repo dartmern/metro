@@ -62,15 +62,7 @@ class boosts(commands.Cog, description='Get booster stats a members'):
             
         if to_append:
 
-            if len(to_append) < 7 and len(to_append) >= 2:
-                lvl = '1'
-            elif len(to_append) < 14 and len(to_append) >= 7:
-                lvl = '2'
-            elif len(to_append) >= 14:
-                lvl = '3'
-
             embed = Embed()
-            embed.title = f'<:boost_lvl:916489560807051284> Server Boost Level: {lvl}'
             embed.description = '\n'.join(to_append)
             embed.set_footer(text=f'Total Boosters: {len(to_append)}')
             await ctx.send(embed=embed)
