@@ -15,3 +15,15 @@ Pass in a codeblock using the language of your choice. <br />
 You can use `py` or `css` as a language inside codeblocks.
 #
 - **nsfw-check** is powered by [OpenRobot API](https://api.openrobot.xyz/api/docs#operation/do_nsfw_check_api_nsfw_check_get)
+
+
+# Miscellaneous 
+
+**Miscellaneous commands for your server.**
+#
+| Name | Description | Usage | Aliases |
+| :--- | :--- | :--- | :---
+| whatcog | Show what cog a command belongs to. | `/whatcog <commnand>` |
+| length | Get the length of a string. | `/length <object>` |
+| calculate | Calculate an equation. | `/calculate [equation]` | calc
+| poll | Simple yes/no poll with reactions. | `/poll <question>` |
