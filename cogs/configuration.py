@@ -109,6 +109,9 @@ class configuration(commands.Cog, description='Configure the bot/server.'):
         if ctx.guild is None:
             return True  # Do not restrict in DMs.
 
+        if check_dev(ctx.bot, ctx.author):
+            return True
+
         if isinstance(ctx.author, discord.Member):
             if ctx.author.guild_permissions.manage_guild:
                 return True  # Manage guild is immune.

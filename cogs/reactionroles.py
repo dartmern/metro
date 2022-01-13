@@ -53,8 +53,12 @@ class reactionroles(commands.Cog, description='Manage the reaction role system.'
         if not member:
             return # can't find member for some odd reason?
 
+        role = data.get[payload.message_id]
+        if not role:
+            return # Somehow role isn't found :(
+
         try:
-            await member.add_roles(discord.Object(data[payload.message_id]), reason='reactionroleadd')
+            await member.add_roles(discord.Object(role), reason='reactionroleadd')
         except discord.HTTPException:
             pass # no perms, can't really do anything...
             
