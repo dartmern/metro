@@ -240,9 +240,9 @@ class extras(commands.Cog, description='Extra commands for your use.'):
             response_data = await response.json()
         
         embed = discord.Embed()
-        embed.description = f"Is NSFW: {'<:mCheck:819254444197019669>' if response_data['nsfw_score'] > 0.25 else '<:mCross:819254444217860116>'}"
-        embed.add_field(name='<:online:819254444151537665> Safe Score', value=f"`{round(100 - (response_data['nsfw_score']*100), 2)}%`")
-        embed.add_field(name='<:dnd:819254444028854324> Unsafe Score', value=f"`{round(response_data['nsfw_score']*100, 2)}%`")
+        embed.description = f"Is NSFW: {self.bot.emotes['check'] if response_data['nsfw_score'] > 0.25 else self.bot.emotes['cross']}"
+        embed.add_field(name=f'{self.bot.emotes["online"]} Safe Score', value=f"`{round(100 - (response_data['nsfw_score']*100), 2)}%`")
+        embed.add_field(name=f'{self.bot.emotes["dnd"]} Unsafe Score', value=f"`{round(response_data['nsfw_score']*100, 2)}%`")
         embed.set_image(url=url)
         await ctx.send(embed=embed)
 

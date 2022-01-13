@@ -105,15 +105,17 @@ class reactionroles(commands.Cog, description='Manage the reaction role system.'
         if not message:
             raise commands.BadArgument("Please supply a message or reply to a message.")
 
+        if len(message.reactions) > 20:
+            raise commands.BadArgument('This message has reached the maximum number of reactions (20)')
+
         query = """
                 SELECT * FROM reactionroles
                 WHERE emoji = $1
                 AND message_id = $2
-                AND role_id = $3
                 """
-        data = await self.bot.db.fetchval(query, str(emoji), message.id, role.id)
+        data = await self.bot.db.fetchval(query, str(emoji), message.id)
         if data:
-            raise commands.BadArgument(f"{self.bot.emotes['cross']} This is already a reaction role...")
+            raise commands.BadArgument(f"{self.bot.emotes['cross']} This is emoji already has a role binded to it...")
 
         query = """
                 INSERT INTO reactionroles
@@ -153,3 +155,31 @@ class reactionroles(commands.Cog, description='Manage the reaction role system.'
         self.reactionroles[str(emoji)].pop(message.id)
 
         await ctx.send(f"{self.bot.emotes['check']} Removed \"{emoji}\" to hand out **{role.name}**")
+
+    @reactionrole.command(name='list')
+    @commands.has_guild_permissions(manage_guild=True)
+    async def reactionrole_list(self, ctx: MyContext):
+        """
+        Display all the reaction roles for this guild.
+        """
+        data =  await self.bot.db.fetch(
+            "SELECT (channel_id, message_id, role_id, emoji) FROM reactionroles WHERE server_id = $1",ctx.guild.id)
+        if not data:
+            raise commands.BadArgument(f"{self.bot.emotes['cross']} This guild does not have any reaction roles.")
+
+        embed = discord.Embed(color=ctx.color)
+        embed.description = "Run `%srr show <id>` for more information on a reaction role." % ctx.clean_prefix
+        for record in data:
+            channel = self.bot.get_channel(record['row'][0])
+            message = channel.get_partial_message(record['row'][1])
+
+            embed.add_field(
+                name=record['row'][1], 
+                value=f"Emoji: {record['row'][3]} Role: <@&{record['row'][2]}> \n"\
+                    f"[Jump url]({message.jump_url})",
+                inline=True)
+        await ctx.send(embed=embed)
+
+        
+
+

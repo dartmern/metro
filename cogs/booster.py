@@ -3,39 +3,21 @@ from typing import Optional
 import discord
 import bisect
 from discord.ext import commands
-from discord.member import M
 
 from bot import MetroBot
+from utils.constants import BOOST_BADGES
 from utils.custom_context import MyContext
 from utils.useful import Embed
 
 class boosts(commands.Cog, description='Get booster stats a members'):
     def __init__(self, bot : MetroBot):
         self.bot = bot
-        self.boost_badges = {
-            30 : "<:boost1:916198948404858941>",
-            60 : "<:boost2:916198948438421554>",
-            90 : "<:boost3:916198948480372786>",
-            180 : "<:boost4:916198948035760129>",
-            270 : "<:boost5:916198948069335091>",
-            360 : "<:boost6:916198948333559849>",
-            450 : "<:boost7:916198948396466236>",
-            540 : "<:boost8:916198948228718613>",
-            720 : "<:boost9:916198948383891466>",  
-        }
+        self.boost_badges = BOOST_BADGES
 
     @property
     def emoji(self) -> str:
-        return '<:booster:916183319144710154>'
+        return self.bot.emotes['booster']
         
-
-    @commands.Cog.listener()
-    async def on_message(self, message : discord.Message):
-        
-        if message.guild:
-            if message.type in ['MessageType.premium_guild_subscription', 'MessageType.premium_guild_tier_1', 'MessageType.premium_guild_tier_2', 'MessageType.premium_guild_tier_3']:
-                await self.bot.dispatch('boost', message)
-
     @commands.command()
     @commands.bot_has_permissions(send_messages=True, embed_links=True)
     @commands.has_permissions(send_messages=True)

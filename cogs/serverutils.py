@@ -118,7 +118,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         )
 
         if duration and duration.dt:
-            timefmt = human_timedelta(endtime - datetime.timedelta(seconds=2))
+            timefmt = human_timedelta(endtime)
         else:
             timefmt = None
         

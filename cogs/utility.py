@@ -254,14 +254,6 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         self.regex_pattern = re.compile('([^\s\w]|_)+')
         self.website_regex = re.compile("https?:\/\/[^\s]*")
 
-        self._channel_cvs: Dict[discord.TextChannel, asyncio.Condition] = {}
-        self.locked_channels = set()
-
-        self.last_message_ids = {}
-        self.REPOST_COOLDOWN = 4
-        self.sticky_channels = {}
-
-        bot.loop.create_task(self.load_sticks())
 
     def cog_unload(self):
         self._task.cancel()
@@ -1539,71 +1531,6 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             return await ctx.check()
         except Exception as e:
             return await ctx.send(str(e))
-
-    @commands.group(name='stick')
-    @commands.has_guild_permissions(manage_messages=True)
-    async def stick(self, ctx: MyContext, *, message: commands.clean_content):
-        """
-        Stick a message to this channel.
-        
-        I will post a message attempt to keep it the last sent message by
-        deleting and resending it everytime a new message gets sent.
-        """
-
-        data = await self.bot.db.fetchval("SELECT * FROM sticky WHERE channel_id = $1", ctx.channel.id)
-        if data:
-            raise commands.BadArgument(f"{self.bot.emotes['cross']} This channel already has a sticky message...")
-
-        m = await ctx.send(f"__**Stickied Message**__\n\n{message[0:1900]}")
-
-        await self.bot.db.execute("INSERT INTO sticky (channel_id, message, last_message_id) VALUES ($1, $2, $3)", ctx.channel.id, message[0:1900], m.id)
-
-        self.sticky_channels[ctx.channel.id] = message[0:1900]
-        self.last_message_ids[ctx.channel.id] = message.id
-
-        await ctx.check()
-
-    async def load_sticks(self):
-        await self.bot.wait_until_ready()
-
-        records = await self.bot.fetch('SELECT * FROM sticky WHERE sticky')
-        if records:
-            for record in records:
-                print(record)
-                self.sticky_channels
-
-    @commands.Cog.listener()
-    async def on_message(self, message: discord.Message):
-        if isinstance(message.channel, discord.abc.PrivateChannel):
-            return  # fuck ur dms
-
-        await self.maybe_post_sticky(message)
-
-    async def maybe_post_sticky(self, message: discord.Message):
-        cv = self._channel_cvs.setdefault(message.channel, asyncio.Condition())
-
-        async with cv:
-
-            last_message_id = self.last_message_ids.get(message.channel.id)
-            if not last_message_id:
-                return 
-            
-            last_message = message.channel.get_partial_message(last_message_id)
-            if message and (
-                message.id == last_message_id 
-                or message.created_at < last_message.created_at):
-                return 
-
-            time_since = discord.utils.utcnow() - last_message.created_at.replace(tzinfo=datetime.timezone.utc)
-            time_to_wait = self.REPOST_COOLDOWN - time_since.total_seconds()
-            if time_to_wait > 0:
-                await asyncio.sleep(time_to_wait)
-
-            message_to_send = await self.bot.db.fetchval("SELECT message FROM sticky WHERE channel_id = $1", message.channel.id)
-
-            await last_message.delete(silent=True)
-            new_message = await message.channel.send(f"__**Stickied Message**__\n\n{message_to_send}")
-            self.last_message_ids[message.channel.id] = new_message.id 
 
 def setup(bot):
     bot.add_cog(utility(bot))

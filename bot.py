@@ -16,6 +16,7 @@ import mystbin
 import aiohttp
 import logging
 from utils.checks import check_dev
+from utils.constants import EMOTES
 
 from utils.useful import Cooldown
 from utils.json_loader import read_json
@@ -154,12 +155,7 @@ class MetroBot(commands.AutoShardedBot):
         self.message_stats = collections.Counter()
         
         #Emojis
-        self.emotes = {
-            "check" : '<:mCheck:819254444197019669>', 
-            "cross" : '<:mCross:819254444217860116>',
-            'minus' : '<:mminus:904450883587276870>',
-            'plus' : '<:mplus:904450883633426553>'
-        }
+        self.emotes = EMOTES
 
     async def add_to_blacklist(self, ctx : MyContext, member : Union[discord.Member, discord.User], reason : str = None, *, silent : bool = False):
         if check_dev(self, member):
