@@ -33,7 +33,7 @@ class tags(commands.Cog, description='Manage and create tags'):
     def __init__(self, bot: MetroBot):
         self.bot = bot
         self.in_making = []
-        self.blacklisted_names = ['add', 'make', 'remove', 'owner', 'info', 'make', 'list', 'create']
+        self.blacklisted_names = ['add', 'make', 'remove', 'owner', 'info', 'make', 'list', 'create', 'raw']
 
     @property
     def emoji(self) -> str:
@@ -50,7 +50,7 @@ class tags(commands.Cog, description='Manage and create tags'):
         if not data:
             raise commands.BadArgument("Tag not found.")
         else:
-            await ctx.send(data[0], reference=ctx.replied_reference)
+            await ctx.send(data[0], reference=ctx.replied_reference, reply=False)
             await self.bot.db.execute("UPDATE tags SET uses = $1 WHERE guild_id = $2 AND text = $3", data[1]+1, ctx.guild.id, data[0])
 
     @tag.command(name='add', aliases=['create'])
@@ -74,6 +74,25 @@ class tags(commands.Cog, description='Manage and create tags'):
             id, name, ctx.guild.id, ctx.author.id, tag[0:1950], 0, discord.utils.utcnow().astimezone(datetime.timezone.utc).replace(tzinfo=None))
         
         await ctx.send("Created the tag \"{}\": \n> {}".format(name, tag[0:1950]))
+
+    @tag.command(name='raw')
+    async def tag_raw(self, ctx: MyContext, name: commands.clean_content):
+        """Get the raw output of a tag."""
+        tag = await self.bot.db.fetchval("SELECT text FROM tags WHERE name = $1 AND guild_id = $2", name, ctx.guild.id)
+        if not tag:
+            raise commands.BadArgument("This tag does not exist...")
+
+        await ctx.send(discord.utils.escape_markdown(tag), reply=False)
+
+    @tag.command(name='edit')
+    async def tag_edit(self, ctx: MyContext, name: commands.clean_content, *, tag: commands.clean_content):
+        """Edit a tag that you own."""
+        check = await self.bot.db.fetchval("SELECT text FROM tags WHERE name = $1 AND guild_id = $2 AND owner_id = $3", name, ctx.guild.id, ctx.author.id)
+        if not check:
+            raise commands.BadArgument("This tag does not exist or you do not own this tag.")
+
+        await self.bot.db.execute("UPDATE tags SET text = $1 WHERE name = $2 AND guild_id = $3 AND owner_id = $4", tag, name, ctx.guild.id, ctx.author.id)
+        await ctx.send("Edited that tag.")
 
     @tag.command(name='info', aliases=['owner'])
     async def tag_info(self, ctx: MyContext, *, name: commands.clean_content):
