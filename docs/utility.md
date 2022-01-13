@@ -16,6 +16,7 @@ the most documented part of the bot.
 | raw-message | Get the raw json format of a message. <br > Pass in a message or reply to work this. | `/raw-message [message]` | rawmessage, rmsg, raw
 | first-message | Get the first message in a channel. | `/first-message [channel]` | firstmsg, firstmessage
 | embed | Post an embed from json. <br/><br/> Click here to build your embed, then click copy and paste that as an argument for this command. | `/embed <json>`
+
 #
 ## Prefix Management
 | Name | Description | Usage | Aliases |

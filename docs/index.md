@@ -3,6 +3,9 @@
 ## Important Links
 [**Documentation**](https://dartmern.github.io/metro/) | [**Support Server**](https://discord.gg/2ceTMZ9qJh) | [**Invite Link**](https://discord.com/oauth2/authorize?client_id=788543184082698252&scope=bot+applications.commands&permissions=140932115831) | [**Github**](https://github.com/dartmern/metro)
 
+## Hey you!
+Please read the [Frequently Asked Questions](https://dartmern.github.io/metro/faq/) before asking for help
+
 ## How do I read this documentation
 
 * `<argument>` - This argument is __required__
@@ -21,3 +24,4 @@ Please do not literally type out <>, [], |, etc.
 * Use `/help <command | category>` for some help and examples on a command or category
 * Run `/help` and select through the different categories
 * Use `/search <query>` to search for a particular command
+
