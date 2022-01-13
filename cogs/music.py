@@ -1,18 +1,24 @@
 import contextlib
-from typing import Optional
+from typing import Any, Optional
+from urllib.parse import quote_plus
 import discord
 import pomice
 import asyncio
 import math
 import random
 
-from discord.ext import commands
+from discord.ext import commands, menus
 
 from bot import MetroBot
 from utils.custom_context import MyContext
 from utils.json_loader import read_json
+from utils.new_pages import SimplePages
 
-password = read_json('info')['database_info']['password']
+_info = read_json('info')
+
+password = _info['database_info']['password']
+auth = _info['openrobot_api_key']
+
 
 def setup(bot: MetroBot):
     bot.add_cog(music(bot))
@@ -74,13 +80,24 @@ class Player(pomice.Player):
         self.context = ctx 
         self.dj = ctx.author 
 
+class LyricsSource(menus.ListPageSource):
+    def __init__(self, data, js: Any):
+        super().__init__(data, per_page=18)
+        self.js = js
+
+    async def format_page(self, menu: SimplePages, entries):
+        menu.embed.title = self.js['title']
+        menu.embed.set_thumbnail(url=self.js['images']['background'])
+
+        menu.embed.description = "\n".join(entries)
+        return menu.embed
 
 class music(commands.Cog, description='Play high quality music in a voice channel.'):
     def __init__(self, bot: MetroBot):
         self.bot = bot
 
         self.pomice = pomice.NodePool()
-        bot.loop.create_task(self.start_nodes())
+        #bot.loop.create_task(self.start_nodes())
 
     @property
     def emoji(self) -> str:
@@ -89,15 +106,18 @@ class music(commands.Cog, description='Play high quality music in a voice channe
     async def start_nodes(self):
         await self.bot.wait_until_ready()
 
-        await self.pomice.create_node(
-            bot=self.bot,
-            host="0.0.0.0",
-            port="2333",
-            password=password,
-            identifier="MAIN",
-            spotify_client_id="d31d8bdbe41d4ca5937bd503e1f098b2",
-            spotify_client_secret="e209c01ae7b646379ca21d08b7262ca8"
-        )
+        try:
+            await self.pomice.create_node(
+                bot=self.bot,
+                host="127.0.0.1",
+                port="3030",
+                password=password,
+                identifier="MAIN",
+                spotify_client_id="d31d8bdbe41d4ca5937bd503e1f098b2",
+                spotify_client_secret="e209c01ae7b646379ca21d08b7262ca8"
+            )
+        except pomice.exceptions.NodeCreationError:
+            pass
         print("Music node created.")
 
     async def is_privileged(self, ctx: MyContext):
@@ -118,6 +138,19 @@ class music(commands.Cog, description='Play high quality music in a voice channe
     async def on_pomice_track_exception(self, player: Player, track, _):
         await player.do_next()
 
+    @commands.command(name='lyrics')
+    async def lyrics(self, ctx: MyContext, *, song: str):
+        """Get the lyrics of a song."""
+
+        headers = {'Authorization' : auth}
+        async with self.bot.session.get(
+            f"https://api.openrobot.xyz/api/lyrics/{quote_plus(song)}", headers=headers) as res:
+
+            js = await res.json()
+
+        menu = SimplePages(source=LyricsSource(js['lyrics'].split("\n"), js), ctx=ctx)
+        await menu.start()
+
     @commands.command(name='join', aliases=['summon', 'connect'])
     async def join(self, ctx: MyContext, *, channel: Optional[discord.VoiceChannel]=None):
         """Join a voice channel."""
@@ -129,7 +162,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
 
         await ctx.author.voice.channel.connect(cls=Player)
         player: Player = ctx.voice_client
-        player.set_context(ctx=ctx)
+        await player.set_context(ctx=ctx)
 
         await ctx.send(f"Joined the voice channel {channel.mention}")
 
@@ -151,7 +184,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
         if not (player := ctx.voice_client):
             await ctx.invoke(self.join)  
 
-        results = await player.get_trackers(query, ctx=ctx)
+        results = await player.get_tracks(query, ctx=ctx)
 
         if not results:
             raise commands.BadArgument("No results were found with that search query.")
@@ -168,4 +201,26 @@ class music(commands.Cog, description='Play high quality music in a voice channe
 
     
 
+    @commands.command(name='stop')
+    async def stop(self, ctx: MyContext):
+        """Stop the player."""
+
+        if not (player := ctx.voice_client):
+            return await ctx.send("You must have the bot in a channel in order to use this command", delete_after=7)
+
+        if not player.is_connected:
+            return
+
+        if await self.is_privileged(ctx):
+            await ctx.send('An admin or DJ has stopped the player.', delete_after=10)
+            return await player.teardown()
+
+        required = self.required(ctx)
+        player.stop_votes.add(ctx.author)
+
+        if len(player.stop_votes) >= required:
+            await ctx.send('Vote to stop passed. Stopping the player.', delete_after=10)
+            await player.teardown()
+        else:
+            await ctx.send(f'{ctx.author.mention} has voted to stop the player. Votes: {len(player.stop_votes)}/{required}', delete_after=15)
 

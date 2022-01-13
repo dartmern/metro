@@ -361,7 +361,7 @@ class NewHelpView(discord.ui.View):
 
         count = await self.bot.db.fetchval('SELECT COUNT(*) as c FROM messages')
 
-        embed.add_field(name='Messages', value=count)
+        embed.add_field(name='Messages', value=f"{count:,}")
         embed.add_field(name='Uptime', value=get_bot_uptime(self.bot, brief=True))
         return embed
 
@@ -1040,11 +1040,15 @@ class meta(commands.Cog, description='Get bot stats and information.'):
         desc += (
             """
             - By interacting with Metro which will be refered to as "bot", 
-            you agree that your messages including attachments will be recorded 
-            (except message content) and your user id (to identify you). This 
-            data is encrypted in a secure database that only developers have 
-            access to. The bot collects this data for moderation purpose and to 
-            track stats with the tracking module which tracks message count. If
+            you agree that message data (the message id, message author, 
+            the time the message was sent) WILL be recorded but 
+            message CONTENT (the content of the messages sent, this includes 
+            attachments, embeds and the actual content) will NOT be recorded.
+            Your user id (to identify you) is another piece of information
+            will be recorded in my database. This data is encrypted in a 
+            secure database that only developers have access to. The bot 
+            collects this data for moderation purpose and to track stats 
+            with the tracking module which tracks message count. If
             you do not consent to having your data tracking please join the
             bot's support server. The bot does not collect data like presences, 
             statuses, about me, connections about you.
@@ -1069,6 +1073,12 @@ class meta(commands.Cog, description='Get bot stats and information.'):
         desc += (
             """
             \nAny concerns? Join my [support server](https://discord.gg/2ceTMZ9qJh) if you have any concerns or issues.
+            """
+        )
+        desc += (
+            f"""
+            \nYou can now optout of having your messages tracked by running `{ctx.clean_prefix}optout`
+            Add the `--remove` flag to remove previously stored data.
             """
         )
         embed = discord.Embed(color=ctx.color)

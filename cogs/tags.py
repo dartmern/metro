@@ -133,7 +133,7 @@ class tags(commands.Cog, description='Manage and create tags'):
         if not data:
             raise commands.BadArgument("This server has no tags.")
 
-        menu = SimplePages(source=TagSource(data, per_page=15), ctx=ctx)
+        menu = SimplePages(source=TagSource(data.reverse(), per_page=15), ctx=ctx)
         await menu.start()
 
     @tag.command(name='make', usage='')

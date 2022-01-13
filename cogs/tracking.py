@@ -22,7 +22,7 @@ class tracking(commands.Cog, description='Module for user and server stats.'):
         self.batch_lock = asyncio.Lock(loop=bot.loop)
         self.message_batch = []
         self.tracking_batch = defaultdict(dict)
-
+        self.no_tracking = {}
         self.message_inserter.start()
 
     def cog_unload(self):
@@ -31,6 +31,14 @@ class tracking(commands.Cog, description='Module for user and server stats.'):
     @property
     def emoji(self) -> str:
         return '🔍'
+
+    async def load_optout(self):
+        await self.bot.wait_until_ready()
+
+        records = await self.bot.db.fetch("SELECT id FROM optout WHERE option = True")
+        if records:
+            for record in records:
+                self.no_tracking[record['id']] = True
 
     @tasks.loop(seconds=0.5)
     async def message_inserter(self):
@@ -58,6 +66,8 @@ class tracking(commands.Cog, description='Module for user and server stats.'):
     @commands.Cog.listener('on_message')
     async def message_tracking(self, message : discord.Message):
         if message.guild:
+            if self.no_tracking.get(message.author.id) is True:
+                return # They don't wanna be tracked
             self.bot.message_stats[message.guild.id] += 1
             async with self.batch_lock:
                 self.message_batch.append(
@@ -72,6 +82,45 @@ class tracking(commands.Cog, description='Module for user and server stats.'):
                 )
                 self.tracking_batch[message.author.id] = {time.time() : "sending a message"}
 
+    @commands.command(name='optout', usage='[--remove]')
+    async def opt_out(self, ctx: MyContext, *, flags: Optional[str]):
+        """
+        Optout of **all** message tracking.
+        Apply `--remove` to remove previous data.
+        
+        Run `unoptout` to reverse this.
+        """
+        confirm = await ctx.confirm(
+            f"Are you sure you want to optout on all message tracking{' and remove all your previous data?' if flags and '--remove' in flags else '?'}",
+            delete_after=True, timeout=60)
+        if confirm is False:
+            raise commands.BadArgument("Canceled.")
+        if confirm is None:
+            raise commands.BadArgument("Timed out.")
+
+        self.no_tracking[ctx.author.id] = True
+        await self.bot.db.execute("INSERT INTO optout (id, option) VALUES ($1, $2)", ctx.author.id, True)
+
+        if flags and "--remove" in flags:
+            await self.bot.db.execute("DELETE FROM messages WHERE author_id = $1", ctx.author.id)
+
+        await ctx.check()
+        await ctx.send(f"You are now opted out of all message tracking{' and I removed all your previous data.' if flags and '--remove' in flags else '.'}")
+        
+    @commands.command(name='unoptout')
+    async def unopt_out(self, ctx: MyContext):
+        """
+        Opt in me tracking your messages.
+        
+        I **do not** track message content and this use purly
+        used for message count commands that you can use.
+        """
+        self.no_tracking[ctx.author.id] = False
+        await self.bot.db.execute("DELETE FROM optout WHERE id=$1", ctx.author.id)
+
+        await ctx.check()
+        await ctx.send("You have opted back into message tracking.")
+        
 
     @commands.command(aliases=['gm'])
     async def messages_guild(self, ctx : MyContext):
@@ -88,7 +137,7 @@ class tracking(commands.Cog, description='Module for user and server stats.'):
 
         embed = Embed()
         embed.colour = discord.Colour.green()
-        embed.description = f'I have seen **{count}** message{"" if count == 1 else "s"} in this guild.'\
+        embed.description = f'I have seen **{count:,}** message{"" if count == 1 else "s"} in this guild.'\
                             f"\n*Message tracking started {discord.utils.format_dt(ctx.guild.me.joined_at, 'R')}*"
         await ctx.send(embed=embed)
 
@@ -109,7 +158,7 @@ class tracking(commands.Cog, description='Module for user and server stats.'):
         count = await self.bot.db.fetchval(query, member.id, ctx.guild.id)
 
         embed = Embed()
-        embed.description = f'**{member}** has sent **{count}** message{"" if count == 1 else "s"}'\
+        embed.description = f'**{member}** has sent **{count:,}** message{"" if count == 1 else "s"}'\
                             f"\n*Message tracking started {discord.utils.format_dt(ctx.guild.me.joined_at, 'R')}*"
         await ctx.send(embed=embed)
 
@@ -132,7 +181,7 @@ class tracking(commands.Cog, description='Module for user and server stats.'):
 
         embed = Embed()
         embed.colour = discord.Colour.yellow()
-        embed.description = f'**{user}** has sent **{count}** message{"" if count == 1 else "s"} globally'\
+        embed.description = f'**{user}** has sent **{count:,}** message{"" if count == 1 else "s"} globally'\
                             f"\n*Message tracking started {discord.utils.format_dt(ctx.guild.me.joined_at, 'R')}*"
         await ctx.send(embed=embed)
 
@@ -148,6 +197,6 @@ class tracking(commands.Cog, description='Module for user and server stats.'):
 
         embed = Embed()
         embed.colour = discord.Colour.green()
-        embed.description = f"I have seen **{count}** message{'' if count == 1 else 's'}"\
+        embed.description = f"I have seen **{count:,}** message{'' if count == 1 else 's'}"\
                             f"\n*Message tracking started <t:1639287704:R>*"
         await ctx.send(embed=embed)

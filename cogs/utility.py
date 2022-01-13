@@ -458,7 +458,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         embed.colour = discord.Colour.green()
         return await ctx.send(embed=embed)
 
-    @commands.command(aliases=['sourcecode', 'code'])
+    @commands.command(aliases=['sourcecode', 'code', 'src'])
     @commands.bot_has_permissions(send_messages=True, embed_links=True)
     async def source(self, ctx, *, command: str = None):
         """
@@ -1337,9 +1337,14 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             await message.reply(f'{", ".join(f"<@{users}>" for i, users in enumerate(winners_string))} {"have" if len(winners_string) > 1 else "has"} won the giveaway for **{prize}**\n{message.jump_url}')
             return
 
-    @commands.command(name='raw-message', aliases=['rmsg', 'raw'])
+    @commands.command(name='raw-message', aliases=['rmsg', 'raw', 'rawmessage'])
     @commands.check(Cooldown(1, 30, 1, 15, commands.BucketType.user))
     async def raw_message(self, ctx: MyContext, message: Optional[discord.Message]):
+        """
+        Get the raw json format of a message.
+
+        Pass in a message or reply to work this.
+        """
         async with ctx.typing():
             message: discord.Message = getattr(ctx.message.reference, 'resolved', message)
             if not message:
@@ -1359,10 +1364,10 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             await ctx.send(to_send)
 
 
-    @commands.command(name='first-message', aliases=['firstmsg'])
+    @commands.command(name='first-message', aliases=['firstmsg', 'firstmessage'])
     @commands.check(Cooldown(1, 3, 1, 2, commands.BucketType.user))
     async def first_message(self, ctx: MyContext, *, channel: Optional[discord.TextChannel]) -> discord.Message:
-        """Get the first message in this channel."""
+        """Get the first message in a channel."""
         channel = channel or ctx.channel
 
         first_message : discord.Message = (await channel.history(limit=1, oldest_first=True).flatten())[0]
