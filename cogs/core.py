@@ -135,15 +135,6 @@ class core(commands.Cog, description="Core events."):
                     await channel.send(content='Traceback string was too long to output.', embed=embed, file=discord.File(io.StringIO(traceback_string), filename='traceback.py'))
                 return 
                 
-        elif isinstance(error, commands.MissingRequiredArgument):
-            missing = f"{error.param.name}"
-            command = f"{ctx.clean_prefix}{ctx.command} {ctx.command.signature}"
-            separator = (' ' * (len([item[::-1] for item in command[::-1].split(missing[::-1], 1)][::-1][0]) - 1)) + (8*' ')
-            indicator = ('^' * (len(missing) + 2))
-            message = (f"\n```yaml\nSyntax: {command}\n{separator}{indicator}\n{missing} is a required argument that is missing.\n```")
-                                    
-            return await ctx.send(message, embed=await ctx.get_help(ctx.command))
-
         elif isinstance(error, commands.errors.BotMissingPermissions):
             missing_perms = ", ".join(["`%s`" % perm.replace('_', ' ').replace('guild', 'server').title() for perm in error.missing_permissions])
             embed.description = "I am missing the following permissions to run that command: \n%s" % missing_perms
@@ -151,7 +142,7 @@ class core(commands.Cog, description="Core events."):
             embed.set_author(name='Bot Missing Permissions', icon_url=self.error_emoji)
 
             try:
-                return await ctx.send(embed=embed)
+                return await ctx.reply(embed=embed)
             except:
                 return await ctx.author.send(embed=embed)
 
@@ -166,7 +157,17 @@ class core(commands.Cog, description="Core events."):
             missing_perms = ", ".join(["`%s`" % perm.replace('_', ' ').replace('guild', 'server').title() for perm in error.missing_permissions])
             embed.description = "You are missing the following permissions to run that command: \n%s" % missing_perms
             
-            return await ctx.send(embed=embed)
+            return await ctx.reply(embed=embed)
+
+        elif isinstance(error, commands.MissingRequiredArgument):
+            missing = f"{error.param.name}"
+            command = f"{ctx.clean_prefix}{ctx.command} {ctx.command.signature}"
+            separator = (' ' * (len([item[::-1] for item in command[::-1].split(missing[::-1], 1)][::-1][0]) - 1)) + (8*' ')
+            indicator = ('^' * (len(missing) + 2))
+            message = (f"\n```yaml\nSyntax: {command}\n{separator}{indicator}\n{missing} is a required argument that is missing.\n```")
+                                    
+            return await ctx.reply(message, embed=await ctx.get_help(ctx.command))
+
 
         elif isinstance(error, commands.CommandNotFound):
             return # Might change this later and only handle this if the prefix is decently long.

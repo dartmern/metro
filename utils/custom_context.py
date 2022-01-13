@@ -2,7 +2,7 @@ import asyncio
 import discord
 from discord.ext import commands, menus
 
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
 
 from discord.ext.commands.core import Command, Group
 from discord.ext.commands.errors import CommandError, CommandInvokeError
@@ -74,22 +74,20 @@ class MyContext(commands.Context):
     #async def defer(self, hide : bool = True, trigger_typing : bool = True):
         #await super().defer(ephemeral=hide, trigger_typing=trigger_typing)
 
-    async def send(self, content : str = None, embed : discord.Embed = None, hide : bool = False, **kwargs):
+    async def send(self, content : str = None, embed : discord.Embed = None, hide : bool = False, reply: bool = True, reference: Any = None, **kwargs):
 
         if content: 
             content=str(content)
 
             if self.bot.http.token in content:
-                content = content.replace(self.bot.http.token, "[Token Hidden]")
+                content = content.replace(self.bot.http.token, "[Token Hidden for privacy reasons]")
 
-        if self.interaction == None:
-            message = await super().send(content=content, embed=embed, **kwargs)
-        else:
-            if embed:
-                message = await super().send(content=content, embed=embed, ephemeral=hide, **kwargs)
-            else:
-                message = await super().send(content=content, ephemeral=hide, **kwargs)
-            
+        if reply:
+            reference = self.message
+        reference = reference or self.message
+        message = await super().send(content=content, reference=reference, embed=embed, ephemeral=hide, **kwargs)
+
+
         return message
           
 

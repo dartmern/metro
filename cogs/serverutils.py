@@ -762,7 +762,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
 
     @role.command(name='info')
     @commands.bot_has_guild_permissions(embed_links=True)
-    async def role_info(self, ctx: MyContext, *, role: RoleConverter):
+    async def _role_info(self, ctx: MyContext, *, role: RoleConverter):
         """Show all the information about a role."""
         await ctx.send(embed=await self.show_roleinfo(ctx, role))
 
@@ -1276,7 +1276,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
 
     @commands.command(name='grant', aliases=['grant-permissions'])
     @commands.has_guild_permissions(administrator=True)
-    @commands.bot_has_guild_permissions(manage_roles=True, manage_channels=True)
+    @commands.bot_has_guild_permissions(administrator=True)
     async def grant_permissions(self, ctx: MyContext, entity: Union[discord.Member, discord.Role], *perms: str):
         """
         Grant an entity certain permissions.

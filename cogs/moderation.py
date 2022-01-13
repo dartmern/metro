@@ -1112,10 +1112,14 @@ class moderation(commands.Cog, description="Moderation commands."):
             raise commands.BadArgument(to_send)
         
         if duration:
-            reason = duration.arg if duration.arg != "…" else None
-            endtime = duration.dt.replace(tzinfo=None) if duration.dt else None
-            ftime = human_timedelta((endtime), accuracy=500)
-            
+            if duration.dt is None:
+                reason = duration.arg
+                endtime = None
+            else:
+                reason = duration.arg if duration.arg != "…" else None
+                endtime = duration.dt.replace(tzinfo=None) if duration.dt else None
+                ftime = human_timedelta((endtime), accuracy=500)
+                
         else:
             reason = None
             endtime = None

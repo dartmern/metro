@@ -3,8 +3,11 @@
 This is a simple implementation of reaction roles.
 #
 
+Please check out the [Reaction Roles FAQ](https://dartmern.github.io/metro/faq/#my-reaction-roles-arent-working-why) if you are having issues with reaction roles.
+
 After setting up reaction roles please make sure the bot's top role is higher than the roles you want to hand out. You can do this by moving the `@Metro` role.
 #
+#### Permissions required: `Manage Server`
 
 | Name | Description | Usage | Aliases |
 | :--- | :--- | :--- | :---
