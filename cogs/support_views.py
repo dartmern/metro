@@ -45,6 +45,8 @@ class support(commands.Cog, description='Support only commands.'):
 
         if self.bot.user.id == 795373951043633232:
             return 
+        if payload.user_id == self.bot.user.id:
+            return # Lmao
 
         if str(payload.emoji) == "<:mCheck:819254444197019669>":
             channel = (
