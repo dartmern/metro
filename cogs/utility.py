@@ -1,3 +1,4 @@
+from ast import parse
 from collections import defaultdict
 import re
 import discord
@@ -32,10 +33,12 @@ import asyncpg
 import yarl
 import inspect
 import unicodedata
+import argparse
 
-class Flags(commands.FlagConverter, delimiter=' ', prefix='--'):
-    ping: Optional[RoleConverter]
-    message: Optional[str] = commands.Flag(aliases=['msg'], name='message')
+class NoExitParser(argparse.ArgumentParser):
+    def error(self, message):
+        raise commands.BadArgument(message)
+
 
 class StopView(discord.ui.View):
     def __init__(self, ctx : MyContext):
@@ -110,6 +113,7 @@ class SourceView(discord.ui.View):
         Unless this pagination menu was invoked with a slash command
         """
 
+        await self.ctx.check()
         await interaction.response.defer()
         await interaction.delete_original_message()
         self.stop()
@@ -134,20 +138,20 @@ class WinnerConverter(commands.Converter):
     async def convert(self, ctx : MyContext, argument : str):
         try:
             if int(argument) > 30:
-                raise commands.BadArgument("You cannot have more than 30 winners.")
+                raise commands.BadArgument("\U00002753 You cannot have more than 30 winners.")
             if int(argument) <= 0:
-                raise commands.BadArgument("You cannot have less than 0 winners.")
+                raise commands.BadArgument("\U00002753 You cannot have less than 0 winners.")
             return int(argument)
         except ValueError:
             argument = argument.replace("w", "")
             try:
                 if int(argument) > 30:
-                    raise commands.BadArgument("You cannot have more than 30 winners.")
+                    raise commands.BadArgument("\U00002753 You cannot have more than 30 winners.")
                 if int(argument) <= 0:
-                    raise commands.BadArgument("You cannot have less than 0 winners.")
+                    raise commands.BadArgument("\U00002753 You cannot have less than 0 winners.")
                 return int(argument)
             except ValueError:
-                raise commands.BadArgument("There was an issue converting your winners argument.")
+                raise commands.BadArgument("\U00002753 There was an issue converting your winners argument.")
                 
     
 class Timer:
@@ -276,7 +280,6 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         permission.denied = denied
         return permission
         
-
     async def say_permissions(self, ctx : MyContext, member : discord.Member, channel : discord.TextChannel):
         permissions = channel.permissions_for(member)
         e = discord.Embed(colour=member.colour)
@@ -299,8 +302,6 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         await ctx.send(embed=e)
 
     async def post_mystbin(self, data : str, encoding : str = 'utf-8'):
-        to_post = bytes(data, encoding)
-
         async with self.bot.session.post(f"https://mystb.in/documents", data=data) as s:
             res = await s.json()
             url_key = res['key']
@@ -323,8 +324,6 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         e.description = f"Output: {link}"
         e.set_footer(text=f'Post time: {round(post_time, 3)}')
         return await ctx.send(embed=e)
-
-        
 
     @commands.command(name='permissions',brief="Shows a member's permissions in a specific channel.")
     @commands.guild_only()
@@ -361,11 +360,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             return await ctx.send('Output too long to display.')
         await ctx.send(msg)
 
-    @commands.group(
-        name='prefix',
-        case_insensitive=True,
-        invoke_without_command=True
-    )
+    @commands.group(name='prefix', case_insensitive=True, invoke_without_command=True)
     @commands.has_permissions(manage_guild=True)
     @commands.bot_has_permissions(send_messages=True)
     async def prefix(self, ctx : MyContext):
@@ -375,9 +370,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         return await ctx.help()
 
 
-    @prefix.command(
-        name='add'
-    )
+    @prefix.command(name='add')
     @commands.has_permissions(manage_guild=True)
     async def prefix_add(self, ctx : MyContext, prefix : str) -> discord.Message:
         """
@@ -1042,11 +1035,13 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         """Manage and create giveaways for your server."""
         await ctx.help()
 
-    @giveaway.command(name='start', usage="<duration> [winners='1'] <prize> [flags]")
+    @giveaway.command(name='start', usage="<duration> [winners=1] <prize> [flags]")
     @commands.check(Cooldown(8, 8, 12, 8, commands.BucketType.member))
     @commands.bot_has_permissions(send_messages=True, add_reactions=True)
     @commands.has_guild_permissions(manage_guild=True)
-    async def giveaway_start(self, ctx : MyContext, duration : FutureTime, winners : Optional[WinnerConverter] = 1, *, prize : str):
+    async def giveaway_start(
+        self, ctx : MyContext, duration : FutureTime, 
+        winners : Optional[WinnerConverter] = 1, *, prize : str):
         """
         Start a giveaway!
         
@@ -1054,18 +1049,28 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         """
         await ctx.defer()
 
-        message = ""
-        to_send = ""
-
-        flags = prize.partition("--")[2]
         prize = prize.split('--')[0]
-        if flags:
-            convertered = await Flags().convert(ctx, "--%s" % flags)
-            if convertered.ping:
-                to_send += convertered.ping.mention
-            if convertered.message:
-                message += convertered.message[0:1950]
+        flags = ctx.message.content
+
+        parser = NoExitParser()
+        parser.add_argument('--ping', nargs='*', type=str, default=None)
+        parser.add_argument('--message', nargs='*', type=str, default=None)
         
+        role, message = None, None
+        try:
+            flags = vars(parser.parse_known_args(flags.split())[0])
+            
+            if flags['ping']:
+                try:
+                    role = await RoleConverter().convert(ctx, str(flags['ping']))
+                except Exception as e:
+                    return await ctx.send(str(e))
+            if flags['message']:
+                message = ' '.join(list(flags['message']))
+
+        except Exception as e:
+            return await ctx.send(str(e))
+
         if duration.dt < (ctx.message.created_at + datetime.timedelta(seconds=5)):
             return await ctx.send("Duration is too short. Must be at least 5 seconds.")
 
@@ -1077,12 +1082,9 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
                         f"\n Hosted by: {ctx.author.mention}"
         e.set_footer(text=f'{winners} winner{"s" if winners > 1 else ""}')
 
-        if message:
-            embeds = [Embed(color=discord.Color.blue(), description=message), e]
-        else:
-            embeds = [e]
+        embeds = [e] if not message else [e, discord.Embed(description=message[0:1500], color=discord.Colour.blue())]
 
-        giveaway_message = await ctx.send(f":tada: **GIVEAWAY!** :tada: \n{to_send}",embeds=embeds, allowed_mentions=discord.AllowedMentions(roles=True))
+        giveaway_message = await ctx.send(f":tada: **GIVEAWAY!** :tada: \n{role.mention if role else ''}",embeds=embeds, allowed_mentions=discord.AllowedMentions.all(), reply=None)
         await giveaway_message.add_reaction('\U0001f389')
 
         try:
@@ -1094,7 +1096,9 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
                 ctx.channel.id,
                 giveaway_message.id,
                 winners=winners,
-                prize=prize
+                prize=prize,
+                message=message,
+                role=None if role == None else role.id
             )
         except Exception as e:
             traceback_string = "".join(traceback.format_exception(
@@ -1103,13 +1107,9 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             await ctx.send(str(traceback_string))
             return
         e.set_footer(text=f'{winners} winner{"s" if winners > 1 else ""} | Giveaway ID: {timer.id}')
-        if message:
-            embeds = [Embed(color=discord.Color.blue(), description=message), e]
-        else:
-            embeds = [e]
 
-        await giveaway_message.edit(f":tada: **GIVEAWAY!** :tada:\n{to_send}",embeds=embeds, allowed_mentions=discord.AllowedMentions(roles=True))
-        return
+        return await giveaway_message.edit(f":tada: **GIVEAWAY!** :tada:\n{role.mention if role else ''}",embeds=embeds, allowed_mentions=discord.AllowedMentions.all())
+        
 
     @giveaway.command(name='list')
     @commands.check(Cooldown(4, 8, 6, 8, commands.BucketType.member))
@@ -1274,6 +1274,9 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         winners = timer.kwargs.get("winners")
         prize = timer.kwargs.get("prize")
 
+        _message = timer.kwargs.get('message')
+        role = timer.kwargs.get('role')
+
         await self.bot.wait_until_ready()
 
         guild = self.bot.get_guild(guild_id)
@@ -1302,7 +1305,9 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
                             f"\n Hosted by: <@{host_id}>" # No API call needed here
             e.set_footer(text=f'{winners} winner{"s" if winners > 1 else ""}')
 
-            await message.edit(embed=e, content=f"\U0001f389\U0001f389 **GIVEAWAY ENDED** \U0001f389\U0001f389")
+            embeds = [e] if not _message else [e, discord.Embed(description=_message, colour=discord.Colour.blue())]
+
+            await message.edit(embeds=embeds, content=f"\U0001f389\U0001f389 **GIVEAWAY ENDED** \U0001f389\U0001f389\n{'<@&%s>' % role if role else ''}", allowed_mentions=discord.AllowedMentions.all())
             return # No need to choose winners as there is nothing to choose from
                     
         else:
@@ -1333,9 +1338,18 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
                                     f"\n Ended {discord.utils.format_dt(discord.utils.utcnow(), 'R')}"\
                                     f"\n Hosted by: <@{host_id}>" # No API call needed here
             e.set_footer(text=f'{winners} winner{"s" if winners > 1 else ""}')
-            await message.edit(embed=e, content=f"\U0001f389\U0001f389 **GIVEAWAY ENDED** \U0001f389\U0001f389")
-            await message.reply(f'{", ".join(f"<@{users}>" for i, users in enumerate(winners_string))} {"have" if len(winners_string) > 1 else "has"} won the giveaway for **{prize}**\n{message.jump_url}')
-            return
+
+            embeds = [e] if not _message else [e, discord.Embed(description=_message, colour=discord.Colour.blue())]
+
+            view = discord.ui.View()
+            view.add_item(discord.ui.Button(label='Jump to original message', url=message.jump_url))
+
+            await message.edit(embeds=embeds, content=f"\U0001f389\U0001f389 **GIVEAWAY ENDED** \U0001f389\U0001f389\n{'<@&%s>' % role if role else ''}", allowed_mentions=discord.AllowedMentions.all())
+            return await message.channel.send(
+                f'{", ".join(f"<@{users}>" for i, users in enumerate(winners_string))} {"have" if len(winners_string) > 1 else "has"} won the giveaway for **{prize}**',
+                view=view)
+
+            
 
     @commands.command(name='raw-message', aliases=['rmsg', 'raw', 'rawmessage'])
     @commands.check(Cooldown(1, 30, 1, 15, commands.BucketType.user))

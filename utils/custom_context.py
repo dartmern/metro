@@ -84,7 +84,6 @@ class MyContext(commands.Context):
 
         if reply:
             reference = self.message
-        reference = reference or self.message
         message = await super().send(content=content, reference=reference, embed=embed, ephemeral=hide, **kwargs)
 
 
