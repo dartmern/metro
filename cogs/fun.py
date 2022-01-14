@@ -81,7 +81,7 @@ class Game(discord.ui.View):
                 item.disabled = True
         await self.message.edit(view=self)
         while True:
-            ran = random.randint(1, 26)
+            ran = random.randint(1, 25)
             if ran not in self.game_data:
                 self.game_data.append(ran)
                 break

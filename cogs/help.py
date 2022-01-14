@@ -118,7 +118,7 @@ class VoteView(discord.ui.View):
 
 class InviteView(discord.ui.View):
     def __init__(self, ctx : MyContext):
-        super().__init__()
+        super().__init__(timeout=5)
         self.ctx = ctx
         self.client = None
 
@@ -127,20 +127,6 @@ class InviteView(discord.ui.View):
             return True
         await interaction.response.send_message('This pagination menu cannot be controlled by you, sorry!', ephemeral=True)
         return False
-
-    async def start_normal(self):
-        embed = Embed()
-        embed.colour = discord.Colour.blue()
-        embed.description = "__**Choose a invite option below or press `Create custom permissions`**__"\
-            f"\n\nIf you press `Create custom permissions` you are required to enter a vaild discord permissions integer."\
-            f'\nYou can use [this calculator](https://discordapi.com/permissions.html) to find the permissions if you are unsure what to put.'
-        
-        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='None', url=discord.utils.oauth_url(self.ctx.bot.user.id, permissions=discord.Permissions(0))))
-        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='Basic', url=discord.utils.oauth_url(self.ctx.bot.user.id, permissions=discord.Permissions(140663671873))))
-        self.add_item(discord.ui.Button(style=discord.ButtonStyle.blurple, label='Advanced', url=discord.utils.oauth_url(self.ctx.bot.user.id, permissions=discord.Permissions(140932115831))))
-        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='Admin', url=discord.utils.oauth_url(self.ctx.bot.user.id, permissions=discord.Permissions(8))))
-        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='All', url=discord.utils.oauth_url(self.ctx.bot.user.id, permissions=discord.Permissions(549755813887))))
-        await self.ctx.send(embed=embed, view=self)
 
     async def start(self, interaction: Optional[discord.Interaction] = None, client: Optional[BotUserObject] = None):
         if interaction:
@@ -183,7 +169,7 @@ class InviteView(discord.ui.View):
             return await interaction.followup.send("Timed out.")
 
         try:
-            perms = int(message.content)
+            int(message.content)
         except ValueError:
             embed = Embed(color=discord.Colour.red())
             embed.set_author(name='Invaild permission value.')
@@ -210,7 +196,7 @@ class InviteView(discord.ui.View):
 
 class NeedHelp(discord.ui.View):
     def __init__(self, ctx: MyContext, old_view: discord.ui.View):
-        super().__init__()
+        super().__init__(timeout=5)
         self.ctx = ctx
         self.old_embed = None
         self.old_view = old_view # For the go home button
@@ -262,7 +248,7 @@ class NeedHelp(discord.ui.View):
 
 class NewHelpView(discord.ui.View):
     def __init__(self, ctx : MyContext, data : List, help_command):
-        super().__init__(timeout=None)
+        super().__init__(timeout=5)
         self.ctx : MyContext = ctx
         self.bot : MetroBot = ctx.bot #get typehinted bot and better to remember
         self.help_command : HelpCommand = help_command
@@ -459,7 +445,6 @@ class View(discord.ui.View):
         super().__init__(timeout=60)
         self.user = author
 
-
     async def on_timeout(self) -> None:
         self.foo.disabled = True
         try:
@@ -474,7 +459,7 @@ class View(discord.ui.View):
                                                 ephemeral=True)
         return False
 
-    @discord.ui.button(emoji='<:mCross:819254444217860116>', style=discord.ButtonStyle.gray)
+    @discord.ui.button(emoji='\U0001f5d1', style=discord.ButtonStyle.gray)
     async def foo(self, _, interaction: discord.Interaction) -> None:
         await interaction.message.delete()
 

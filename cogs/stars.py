@@ -252,9 +252,6 @@ class stars(commands.Cog, description='Manage and create starboard commands. \nT
         if msg is None:
             raise StarError('\N{BLACK QUESTION MARK ORNAMENT} This message could not be found.')
 
-        if msg.author.id == starrer_id:
-            raise StarError('\N{NO ENTRY SIGN} You cannot star your own message.')
-
         empty_message = len(msg.content) == 0 and len(msg.attachments) == 0
         if empty_message or msg.type not in (discord.MessageType.default, discord.MessageType.reply):
             raise StarError('\N{NO ENTRY SIGN} This message cannot be starred.')
