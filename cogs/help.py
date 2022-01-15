@@ -33,7 +33,7 @@ dartmern#7563 in my support server or in discord.py #playground.
 
 class SupportView(discord.ui.View):
     def __init__(self, ctx : MyContext):
-        super().__init__()
+        super().__init__(timeout=300)
         self.ctx = ctx
         
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
@@ -64,7 +64,7 @@ class SupportView(discord.ui.View):
 
 class VoteView(discord.ui.View):
     def __init__(self, ctx: MyContext, bot: discord.User, *, bot_instance: MetroBot):
-        super().__init__(timeout=180)
+        super().__init__(timeout=300)
         self.ctx = ctx
         self.bot: discord.User = bot  # This is a discord.User which is confirmed to be a *bot* 
                                     # THIS IT NOT AN INSTANCE OF METRO BUT CAN BE
@@ -118,9 +118,10 @@ class VoteView(discord.ui.View):
 
 class InviteView(discord.ui.View):
     def __init__(self, ctx : MyContext):
-        super().__init__(timeout=5)
+        super().__init__(timeout=300)
         self.ctx = ctx
         self.client = None
+        self.message: Optional[discord.Message] = None
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id == self.ctx.author.id:
@@ -137,28 +138,29 @@ class InviteView(discord.ui.View):
         client = client or self.ctx.bot.user
         self.client = client
 
-        embed = Embed()
-        embed.colour = discord.Colour.blue()
-        embed.description = "__**Choose a invite option below or press `Create custom permissions`**__"\
-            f'\n\nUse [this calculator](https://discordapi.com/permissions.html) to find the permission value if you are unsure what to put.'
-        
-        if client == self.ctx.bot.user:
-            embed.set_author(name=client, icon_url=client.display_avatar.url)
-        else:
-            embed.set_author(name='Invite %s to your server' % client, icon_url=client.display_avatar.url)
-            embed.set_footer(text='This is inviting %s to your server and not Metro. \nI am not responsible for any damages.' % client)
-        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='None', url=discord.utils.oauth_url(client.id, permissions=discord.Permissions(0), scopes=('bot', 'applications.commands'))))
-        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='Basic', url=discord.utils.oauth_url(client.id, permissions=discord.Permissions(140663671873), scopes=('bot', 'applications.commands'))))
-        self.add_item(discord.ui.Button(style=discord.ButtonStyle.blurple, label='Advanced', url=discord.utils.oauth_url(client.id, permissions=discord.Permissions(140932115831), scopes=('bot', 'applications.commands'))))
-        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='Admin', url=discord.utils.oauth_url(client.id, permissions=discord.Permissions(8), scopes=('bot', 'applications.commands'))))
-        self.add_item(discord.ui.Button(style=discord.ButtonStyle.gray, label='All', url=discord.utils.oauth_url(client.id, permissions=discord.Permissions(-1), scopes=('bot', 'applications.commands'))))
-        
-        await _send(embed=embed, view=self)
+        embed = Embed(color=self.ctx.color)
+        embed.description = f"\n\n• [No Permissions]({discord.utils.oauth_url(client.id, permissions=discord.Permissions(0), scopes=('bot', 'applications.commands'))})"\
+            f"\n• [Basic Permissions]({discord.utils.oauth_url(client.id, permissions=discord.Permissions(140663671873), scopes=('bot', 'applications.commands'))})"\
+            f"\n• [**Advanced Permissions**]({discord.utils.oauth_url(client.id, permissions=discord.Permissions(140932115831), scopes=('bot', 'applications.commands'))}) \U00002b50"\
+            f"\n• [Admin Permissions]({discord.utils.oauth_url(client.id, permissions=discord.Permissions(8), scopes=('bot', 'applications.commands'))})"\
+            f"\n• [All Permissions]({discord.utils.oauth_url(client.id, permissions=discord.Permissions(-1), scopes=('bot', 'applications.commands'))})"
+        embed.set_author(name='Invite %s to your server' % client, icon_url=client.display_avatar.url)
+
+        if client != self.ctx.bot.user:
+            embed.set_footer(text=f'This is inviting {client} to your server and not {self.ctx.bot.user.name}. \nI am not responsible for any damages.')
+
+        self.message = await _send(embed=embed, view=self)
 
     @discord.ui.button(row=1, label='Create custom permissions', style=discord.ButtonStyle.green)
     async def custom_perms(self, button: discord.ui.Button, interaction: discord.Interaction):
-        
-        await interaction.response.send_message(f"Please enter a permissions integer: ")
+        button.disabled = True
+        try:
+            await self.message.edit(view=self)
+        except:
+            await interaction.message.edit(view=self)
+
+        embed = Embed(color=self.ctx.color, description="Please enter a permissions integer.\nUse this calculator to find the permission value if you are unsure what to put.")
+        await interaction.response.send_message(embed=embed)
         
         def check(message : discord.Message) -> bool:
             return message.channel == self.ctx.channel and message.author == self.ctx.author
@@ -167,7 +169,7 @@ class InviteView(discord.ui.View):
             message = await self.ctx.bot.wait_for("message", check=check, timeout=30)
         except asyncio.TimeoutError:
             return await interaction.followup.send("Timed out.")
-
+        await interaction.delete_original_message()
         try:
             int(message.content)
         except ValueError:
@@ -176,9 +178,9 @@ class InviteView(discord.ui.View):
             embed.description = "Use [this calculator](https://discordapi.com/permissions.html) to find the permission value if you are unsure what to put."
             return await interaction.followup.send(embed=embed)
         
-        em = Embed()
+        em = Embed(color=self.ctx.color)
         em.description = f"Permission Integer: {message.content}"\
-            f"\n Invite URL: {discord.utils.oauth_url(self.client.id, permissions=discord.Permissions(int(message.content)))}"
+            f"\n Invite URL: {discord.utils.oauth_url(self.client.id, scopes=('bot', 'applications.commands'), permissions=discord.Permissions(int(message.content)))}"
         await interaction.followup.send(embed=em)
 
     @discord.ui.button(emoji='🗑️', style=discord.ButtonStyle.red, row=1)
@@ -248,7 +250,7 @@ class NeedHelp(discord.ui.View):
 
 class NewHelpView(discord.ui.View):
     def __init__(self, ctx : MyContext, data : List, help_command):
-        super().__init__(timeout=5)
+        super().__init__(timeout=None)
         self.ctx : MyContext = ctx
         self.bot : MetroBot = ctx.bot #get typehinted bot and better to remember
         self.help_command : HelpCommand = help_command
@@ -288,7 +290,7 @@ class NewHelpView(discord.ui.View):
                 signature = f"`{command.name[0:12]}...{group_mark}` {short_doc if len(short_doc) < 58 else f'{short_doc[0:58]}...'}"
             to_join.append(signature)
 
-        embed = Embed()
+        embed = Embed(color=self.ctx.color)
         embed.set_author(
             name=self.ctx.author.name + " | Help Menu",
             icon_url=self.ctx.author.display_avatar.url,
@@ -303,7 +305,7 @@ class NewHelpView(discord.ui.View):
         return embed
 
     async def bot_info_embed(self) -> discord.Embed:
-        embed = Embed()
+        embed = Embed(color=self.ctx.color)
         embed.description = f'\n <:mdiscord:904157585266049104> [Support Server]({self.ctx.bot.support})'\
                 f'\n <:inviteme:924868244525940807> [Invite Link]({self.ctx.bot.invite})'\
                 f'\n <:github:744345792172654643> [Github]({self.ctx.bot.github})'\
@@ -347,13 +349,14 @@ class NewHelpView(discord.ui.View):
 
         count = await self.bot.db.fetchval('SELECT COUNT(*) as c FROM messages')
 
-        embed.add_field(name='Messages', value=f"{count:,}")
+        embed.add_field(name='Messages', value=count)
         embed.add_field(name='Uptime', value=get_bot_uptime(self.bot, brief=True))
         return embed
 
     async def all_commands_embed(self) -> discord.Embed:
         embed = Embed(
-            title=f'All commands [{len(self.bot.commands)}]'
+            title=f'All commands [{len(self.bot.commands)}]',
+            color=self.ctx.color
         )
         
         embed.description = ', '.join([f"`{command}`" for command in self.bot.commands])
@@ -364,6 +367,7 @@ class NewHelpView(discord.ui.View):
         embed = Embed(
             description=
             f"\n**Total Commands:** {len(list(self.ctx.bot.walk_commands()))} | **Total Categories:** {len(self.ctx.bot.cogs)}"
+            ,color=self.ctx.color
         )
         embed.add_field(
             name='Getting Help',
@@ -424,6 +428,7 @@ class NewHelpView(discord.ui.View):
         Stop the pagination session. 
         """
 
+        await self.ctx.check()
         await interaction.response.defer()
         await interaction.delete_original_message()
         self.stop()

@@ -1533,6 +1533,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
     @commands.command(name='embed')
     @commands.has_permissions(manage_messages=True)
+    @commands.bot_has_guild_permissions(embed_links=True)
     async def _embed(self, ctx: MyContext, *, argument: str):
         """
         Post an embed from json.
@@ -1540,13 +1541,20 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         [Click here](https://embedbuilder.nadekobot.me/) to build your embed,
         then click copy and paste that as an argument for this command.
 
-        :warning: **This mystbin part is still under development** :warning:
         If the message is too long please post it in a [mystbin](https://mystb.in/)
         and post the mystbin link as your argument.
         """
+        x = re.findall(
+                r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+",
+                argument,
+            )
+        if x:
+            await ctx.defer()
+            argument = str(await self.bot.mystbin_client.get(x[0]))
+
         try:
             embed = discord.Embed.from_dict(json.loads(argument))
-            await ctx.send(embed=embed)
+            await ctx.send(embed=embed, reply=False)
             return await ctx.check()
         except Exception as e:
             return await ctx.send(str(e))

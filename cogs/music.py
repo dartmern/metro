@@ -4,8 +4,6 @@ from urllib.parse import quote_plus
 import discord
 import pomice
 import asyncio
-import math
-import random
 
 from discord.ext import commands, menus
 
@@ -198,8 +196,6 @@ class music(commands.Cog, description='Play high quality music in a voice channe
 
         if not player.is_playing:
             await player.do_next()
-
-    
 
     @commands.command(name='stop')
     async def stop(self, ctx: MyContext):

@@ -1,14 +1,11 @@
-import asyncio
 import io
-import re
-from typing import List
 import discord
 from discord import errors
-from discord import interactions
 from discord.ext import commands
 
 import humanize
 import traceback
+import pomice
 
 import datetime as dt
 from bot import MetroBot
@@ -97,6 +94,8 @@ class core(commands.Cog, description="Core events."):
                     return await ctx.send(embed=embed)
                 except discord.Forbidden:
                     return await ctx.author.send(embed=embed)
+            elif isinstance(error, pomice.exceptions.NoNodesAvailable):
+                return await ctx.send(f"{self.bot.emotes['cross']} There are no lavalink nodes available.")
             else:
                 traceback_string = "".join(traceback.format_exception(
                     etype=None, value=error, tb=error.__traceback__))
