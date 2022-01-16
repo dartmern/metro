@@ -1,5 +1,6 @@
 from code import InteractiveConsole
 import contextlib
+from re import I
 from typing import Any, Optional
 from urllib.parse import quote_plus
 import discord
@@ -65,10 +66,10 @@ class PlayerView(discord.ui.View):
 
         return player.dj == interaction.user or interaction.user.guild_permissions.mute_members
 
-    async def required(self, ctx: commands.Context):
+    def required(self, ctx: commands.Context):
         """Method which returns required votes based on amount of members in a channel."""
         player: Player = ctx.voice_client
-        channel = self.bot.get_channel(int(player.channel.id))
+        channel = ctx.bot.get_channel(int(player.channel.id))
         required = math.ceil((len(channel.members) - 1) / 2.5)
 
         return required
@@ -103,7 +104,7 @@ class PlayerView(discord.ui.View):
             return await interaction.response.send_message("The player is already paused or not playing.", ephemeral=True)
 
         if self.is_privileged(interaction):
-            await interaction.response.send_message(f"⏸ {interaction.user} has paused the player.")
+            await interaction.response.defer()
             self.player.pause_votes.clear()
             await self.player.set_pause(True)
 
@@ -130,7 +131,7 @@ class PlayerView(discord.ui.View):
             return await interaction.response.send_message("The player is already playing or not connected.", ephemeral=True)
 
         if self.is_privileged(interaction):
-            await interaction.response.send_message(f"⏯️ {interaction.user} has resumed the player.")
+            await interaction.response.defer()
             self.player.resume_votes.clear()
             await self.player.set_pause(False)
 
@@ -150,6 +151,29 @@ class PlayerView(discord.ui.View):
         else:
             await interaction.response.send_message(f"{interaction.user} has voted to resume the player. Votes: {len(self.player.resume_votes)}/{required}")
 
+    @discord.ui.button(label='Skip', emoji='\U000023ed', style=discord.ButtonStyle.blurple)
+    async def skip(self, button: discord.ui.Button, interaction: discord.Interaction) -> None:
+        if not self.player.is_connected:
+            return await interaction.response.send_message("The player is currently not connected.", ephemeral=True)
+
+        if self.is_privileged(interaction) or interaction.user == self.player.current.requester:
+            await self.player.stop()
+            self.player.skip_votes.clear()
+            await self.controller.delete(silent=True)
+            await interaction.response.defer()
+            return await self.controller.channel.send(f"\U000023ed Skipped the current song.")
+
+        required = self.required(self.ctx)
+        self.player.skip_votes.add(interaction.user)
+
+        if len(self.player.skip_votes) >= required:
+            await interaction.response.send_message(f"\U000023ed Voted to skip the song.")
+            self.player.skip_votes.clear()
+            await self.player.stop()
+            await self.controller.delete(silent=True)
+        else:
+            await interaction.response.send(f"{interaction.user} has voted to skip this song. Votes: {len(self.player.skip_votes)}/{required}")
+
     @discord.ui.button(emoji='\U0001f6d1', style=discord.ButtonStyle.danger)
     async def stop_player(self, button: discord.ui.Button, interaction: discord.Interaction) -> None:
 
@@ -157,12 +181,12 @@ class PlayerView(discord.ui.View):
             return await interaction.response.send_message("The player is currently not connected.", ephemeral=True)
 
         if self.is_privileged(interaction):
-            await interaction.response.send_message("\U0001f6d1 Stopped the player.", ephemeral=True)
+            await interaction.response.send_message("\U0001f6d1 Stopped the player.")
             for item in self.children:
                 if isinstance(item, discord.ui.Button):
                     item.disabled = True
             await self.controller.edit(view=self)
-            return await self.player.teardown()
+            return await self.player.teardown(view=self)
 
         required = self.required(self.ctx)
         self.player.stop_votes.add(interaction.user)
@@ -173,10 +197,10 @@ class PlayerView(discord.ui.View):
                 if isinstance(item, discord.ui.Button):
                     item.disabled = True
             await self.controller.edit(view=self)
-            return await self.player.teardown()
+            return await self.player.teardown(view=self)
         else:
             await interaction.response.send_message(f"{interaction.user} has voted to stop the player. Votes: {len(self.player.stop_votes)}/{required}")
-        
+    
 
 class Player(pomice.Player):
     def __init__(self, *args, **kwargs):
@@ -209,14 +233,18 @@ class Player(pomice.Player):
 
         await self.play(track)
 
-
         view = PlayerView(self.context, track=track, player=self)
         self.controller = await view.start()
 
-    async def teardown(self):
+    async def teardown(self, *, view: Optional[PlayerView] = None):
         """Clear internal states, remove player controller and disconnect."""
         with contextlib.suppress((discord.HTTPException), (KeyError)):
             await self.destroy()
+            if view:
+                for item in view.children:
+                    if isinstance(item, discord.ui.Button):
+                        item.disabled = True
+                await self.controller.edit(view=view)
 
     async def set_context(self, ctx: commands.Context):
         """Set context for the player"""
@@ -329,17 +357,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
 
         await ctx.send(f"Joined the voice channel {channel.mention}", reply=False)
 
-    @commands.command(name='disconnect', aliases=['leave'])
-    async def disconnect(self, ctx: MyContext):
-        """Disconnect from the voice channel."""
 
-        if not (player := ctx.voice_client):
-            raise commands.BadArgument(f"{self.bot.emotes['cross']} The bot must be in your voice channel to use this.")
-
-        await player.destroy()
-        await ctx.send("Left the voice channel.")
-
-    
     @commands.command(name='play')
     async def play(self, ctx: MyContext, *, query: str) -> None:
         """Play a song from the query."""
@@ -348,124 +366,51 @@ class music(commands.Cog, description='Play high quality music in a voice channe
             await ctx.invoke(self.join)  
         
         player = ctx.voice_client
+
         results = await player.get_tracks(query, ctx=ctx)
 
         if not results:
             raise commands.BadArgument("No results were found with that search query.")
 
+        if not player.is_playing:
+            await player.queue.put(results[0])
+            return await player.do_next()
+
+        if player.controller and ctx.channel != player.controller.channel:
+            return await ctx.send("The player is currently being played in %s head there to use commands." % player.controller.channel.mention)
+
         if isinstance(results, pomice.Playlist):
             for track in results.tracks:
                 await player.queue.put(track)
+            await ctx.send(f"📚 Enqueued `{' ,'.join(map(lambda x: x.title, results.tracks))}`")
         else:
             track = results[0]
             await player.queue.put(track)
+            await ctx.send(f"📚 Enqueued `{results[0]}`")
 
-        if not player.is_playing:
-            await player.do_next()
-
-    @commands.command(name='stop')
+    @commands.command()
     async def stop(self, ctx: MyContext):
         """Stop the player."""
 
         if not (player := ctx.voice_client):
-            return await ctx.send("You must have the bot in a channel in order to use this command")
+            return await ctx.send("You must have the bot in a channel in order to use this command", reply=False)
 
         if not player.is_connected:
             return
 
         if await self.is_privileged(ctx):
-            await ctx.send('\U0001f6d1 Stopped the player.', reply=False)
-            return await player.teardown()
+            await ctx.send('An admin or DJ has stopped the player.', reply=False)
+            return await player.teardown(view=None)
 
         required = self.required(ctx)
         player.stop_votes.add(ctx.author)
 
         if len(player.stop_votes) >= required:
-            await ctx.send('\U0001f6d1 Vote to stop passed. Stopping the player.', reply=False)
-            await player.teardown()
+            await ctx.send('Vote to stop passed. Stopping the player.', reply=False)
+            await player.teardown(view=None)
         else:
             await ctx.send(f'{ctx.author.mention} has voted to stop the player. Votes: {len(player.stop_votes)}/{required}', reply=False)
 
-    @commands.command()
-    async def pause(self, ctx: MyContext):
-        """Pause the currently playing song."""
-        if not (player := ctx.voice_client):
-            return await ctx.send("You must have the bot in a channel in order to use this command")
-
-        if player.is_paused or not player.is_connected:
-            return
-
-        if self.is_privileged(ctx):
-            await ctx.send('\U000023ef Paused the player.', reply=False)
-            player.pause_votes.clear()
-
-            return await player.set_pause(True)
-
-        required = self.required(ctx)
-        player.pause_votes.add(ctx.author)
-
-        if len(player.pause_votes) >= required:
-            await ctx.send('\U000023ef Vote to pause passed. Pausing player.', reply=False)
-            player.pause_votes.clear()
-            await player.set_pause(True)
-        else:
-            await ctx.send(f'{ctx.author.mention} has voted to pause the player. Votes: {len(player.pause_votes)}/{required}', reply=False)
-
-    @commands.command()
-    async def resume(self, ctx: MyContext):
-        """Resume a currently paused player."""
-        if not (player := ctx.voice_client):
-            return await ctx.send("You must have the bot in a channel in order to use this command")
-
-        if not player.is_paused or not player.is_connected:
-            return
-
-        if self.is_privileged(ctx):
-            await ctx.send('\U000023ef Resumed the player.', reply=False)
-            player.resume_votes.clear()
-
-            return await player.set_pause(False)
-
-        required = self.required(ctx)
-        player.resume_votes.add(ctx.author)
-
-        if len(player.resume_votes) >= required:
-            await ctx.send('\U000023ef Vote to resume passed. Resuming player.', reply=False)
-            player.resume_votes.clear()
-            await player.set_pause(False)
-        else:
-            await ctx.send(f'{ctx.author.mention} has voted to resume the player. Votes: {len(player.resume_votes)}/{required}', reply=False)
-
-    @commands.command(aliases=['next'])
-    async def skip(self, ctx: MyContext):
-        """Skip the currently playing song."""
-        if not (player := ctx.voice_client):
-            return await ctx.send("You must have the bot in a channel in order to use this command")
-
-        if not player.is_connected:
-            return
-
-        if await self.is_privileged(ctx):
-            await ctx.send('\U000023ed Skipped the song.', reply=False)
-            player.skip_votes.clear()
-
-            return await player.stop()
-
-        if ctx.author == player.current.requester:
-            await ctx.send('\U000023ed The song requester has skipped the song.', reply=False)
-            player.skip_votes.clear()
-
-            return await player.stop()
-
-        required = self.required(ctx)
-        player.skip_votes.add(ctx.author)
-
-        if len(player.skip_votes) >= required:
-            await ctx.send('\U000023ed Vote to skip passed. Skipping song.', reply=False)
-            player.skip_votes.clear()
-            await player.stop()
-        else:
-            await ctx.send(f'{ctx.author.mention} has voted to skip the song. Votes: {len(player.skip_votes)}/{required} ', reply=False)
 
     @commands.command()
     async def volume(self, ctx: commands.Context, *, volume: int):
