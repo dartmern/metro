@@ -3,20 +3,18 @@ import discord
 import time
 from discord.ext import commands
 from bot import MetroBot
+from utils.constants import FEEDBACK_CHANNEL, SUPPORT_GUILD, SUPPORT_ROLE, BOTS_ROLE, BOT_REQUESTS_CHANNEL, TESTER_ROLE
 
 
 from utils.custom_context import MyContext
 from utils.converters import BotUser
-from utils.useful import Cooldown, Embed
+from utils.useful import Cooldown, Embed, ts_now
 from utils.decos import in_support, is_dev
 
 
 
 
-SUPPORT_GUILD = 812143286457729055
-TESTER_ROLE = 861141649265262592
-BOTS_ROLE = 904872199943491596
-BOT_REQUESTS_CHANNEL = 904184918840602684
+
 
 class support(commands.Cog, description='Support only commands.'):
     def __init__(self, bot : MetroBot):
@@ -155,6 +153,43 @@ class support(commands.Cog, description='Support only commands.'):
         else:
             await ctx.author.add_roles(role)
             return await ctx.message.add_reaction(self.bot.emotes['plus'])
+
+    @commands.command(name='feedback')
+    @commands.check(Cooldown(1, 600, 1, 600, commands.BucketType.user))
+    async def give_feedback(self, ctx: MyContext, *, message: str):
+        """
+        Give feedback about the bot.
+        
+        This can be almost anything from "good bot" to
+        a long ass essay. Thank you for feedback!
+        """
+        channel = self.bot.get_channel(FEEDBACK_CHANNEL)
+        if not channel:
+            raise commands.BadArgument("This command is broken as of now....")
+
+        embed = discord.Embed(color=discord.Color.green())
+        embed.set_author(name=ctx.author, icon_url=ctx.author.display_avatar.url)
+        embed.description = f"Feedback given: {ts_now('F')} ({ts_now('R')})\nUser ID: {ctx.author.id}\n\n{message}"
+        embed.set_footer(text='You can use ?dm <id> <message> to thank them with a message.')
+        await channel.send(embed=embed)
+        await ctx.send(f"{self.bot.emotes['check']} Feedback submitted! Thank you.")
+
+    @commands.command(name='dm', hidden=True)
+    async def ___message(self, ctx: MyContext, id: int, *, message: str):
+        """Send a message to a user id."""
+        if ctx.guild.id != SUPPORT_GUILD:
+            return 
+        if SUPPORT_ROLE not in list(map(int, ctx.author.roles)):
+            return 
+
+        user = await self.bot.try_user(id)
+        if not user:
+            raise commands.BadArgument("User was not found....")
+        try:
+            await user.send(message)
+            await ctx.check()
+        except:
+            await ctx.cross()      
     
 def setup(bot):
     bot.add_cog(support(bot))

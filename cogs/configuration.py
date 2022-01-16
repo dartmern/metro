@@ -18,7 +18,7 @@ from utils.checks import check_dev
 from utils.converters import ChannelOrRoleOrMember, DiscordCommand, RoleConverter
 from utils.useful import Embed
 from utils.custom_context import MyContext
-from utils.decos import is_dev
+from utils.decos import is_dev, is_support
 
 def mod_check():
     def predicate(ctx: MyContext):
@@ -649,27 +649,27 @@ class configuration(commands.Cog, description='Configure the bot/server.'):
         invoke_without_command=True,
         case_insensitive=True
     )
-    @is_dev()
+    @is_support()
     async def config_blacklist(self, ctx : MyContext) -> discord.Message:
         """Manage the bot's blacklist."""
         await ctx.help()
 
     
     @config_blacklist.command(name='add')
-    @is_dev()
+    @is_support()
     async def config_blacklist_add(
         self, ctx : MyContext, user : Union[discord.Member, discord.User], *, reason : str = None):
         """Add a user to the bot blacklist."""
         await self.bot.add_to_blacklist(ctx, user, reason)
         
     @config_blacklist.command(name='remove')
-    @is_dev()
+    @is_support()
     async def config_blacklist_remove(self, ctx : MyContext, user : Union[discord.Member, discord.User]):
         """Remove a user from the bot blacklist."""
         await self.bot.remove_from_blacklist(ctx, user)
 
     @config_blacklist.command(name='info')
-    @is_dev()
+    @is_support()
     async def config_blacklist_info(self, ctx : MyContext, user : Union[discord.Member, discord.User]):
         """Check information on a user's blacklist."""
 
@@ -688,7 +688,7 @@ class configuration(commands.Cog, description='Configure the bot/server.'):
 
 
     @config_blacklist.command(name='list', usage='[--cache]')
-    @is_dev()
+    @is_support()
     async def config_blacklist_list(self, ctx : MyContext, *, args : str = None):
         """List all the users blacklisted from bot.
         

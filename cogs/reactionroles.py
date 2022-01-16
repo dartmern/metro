@@ -53,7 +53,7 @@ class reactionroles(commands.Cog, description='Manage the reaction role system.'
         if not member:
             return # can't find member for some odd reason?
 
-        role = data.get[payload.message_id]
+        role = data.get(payload.message_id)
         if not role:
             return # Somehow role isn't found :(
 
@@ -79,10 +79,14 @@ class reactionroles(commands.Cog, description='Manage the reaction role system.'
         if not member:
             return # can't find member for some odd reason?
 
+        role = data.get(payload.message_id)
+        if not role:
+            return # Somehow role isn't found :(
+
         try:
-            await member.remove_roles(discord.Object(data[payload.message_id]), reason='reactionroleremove')
+            await member.remove_roles(discord.Object(role), reason='reactionroleadd')
         except discord.HTTPException:
-            pass # no perms :(
+            pass # no perms, can't really do anything...
 
     @commands.group(name='reactionrole', aliases=['reactrole', 'rr'], invoke_without_command=True, case_insensitive=True)
     @commands.has_guild_permissions(manage_guild=True)

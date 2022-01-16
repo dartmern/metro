@@ -136,6 +136,8 @@ class MetroBot(commands.AutoShardedBot):
 
         self.maintenance = False
 
+        self.support_staff = [437325015994859532, 790618859173969952, 708143475186597909, 525843819850104842]
+
         self.invite = 'https://discord.com/api/oauth2/authorize?client_id=788543184082698252&permissions=0&scope=applications.commands%20bot'
         self.support = 'https://discord.gg/2ceTMZ9qJh'
         self.donate = 'https://www.patreon.com/metrodiscordbot'
