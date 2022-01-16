@@ -1,6 +1,4 @@
-from code import InteractiveConsole
 import contextlib
-from re import I
 from typing import Any, Optional
 from urllib.parse import quote_plus
 import discord
@@ -14,7 +12,7 @@ from discord.ext import commands, menus
 from bot import MetroBot
 from utils.custom_context import MyContext
 from utils.json_loader import read_json
-from utils.new_pages import MyPages, RoboPages, SimplePages
+from utils.new_pages import RoboPages, SimplePages
 from utils.useful import traceback_maker
 
 _info = read_json('info')
@@ -94,7 +92,7 @@ class PlayerView(discord.ui.View):
 
             js = await res.json()
 
-        new_view = MyPages(source=PlayerViewLyrics(js['lyrics'].split("\n"), js, ctx=self.ctx), ctx=self.ctx, interaction=interaction)
+        new_view = RoboPages(source=PlayerViewLyrics(js['lyrics'].split("\n"), js, ctx=self.ctx), ctx=self.ctx, interaction=interaction, compact=True)
         await new_view.start()
         
     @discord.ui.button(label='Pause', emoji='\U000023f8', style=discord.ButtonStyle.blurple)

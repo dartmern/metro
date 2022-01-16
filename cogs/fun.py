@@ -153,6 +153,12 @@ class StressView(discord.ui.View):
         self.message: Optional[discord.Message] = None
         self.score: int = 0
 
+    async def interaction_check(self, interaction: discord.Interaction):
+        if interaction.user != self.ctx.author:
+            await interaction.response.send_message(f"This is not your interaction!", ephemeral=True)
+        else:
+            return True
+
     async def start(self):
         bomb = random.randint(0, 24)
         for _ in range(25):
@@ -163,8 +169,6 @@ class StressView(discord.ui.View):
             else:
                 self.add_item(MyButton(label='\u200b', style=discord.ButtonStyle.blurple))
         self.message = await self.ctx.send('\u200b', view=self)
-
-   
 
 class fun(commands.Cog, description="Fun commands!"):
     def __init__(self, bot : MetroBot):

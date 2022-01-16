@@ -126,7 +126,8 @@ class MyContext(commands.Context):
         *,
         per_page : int = 8,
         source : Optional[menus.ListPageSource] = None,
-        hide : bool = False
+        hide : bool = False,
+        compact: bool = False
 
     ):
 
@@ -137,7 +138,7 @@ class MyContext(commands.Context):
         source = source or default_source
 
         menu = SimplePages(
-            source=source, ctx=self, hide=hide)
+            source=source, ctx=self, hide=hide, compact=compact)
         await menu.start()
 
     @discord.utils.cached_property
@@ -184,7 +185,6 @@ class MyContext(commands.Context):
 
         cmd = help_command.copy()
         cmd.context = self
-
 
         try:
             if hasattr(command, "__cog_commands__"):
