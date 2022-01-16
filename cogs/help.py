@@ -851,7 +851,7 @@ class MetroHelp(commands.HelpCommand):
         if int(len(group.commands)) == 0 or len(entries) == 0:
             return await self.context.send(embed=await self.get_command_help(group),view=View(self.context.author), hide=True)
 
-        menu = SimplePages(ButtonMenuSrc(group, entries, prefix=self.context.clean_prefix, ctx=self.context),ctx=self.context)
+        menu = SimplePages(ButtonMenuSrc(group, entries, prefix=self.context.clean_prefix, ctx=self.context),ctx=self.context, compact=True)
         await menu.start()
         
 

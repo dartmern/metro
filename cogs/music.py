@@ -119,6 +119,11 @@ class PlayerView(discord.ui.View):
             await interaction.response.send_message(f"⏸️ Vote to pause the player passed. Pausing player...")
             self.player.pause_votes.clear()
             await self.player.set_pause(True)
+            button.disabled = True
+            button.style = discord.ButtonStyle.gray
+            self.play.disabled = False
+            self.play.style = discord.ButtonStyle.blurple
+            return await self.controller.edit(view=self)
         else:
             await interaction.response.send_message(f"{interaction.user} has voted to pause the player. Votes: {len(self.player.pause_votes)}/{required}")
 
@@ -146,6 +151,11 @@ class PlayerView(discord.ui.View):
             await interaction.response.send_message(f"⏯️ Vote to resume the player passed. Resuming player...")
             self.player.resume_votes.clear()
             await self.player.set_pause(False)
+            button.disabled = True
+            button.style = discord.ButtonStyle.gray
+            self.pause.disabled = False
+            self.pause.style = discord.ButtonStyle.blurple
+            return await self.controller.edit(view=self)
         else:
             await interaction.response.send_message(f"{interaction.user} has voted to resume the player. Votes: {len(self.player.resume_votes)}/{required}")
 
@@ -386,7 +396,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
             await player.queue.put(track)
             await ctx.send(f"📚 Enqueued `{results[0]}`")
 
-    @commands.command()
+    @commands.command(aliases=['disconnect', 'leave'])
     async def stop(self, ctx: MyContext):
         """Stop the player."""
 

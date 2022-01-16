@@ -1,5 +1,6 @@
 import collections
 from inspect import trace
+import re
 from typing import List, Optional, Tuple, Union
 import typing
 import discord
@@ -321,6 +322,11 @@ bot = MetroBot()
 
 bot.check = "<:mCheck:819254444197019669>"
 bot.cross = "<:mCross:819254444217860116>"
+
+@bot.listen('on_message')
+async def mention_prefix(message: discord.Message):
+    if re.fullmatch(rf"<@!?{bot.user.id}>", message.content):
+        return await message.channel.send(f"\U0001f44b My prefixes here are: {', '.join(await bot.get_pre(bot, message, raw_prefix=True))}")
 
 if __name__ == "__main__":
     # When running this file, if it is the 'main' file
