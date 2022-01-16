@@ -96,6 +96,8 @@ class core(commands.Cog, description="Core events."):
                     return await ctx.author.send(embed=embed)
             elif isinstance(error, pomice.exceptions.NoNodesAvailable):
                 return await ctx.send(f"{self.bot.emotes['cross']} There are no lavalink nodes available.")
+            elif isinstance(error, discord.errors.ClientException):
+                return await ctx.send(str(error))
             else:
                 traceback_string = "".join(traceback.format_exception(
                     etype=None, value=error, tb=error.__traceback__))

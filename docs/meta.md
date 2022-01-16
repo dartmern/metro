@@ -14,3 +14,4 @@
 | vote | Get vote links for a bot | `/vote [bot='Metro']` |
 | privacy | Privacy for the bot | `/privacy`
 | help | Shows this message | `/help [command ∣ category]` | h
+| linecount | Get the linecount for Metro. | `/linecount` | lc

@@ -29,7 +29,7 @@ For better readability this will be separated into different sections.
 | Name | Description | Usage | Aliases |
 | :--- | :--- | :--- | :---
 | cleanup | Cleanup the bot's messages | `/cleanup [amount=25]`|
-| slowmode | Change the slowmode for the current channel. | `/slowmode [duration=0] [--silent]` | sm |
+| slowmode | Change the slowmode for the current channel. | `/slowmode [duration=0]` | sm |
 | purge | Remove messages that meet a certain criteria. | `/purge <amount>` | clear, clean
 | purge user | Remove all messages sent by that member. | `/purge user <user> <amount>`
 | purge custom | A more advanced purge command with a command-line-like syntax. | `/purge custom [args]`

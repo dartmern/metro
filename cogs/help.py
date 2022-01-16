@@ -5,6 +5,7 @@ from discord.ext.commands.help import HelpCommand
 from bot import MetroBot
 from utils.new_pages import SimplePages
 import discord
+import pathlib
 
 import discord.ext
 
@@ -1008,7 +1009,7 @@ class meta(commands.Cog, description='Get bot stats and information.'):
         else:
             await ctx.send("No matches were found. Try again with a different query.")
             
-    @commands.command()
+    @commands.command(aliases=['upvote'])
     async def vote(self, ctx: MyContext, *, bot: Optional[discord.User]):
         """Get vote links for the bot."""
         bot = bot or self.bot.user
@@ -1077,7 +1078,40 @@ class meta(commands.Cog, description='Get bot stats and information.'):
         embed.description = desc
         await ctx.reply(embed=embed)
         
+    @commands.command(name='linecount', aliases=['lc'])
+    @commands.check(Cooldown(1, 10, 1, 8, commands.BucketType.user))
+    async def _linecount(self, ctx: MyContext):
+        """Get the linecount for Metro."""
 
+        await ctx.defer()
+
+        embed = discord.Embed(color=ctx.color)
+
+        p = pathlib.Path('./')
+        cm = cr = fn = cl = ls = fc = 0
+        for f in p.rglob('*.py'):
+            if str(f).startswith("venv"):
+                continue
+            fc += 1
+            with f.open(encoding='utf8',errors='ignore') as of:
+                for l in of.readlines():
+                    l = l.strip()
+                    if l.startswith('class'):
+                        cl += 1
+                    if l.startswith('def'):
+                        fn += 1
+                    if l.startswith('async def'):
+                        cr += 1
+                    if '#' in l:
+                        cm += 1
+                    ls += 1
+        embed.description = f"\nFiles: {fc:,}"\
+            f"\nLines: {ls:,}"\
+            f"\nClasses: {cl:,}"\
+            f"\nFunctions: {fn:,}"\
+            f"\nCoroutines: {cr:,}"\
+            f"\nComments: {cm:,}"
+        await ctx.send(embed=embed, reply=False)
 
 
 def setup(bot):

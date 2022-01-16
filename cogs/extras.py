@@ -260,7 +260,7 @@ class extras(commands.Cog, description='Extra commands for your use.'):
 
         await ctx.message.delete(silent=True)
 
-        message = await ctx.send(f"**{ctx.author}** is asking a question: \n> {question}")
+        message = await ctx.send(f"**{ctx.author}** is asking a question: \n> {question}", reply=False)
         await message.add_reaction('\U0001f44d')
         await message.add_reaction('\U0001f44e')
 

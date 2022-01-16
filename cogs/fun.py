@@ -119,7 +119,52 @@ class Game(discord.ui.View):
             return False
         return True
 
+class MyButton(discord.ui.Button):
+    async def callback(self, interaction: discord.Interaction):
+        self.view.score += 1
+        await interaction.response.defer()
+        self.disabled = True
+        self.style = discord.ButtonStyle.gray
+        await self.view.message.edit(view=self.view)
+        await interaction.response.defer()
 
+class LostButton(discord.ui.Button):
+    async def callback(self, interaction: discord.Interaction):
+        for item in self.view.children:
+            if isinstance(item, (MyButton, EndButton)):
+                item.disabled = True
+        self.disabled = True
+        await self.view.message.edit(view=self.view)
+        await interaction.response.send_message(f"You lost!!! Your score was **{self.view.score}**")
+
+class EndButton(discord.ui.Button):
+    async def callback(self, interaction: discord.Interaction):
+        for item in self.view.children:
+            if isinstance(item, MyButton):
+                item.disabled = True
+        self.disabled = True
+        await self.view.message.edit(view=self.view)
+        await interaction.response.send_message(f"Your score was **{self.view.score}**")
+
+class StressView(discord.ui.View):
+    def __init__(self, ctx):
+        super().__init__(timeout=180)
+        self.ctx = ctx
+        self.message: Optional[discord.Message] = None
+        self.score: int = 0
+
+    async def start(self):
+        bomb = random.randint(0, 24)
+        for _ in range(25):
+            if _ == bomb:
+                self.add_item(LostButton(label='\u200b', style=discord.ButtonStyle.blurple))
+            elif _ == 12:
+                self.add_item(EndButton(emoji='\U0001f5d1'))
+            else:
+                self.add_item(MyButton(label='\u200b', style=discord.ButtonStyle.blurple))
+        self.message = await self.ctx.send('\u200b', view=self)
+
+   
 
 class fun(commands.Cog, description="Fun commands!"):
     def __init__(self, bot : MetroBot):
@@ -128,6 +173,12 @@ class fun(commands.Cog, description="Fun commands!"):
     @property
     def emoji(self) -> str:
         return '😄'
+
+    @commands.command()
+    async def stress(self, ctx: MyContext):
+        """Release your stress."""
+        view = StressView(ctx)
+        await view.start()
 
     @commands.command()
     async def test(self, ctx: MyContext):

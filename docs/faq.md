@@ -7,7 +7,7 @@ This is a list of Frequently Asked Questions regarding Metro.
 
 - [How do I get the ID of something?](https://dartmern.github.io/metro/faq/#how-do-i-get-the-id-of-something)
 - [My reaction roles aren't working, why?](https://dartmern.github.io/metro/faq/#my-reaction-roles-arent-working-why)
-
+- [How do I change the prefix of the bot?](https://dartmern.github.io/metro/faq/#how-do-i-change-the-prefix-of-the-bot)
 
 
 ## How do I get the ID of something?
@@ -62,3 +62,19 @@ Make sure you move my top role higher position.
 ![Example here](https://media.discordapp.net/attachments/908170244890193920/930972439062675496/unknown.png)
 
 Join my [support server](https://discord.gg/2ceTMZ9qJh) if you have issues with this.
+
+
+---
+
+## How do I change the prefix of the bot?
+
+You can use `@Metro prefix add <prefix>` if this is the first time changing the prefix. <br >
+This will remove the default prefixes as well (`m.`, `m?`)
+
+You can remove a prefix with `@Metro prefix remove <prefix>`
+
+View all the prefixes for the bot with `@Metro prefix list` <br />
+- Anyone can use this command 
+
+All the other prefix commands require `Manage Server` permissions
+

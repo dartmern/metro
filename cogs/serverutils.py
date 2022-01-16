@@ -1356,7 +1356,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         total_messages = await ctx.bot.db.fetchval("SELECT COUNT(*) as c FROM messages WHERE author_id = $1 AND server_id = $2", member.id, ctx.guild.id)
         global_messages = await ctx.bot.db.fetchval("SELECT COUNT(*) as c FROM messages WHERE author_id = $1", member.id)
 
-        embed.add_field(name='<:messages:928380915560874055> Messages', value=f'`{total_messages}` total messages, `{global_messages}` global messages.')
+        embed.add_field(name='<:messages:928380915560874055> Messages', value=f'`{total_messages:,}` total messages, `{global_messages:,}` global messages.')
         return embed
         
     async def serverinfo_embed(self, ctx: MyContext, guild: discord.Guild):
