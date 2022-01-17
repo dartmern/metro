@@ -1,3 +1,4 @@
+from code import InteractiveConsole
 import contextlib
 from typing import Any, Optional
 from urllib.parse import quote_plus
@@ -71,6 +72,14 @@ class PlayerView(discord.ui.View):
         required = math.ceil((len(channel.members) - 1) / 2.5)
 
         return required
+
+    async def interaction_check(self, interaction: discord.Interaction):
+        if not interaction.user.voice:
+            return await interaction.response.send_message(f"You must be in my voice channel to interact with the player.", ephemeral=True)
+        if interaction.user.voice.channel != self.player.channel:
+            return await interaction.response.send_message(f"You must be in my voice channel to interact with the player.", ephemeral=True)
+        else:
+            return True
 
     @discord.ui.button(label='Lyrics', emoji='\U0001f4da', style=discord.ButtonStyle.blurple)
     async def lyrics(self, button: discord.ui.Button, interaction: discord.Interaction) -> None:
@@ -347,7 +356,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
 
             js = await res.json()
 
-        menu = SimplePages(source=LyricsSource(js['lyrics'].split("\n"), js), ctx=ctx)
+        menu = SimplePages(source=LyricsSource(js['lyrics'].split("\n"), js), ctx=ctx, compact=True)
         await menu.start()
 
     @commands.command(name='join', aliases=['summon', 'connect'])
@@ -371,8 +380,10 @@ class music(commands.Cog, description='Play high quality music in a voice channe
     @commands.command(name='play')
     async def play(self, ctx: MyContext, *, query: str) -> None:
         """Play a song from the query."""
+        if not ctx.author.voice:
+            raise commands.BadArgument("You aren't connected to a voice channel.")
 
-        if not (player := ctx.voice_client):
+        if not (player := ctx.voice_client) or ctx.author.voice.channel != ctx.voice_client.channel:
             await ctx.invoke(self.join)  
         
         player = ctx.voice_client
@@ -392,7 +403,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
         if isinstance(results, pomice.Playlist):
             for track in results.tracks:
                 await player.queue.put(track)
-            await ctx.send(f"📚 Enqueued `{' ,'.join(map(lambda x: x.title, results.tracks))}`")
+            await ctx.send(f"📚 Enqueued `{', '.join(map(lambda x: x.title, results.tracks))}`")
             await player.do_next()
         else:
             track = results[0]
@@ -402,8 +413,10 @@ class music(commands.Cog, description='Play high quality music in a voice channe
     @commands.command(aliases=['disconnect', 'leave'])
     async def stop(self, ctx: MyContext):
         """Stop the player."""
+        if not ctx.author.voice:
+            raise commands.BadArgument("You aren't connected to a voice channel.")
 
-        if not (player := ctx.voice_client):
+        if not (player := ctx.voice_client) or ctx.author.voice.channel != ctx.voice_client.channel:
             return await ctx.send("You must have the bot in a channel in order to use this command", reply=False)
 
         if not player.is_connected:
@@ -424,11 +437,14 @@ class music(commands.Cog, description='Play high quality music in a voice channe
 
 
     @commands.command()
-    async def volume(self, ctx: commands.Context, *, volume: int):
+    async def volume(self, ctx: MyContext, *, volume: int):
         """Change the players volume, between 1 and 100."""
 
-        if not (player := ctx.voice_client):
-            return await ctx.send("You must have the bot in a channel in order to use this command.")
+        if not ctx.author.voice:
+            raise commands.BadArgument("You aren't connected to a voice channel.")
+
+        if not (player := ctx.voice_client) or ctx.author.voice.channel != ctx.voice_client.channel:
+            return await ctx.send("You must have the bot in a channel in order to use this command", reply=False)
 
         if not player.is_connected:
             return
@@ -439,5 +455,38 @@ class music(commands.Cog, description='Play high quality music in a voice channe
         if not 0 < volume < 101:
             return await ctx.send('Please enter a value between 1 and 100.')
 
-        await player.set_volume(volume)
+        await player.set_volume(volume*5)
         await ctx.send(f'Set the volume to **{volume}**%', reply=False)
+
+    @commands.command()
+    async def shuffle(self, ctx: MyContext):
+        """Shuffle the queue."""
+
+        if not ctx.author.voice:
+            raise commands.BadArgument("You aren't connected to a voice channel.")
+
+        if not (player := ctx.voice_client) or ctx.author.voice.channel != ctx.voice_client.channel:
+            return await ctx.send("You must have the bot in a channel in order to use this command", reply=False)
+
+        if not player.is_connected:
+            raise commands.BadArgument("The player is not connected.")
+
+        if player.queue.qsize() < 3:
+            return await ctx.send('The queue is empty. Add some songs to shuffle the queue.', reply=False)
+
+        if await self.is_privileged(ctx):
+            await ctx.send("An admin or DJ has shuffled the queue.", reply=False)
+            player.shuffle_votes.clear()
+            return random.shuffle(player.queue._queue)
+
+        required = self.required(ctx)
+        player.shuffle_votes.add(ctx.author)
+
+        if len(player.shuffle_votes) >= required:
+            await ctx.send("Vote to shuffle passed. Shuffling queue.", reply=False)
+            player.shuffle_votes.clear()
+            return random.shuffle(player.queue._queue)
+        else:
+            await ctx.send(f"{ctx.author.mention} has shuffled the queue. Votes: {len(self.player.shuffle_votes)}/{required}")
+
+

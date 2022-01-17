@@ -1,3 +1,4 @@
+from code import InteractiveConsole
 from typing import Any, List, Optional, Union
 import discord
 from discord.emoji import Emoji
@@ -20,8 +21,7 @@ class GameButton(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction):
         self.view.button_data.append(self.my_id)
-        #await interaction.response.send_message(self.my_id, ephemeral=True)
-        
+        await interaction.response.defer()
 
 class Game(discord.ui.View):
     def __init__(self, ctx: MyContext):
@@ -210,6 +210,9 @@ class fun(commands.Cog, description="Fun commands!"):
     async def _8ball(self, ctx, *, question):
         """
         Ask the 8-ball a question!
+
+        This was the first ever command created
+        and will not be maintained to keep the vibe.
         """
 
         answers = [
@@ -230,8 +233,8 @@ class fun(commands.Cog, description="Fun commands!"):
 
         em = Embed(
             title="Magic 8-ball",
-            description=f"You: {question}\n\🎱: {random.choice(answers)}",
-            colour=discord.Color.random(),
+            description=f"> {question}\n\🎱: {random.choice(answers)}",
+            colour=ctx.color,
         )
         await ctx.send(embed=em)
 
