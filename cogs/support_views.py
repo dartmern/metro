@@ -81,10 +81,8 @@ class support(commands.Cog, description='Support only commands.'):
             embed = discord.Embed(color=discord.Colour.green())
             embed.description = f"The bot you requested, <@{bot_id}> was rejected from **{guild.name}**"
             
-            try:
-                await author.send(embed=embed)
-            except discord.HTTPException:
-                pass
+            await author.send(embed=embed)
+            
             
 
     @commands.command(hidden=True)
@@ -138,21 +136,6 @@ class support(commands.Cog, description='Support only commands.'):
             await message.add_reaction(self.bot.cross)
 
             await ctx.send('Your bot request has been submitted to the moderators. \nI will DM you about the status of your request.')
-
-    @commands.command(name='tester', hidden=True)
-    @in_support()
-    async def tester(self, ctx : MyContext):
-        """Toggle the tester role for yourself."""
-
-        role = ctx.guild.get_role(TESTER_ROLE)
-
-        if role in ctx.author.roles:
-            await ctx.author.remove_roles(role)
-            return await ctx.message.add_reaction(self.bot.emotes['minus'])
-
-        else:
-            await ctx.author.add_roles(role)
-            return await ctx.message.add_reaction(self.bot.emotes['plus'])
 
     @commands.command(name='feedback')
     @commands.check(Cooldown(1, 600, 1, 600, commands.BucketType.user))

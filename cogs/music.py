@@ -380,7 +380,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
         if not results:
             raise commands.BadArgument("No results were found with that search query.")
 
-        if not player.is_playing:
+        if not player.is_playing and not isinstance(results, pomice.Playlist):
             await player.queue.put(results[0])
             return await player.do_next()
 
@@ -391,6 +391,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
             for track in results.tracks:
                 await player.queue.put(track)
             await ctx.send(f"📚 Enqueued `{' ,'.join(map(lambda x: x.title, results.tracks))}`")
+            await player.do_next()
         else:
             track = results[0]
             await player.queue.put(track)

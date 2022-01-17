@@ -1014,6 +1014,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         except (discord.HTTPException, discord.NotFound):
             return
 
+        author = await self.bot.try_user(author_id)
         msg = f"<@{author_id}>, {discord.utils.format_dt(timer.created_at.replace(tzinfo=datetime.timezone.utc), 'R')}, you wanted me to remind you about: \n> {message}"
 
         guild_id = channel.guild.id if isinstance(channel, (discord.TextChannel, discord.Thread)) else '@me'
@@ -1024,9 +1025,12 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         view.add_item(discord.ui.Button(url=jump_url, label='Jump to original message'))
 
         try:
-            await channel.send(msg, view=view)
-        except discord.HTTPException:
-            pass
+            await author.send(msg, view=view)
+        except:
+            try:
+                await channel.send(msg, view=view)
+            except discord.HTTPException:
+                pass 
         
     @commands.group(name='giveaway', aliases=['gaw', 'g'], invoke_without_command=True, case_insensitive=True)
     @commands.bot_has_permissions(send_messages=True, add_reactions=True)
