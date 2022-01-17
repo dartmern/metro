@@ -7,7 +7,7 @@ from discord.ext.commands.cooldowns import BucketType
 import re
 import asyncio
 
-from utils.checks import can_execute_action, check_dev, check_tester
+from utils.checks import can_execute_action, check_dev
 
 
 from typing import Dict, Any, Optional
@@ -158,10 +158,7 @@ class Cooldown:
 
     def __call__(self, ctx):
 
-        if check_tester(ctx):
-            ctx.bucket = self.altered_mapping.get_bucket(ctx.message)
-        else:
-            ctx.bucket = self.default_mapping.get_bucket(ctx.message)
+        ctx.bucket = self.default_mapping.get_bucket(ctx.message)
         retry_after = ctx.bucket.update_rate_limit()
         if retry_after:
             raise commands.CommandOnCooldown(ctx.bucket, retry_after, BucketType.user)

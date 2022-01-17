@@ -7,7 +7,6 @@ from utils.constants import SUPPORT_ROLE
 from utils.custom_context import MyContext
 
 SUPPORT_GUILD = 812143286457729055
-TESTER_ROLE = 861141649265262592
 
 def check_support(ctx):
     return (
@@ -25,11 +24,7 @@ def check_dev(bot, user : Union[discord.Member, discord.User]):
         user.id in bot.owner_ids
     )
 
-def check_tester(ctx : MyContext):
-    guild = ctx.bot.get_guild(SUPPORT_GUILD)
-    role = guild.get_role(TESTER_ROLE)
-    if ctx.author in role.members:
-        return True
+
         
 
 

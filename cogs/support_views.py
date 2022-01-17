@@ -3,7 +3,7 @@ import discord
 import time
 from discord.ext import commands
 from bot import MetroBot
-from utils.constants import FEEDBACK_CHANNEL, SUPPORT_GUILD, SUPPORT_ROLE, BOTS_ROLE, BOT_REQUESTS_CHANNEL, TESTER_ROLE
+from utils.constants import FEEDBACK_CHANNEL, SUPPORT_GUILD, SUPPORT_ROLE, BOTS_ROLE, BOT_REQUESTS_CHANNEL
 
 
 from utils.custom_context import MyContext

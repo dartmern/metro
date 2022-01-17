@@ -2,7 +2,6 @@ from discord.ext import commands
 
 
 SUPPORT_GUILD = 812143286457729055
-TESTER_ROLE = 861141649265262592
 
 
 

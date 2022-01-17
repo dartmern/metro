@@ -5,7 +5,6 @@ from discord.emoji import Emoji
 from discord.ext import commands
 from discord.partial_emoji import PartialEmoji
 from bot import MetroBot
-from utils.checks import SUPPORT_GUILD, TESTER_ROLE
 
 from utils.useful import Embed
 
