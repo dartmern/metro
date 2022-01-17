@@ -240,7 +240,9 @@ class Player(pomice.Player):
             return await self.teardown()
 
         await self.play(track)
-
+        if self.controller:
+            await self.controller.delete(silent=True)
+            
         view = PlayerView(self.context, track=track, player=self)
         self.controller = await view.start()
 
