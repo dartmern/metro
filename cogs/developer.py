@@ -7,6 +7,7 @@ from typing import Optional, Union
 import traceback
 import time
 import os
+import pytz
 import io
 import datetime
 import sys
@@ -21,9 +22,10 @@ from contextlib import redirect_stdout
 import jishaku 
 from jishaku.paginators import WrappedPaginator
 from jishaku.codeblocks import codeblock_converter
+from bot import MetroBot
 from cogs.serverutils import serverutils
 
-from utils.decos import is_dev
+from utils.decos import is_dev, is_support
 from utils.custom_context import MyContext
 from utils.useful import Embed, fuzzy, pages, get_bot_uptime
 from utils.json_loader import write_json
@@ -94,22 +96,9 @@ class plural:
             return f'{v} {plural}'
         return f'{v} {singular}'
 
-@pages()
-async def show_result(self, menu, entry):
-    return f"```\n{entry}```"
-
-class Arguments(argparse.ArgumentParser):
-    def error(self, message):
-        raise RuntimeError(message)
-
-def clearConsole():
-    command = 'clear'
-    if os.name in ('nt', 'dos'):  # If Machine is running on Windows, use cls
-        command = 'cls'
-    os.system(command)
 
 class developer(commands.Cog, description="Developer commands."):
-    def __init__(self, bot):
+    def __init__(self, bot: MetroBot):
         self.bot = bot
         self._last_result = None
 
@@ -126,66 +115,21 @@ class developer(commands.Cog, description="Developer commands."):
         # remove `foo`
         return content.strip('` \n')
 
-
-
-
     @commands.Cog.listener()
     async def on_message_edit(self, before, after):
         if before.author.id != 525843819850104842:
             return
         await self.bot.process_commands(after)
 
-    @commands.group(
-        name="developer",
-        aliases=["dev"],
-        brief="Developer related commands",
-        invoke_without_command=True,
-        case_insensitive=True,
-        usage="",
-        hidden=True
-    )
-    @commands.is_owner()
-    @commands.bot_has_permissions(send_messages=True)
-    async def developer_cmds(self, ctx):
-        """
-        Commands reserved for bot developers.
-        """
-        await ctx.send_help('dev')
+    @commands.group(name='moderator', aliases=['mod'], invoke_without_command=True, case_insensitive=True)
+    @is_support()
+    async def moderator(self, ctx: MyContext):
+        """Base command for bot moderator actions."""
+        await ctx.help()
 
-    @developer_cmds.command(
-        name='invite',
-        aliases=['inviteme']
-    )
-    @commands.is_owner()
-    @commands.bot_has_permissions(send_messages=True)
-    async def dev_invite(self, ctx, guild_id : int, **flags : Optional[str]):
-        """
-        Get a invite with a guild id.
-
-        Create a invite at the top channel in the guild.
-        The bot must have create_invite permission in that guild for this to work
-        Bot also must be in the guild.
-
-        """
-        try:
-            guild = self.bot.get_guild(guild_id)
-        except:
-            return await ctx.reply('Invaild guild id.')
-
-        try:
-            invite = await guild.text_channels[0].create_invite()
-        except:
-            return await ctx.reply('I do not have permissions to create invites in that guild.')
-
-        await ctx.check()
-        return await ctx.author.send(invite)
-            
-
-
-    @developer_cmds.command(name='guilds', aliases=['servers'])
-    @commands.is_owner()
-    @commands.bot_has_permissions(send_messages=True,embed_links=True)
-    async def dev_guilds(self, ctx, search=None):
+    @moderator.command(name='guilds', aliases=['servers'])
+    @is_support()
+    async def moderator_guilds(self, ctx, search=None):
         """
         Get all the guilds the bot is in.
 
@@ -195,10 +139,10 @@ class developer(commands.Cog, description="Developer commands."):
         if not search:
             to_paginate = []
             for guild in sorted(self.bot.guilds, key=lambda guild: len(guild.members), reverse=True):
-                summary = f"__**Guild:**__ {guild.name} [{guild.id}]\n__**Owner:**__ {guild.owner} [{guild.owner_id}]\n__**Members:**__ {len(guild.members)} <:members:908483589157576714> total | {len(guild.humans)} \U0001f465 humans | {len(guild.bots)} <:bot:925107948789837844> bots\n\n"
+                summary = f"__**Guild:**__ {guild.name} [{guild.id}]\n__**Owner:**__ {guild.owner} [{guild.owner_id}]\n__**Members:**__ {len(guild.members)} <:members:908483589157576714> total | {len(guild.humans)} \U0001f465 humans | {len(guild.bots)} <:bot:925107948789837844> bots\n"
                 to_paginate.append(summary)
 
-            await ctx.paginate(to_paginate)
+            await ctx.paginate(to_paginate, per_page=4, compact=True)
         else:
             collection = {guild.name: guild.id for guild in self.bot.guilds}
             found = fuzzy.finder(search, collection, lazy=False)[:5]
@@ -212,183 +156,109 @@ class developer(commands.Cog, description="Developer commands."):
                 await ctx.send(embed=em)
             elif len(found) > 1:
                 newline = "\n"
-                await ctx.send(
-                    f"{len(found)} guilds found:\n{newline.join(found)}"
-                )
+                await ctx.send(f"**__{len(found)} guilds found:__**\n{newline.join(found)}")
             else:
                 await ctx.send(f"No guild was found named **{search}**")
 
-
-    @developer_cmds.command(name='cleanup',brief='Cleanup my messages with no limit')
-    @commands.is_owner()
-    @commands.bot_has_permissions(send_messages=True)
-    async def dev_cleanup(self, ctx, amount : int = 25, *, flags : str = None):
-        """
-        Cleanup my messages with no limit and no permission checks
-        Requires me to have manage_messages for bulk deletion.
-
-        Apply the `--dm` flag to purge direct messages.
-        """
-
-        if flags is None:
-
-            def check(msg):
-                return msg.author == ctx.me
-            if ctx.channel.permissions_for(ctx.me).manage_messages:
-                deleted = await ctx.channel.purge(limit=amount, check=check)
-            else:
-                deleted = await ctx.channel.purge(limit=amount, check=check, bulk = False)
-            spammers = Counter(m.author.display_name for m in deleted)
-            deleted = len(deleted)
-            messages = [f'{deleted} message{" was" if deleted == 1 else "s were"} removed.']
-            if deleted:
-                messages.append('')
-                spammers = sorted(spammers.items(), key=lambda t: t[1], reverse=True)
-                messages.extend(f'**{name}**: {count}' for name, count in spammers)
-
-            to_send = '\n'.join(messages)
-            if len(to_send) > 2000:
-                await ctx.send(f'Successfully removed {deleted} messages.', delete_after=10)
-            else:
-                await ctx.send(to_send, delete_after=10)
-            return
-
-        else:
-            parser = Arguments(add_help=False, allow_abbrev=False)
-            parser.add_argument('--dm', action='store_true')
-
-            try:
-                args = parser.parse_args(shlex.split(flags))
-            except Exception as e:
-                return await ctx.send(str(e))
-
-            if args.dm:
-                mess = 0
-                await ctx.check()
-
-                async for message in ctx.channel.history(limit=amount):
-                    if message.author == ctx.bot.user:
-                        await message.delete()
-                        mess +=1
-
-                return await ctx.send("Purged {} message(s) sent by me.".format(mess), delete_after=3)
-            else:
-                return await ctx.send("That is not a vaild flag.")
-
-    
-    @developer_cmds.command()
-    @commands.is_owner()
-    async def leave(self, ctx : MyContext, guild_id : int):
-        """Leave a guild the bot is in."""
-        guild = self.bot.get_guild(guild_id)
-
-        if guild is None:
-            return await ctx.send(f'Invaild guild. Use `{ctx.prefix}dev guilds` to see all guilds I\'m in.')
-        else:
-            await guild.leave()
-            await ctx.send(f'Left **{guild.name}** (ID: {guild.id})')
-
-
-    @developer_cmds.command(name='noprefix')
-    @commands.is_owner()
-    async def dev_noprefix(self, ctx):
-        """Toggle on/off no prefix for developers."""
-
-        if self.bot.noprefix == True:
-            self.bot.noprefix = False
-            return await ctx.send(f'{self.bot.cross} No prefix turned off')
-
-        else:
-            self.bot.noprefix = True
-            return await ctx.send(f'{self.bot.check} No prefix turned on')
-
-    @developer_cmds.command()
-    @commands.is_owner()
-    @commands.bot_has_permissions(send_messages=True)
-    async def info(self, ctx):
-        """
-        Display some developer stats/info.
-        """
-        check = ':white_check_mark:'
-        cross = ':x:'
-
-        if self.bot.maintenance:
-            m=check
-        else:
-            m=cross
-
-        if round(self.bot.latency*1000) > 200:
-            l=check
-        else:
-            l=cross
-        
-        embed = Embed(
-            title='Bot Stats for nerds',
-            description=
-            f'Maintenance: {m}\n'
-            f'High Latency: {l}'
-        )
-
-        guilds = 0
-        text = 0
-        voice = 0
-        t_m = 0
-
-        for guild in self.bot.guilds:
-            guilds += 1
-            if guild.unavailable:
-                continue
-
-            t_m += guild.member_count
-
-            for channel in guild.channels:
-                if isinstance(channel, discord.TextChannel):
-                    text += 1
-                if isinstance(channel, discord.VoiceChannel):
-                    voice += 1
-
-        embed.add_field(name='Guilds',value=len(self.bot.guilds),inline=True)
-        embed.add_field(name='Uptime',value=get_bot_uptime(self.bot,brief=True),inline=True)
-
-        embed.add_field(name='Members',value=f'Total: {t_m}\nUnique: {len(self.bot.users)}',inline=False)
-        embed.add_field(name='Channels',value=f'Total: {text+voice}\nText: {text}\nVoice: {voice}',inline=True)
-        
-
-        await ctx.send(embed=embed)
-
-    @developer_cmds.command(name='serverinfo', aliases=['si'])
-    @is_dev()
-    async def dev_si(self, ctx: MyContext, *, guild: discord.Guild):
-        """Get info about a server id."""
+    @moderator.command(name='serverinfo', aliases=['si'])
+    @is_support()
+    async def moderator_serverinfo(self, ctx: MyContext, *, guild: discord.Guild):
+        """Get information about a guild that I'm in."""
         serverutils_cog: serverutils = self.bot.get_cog("serverutils")
         if not serverutils_cog:
-            raise commands.BadArgument("Serverutils cog is not loaded at the moment...")
+            raise commands.BadArgument("This command is not available at this time.")
         await ctx.send(embed=await serverutils_cog.serverinfo_embed(ctx, guild))
 
-    @commands.command(name='delete',aliases=['d'])
-    @commands.bot_has_permissions(send_messages=True)
-    @commands.is_owner()
-    async def delete_message(self, ctx, *, message : Optional[discord.Message]):
+    @moderator.group(name='guildblacklist', invoke_without_command=True, case_insensitive=True, aliases=['gb'])
+    @is_support()
+    async def moderator_guildblacklist(self, ctx: MyContext):
+        """Manage the guild blacklist."""
+        await ctx.help()
 
-        if not message:
-            message = getattr(ctx.message.reference, "resolved", None)
-        
-        if message.author != ctx.me:
-            return await ctx.send('I can only delete **my** messages.',delete_after=3)
+    @moderator_guildblacklist.command(name='add')
+    @is_support()
+    async def moderator_guildblacklist_add(self, ctx: MyContext, guild: discord.Guild, *, reason: Optional[str]):
+        """Add a guild to the guild blacklist."""
+        await self.bot.add_to_guildblacklist(guild, reason=reason, ctx=ctx)
 
+    @moderator_guildblacklist.command(name='remove')
+    @is_support()
+    async def moderator_guildblacklist_remove(self, ctx: MyContext, *, guild: discord.Guild):
+        """Remove a guild from the guild blacklist."""
+        await self.bot.remove_from_guildblacklist(guild, ctx=ctx)
+
+    @moderator_guildblacklist.command(name='list')
+    @is_support()
+    async def moderator_guildblacklist_list(self, ctx: MyContext):
+        """List all of the blacklisted guilds."""
+        records = await self.bot.db.fetch("SELECT (guild, moderator, added_time, reason) FROM guild_blacklist WHERE verify = True")
+        if records:
+            blacklisted = []
+
+            for record in records:
+                guild = self.bot.get_guild(record['row'][0])
+                if not guild:
+                    continue
+                blacklisted.append(f'**{guild.name}** ({guild.id}) {record["row"][3] if record["row"][3] else ""}\nVia: <@{record["row"][1]}> {discord.utils.format_dt(pytz.utc.localize(record["row"][2]), "R")}')
+
+            await ctx.paginate(blacklisted, per_page=14, compact=True)
         else:
+            await ctx.send("No guilds are currently blacklisted.")
+    
 
-            try:
-                await message.delete()
-            except discord.errors.HTTPException:
-                return await ctx.send('Failed to delete that message, try again later.', delete_after=5)
+    @moderator.group(name='blacklist', invoke_without_command=True,case_insensitive=True)
+    @is_support()
+    async def moderator_blacklist(self, ctx : MyContext) -> discord.Message:
+        """Manage the bot's blacklist."""
+        await ctx.help()
+    
+    @moderator_blacklist.command(name='add')
+    @is_support()
+    async def moderator_blacklist_add(
+        self, ctx : MyContext, user : Union[discord.Member, discord.User], *, reason : str = None):
+        """Add a user to the bot blacklist."""
+        await self.bot.add_to_blacklist(ctx, user, reason)
+        
+    @moderator_blacklist.command(name='remove')
+    @is_support()
+    async def moderator_blacklist_remove(self, ctx : MyContext, user : Union[discord.Member, discord.User]):
+        """Remove a user from the bot blacklist."""
+        await self.bot.remove_from_blacklist(ctx, user)
 
+    @moderator_blacklist.command(name='info')
+    @is_support()
+    async def moderator_blacklist_info(self, ctx : MyContext, user : Union[discord.Member, discord.User]):
+        """Check information on a user's blacklist."""
+
+        data = await self.bot.db.fetchrow("SELECT reason FROM blacklist WHERE member_id = $1", user.id)
+        if not data:
+            return await ctx.send("This user is not blacklisted.")
+
+        await ctx.send(
+            f"\nUser: {user} (ID: {user.id})"
+            f"\nReason: {data['reason']}"
+        )
+
+    @moderator_blacklist.command(name='list', usage='[--cache]')
+    @is_support()
+    async def moderator_blacklist_list(self, ctx : MyContext, *, args : str = None):
+        """List all the users blacklisted from bot."""
+        
+        records = await self.bot.db.fetch("SELECT (member_id, reason, added_time, moderator) FROM blacklist WHERE is_blacklisted = True")
+        if records:
+            blacklisted = []
+
+            for record in records:
+                blacklisted.append(f'{record["row"][0]} (<@{record["row"][0]}>) {record["row"][1] if record["row"][1] else ""}\nVia: <@{record["row"][3]}> {discord.utils.format_dt(pytz.utc.localize(record["row"][2]), "R")}\n')
+
+            await ctx.paginate(blacklisted, per_page=10, compact=True)
+        else:
+            await ctx.send("No users are currently blacklisted.")
 
     @commands.command(slash_command=False)
     @is_dev()
     async def eval(self, ctx, *, body : str):
         """Evaluate python code."""
-
 
         env = {
             'bot': self.bot,
@@ -433,22 +303,20 @@ class developer(commands.Cog, description="Developer commands."):
                 self._last_result = ret
                 await ctx.send(f'```py\n{value}{ret}\n```')
 
-
-
-
     @commands.command(aliases=['cc'])
-    @commands.is_owner()
+    @is_dev()
     async def clearconsole(self, ctx):
         try:
-            clearConsole()
+            command = 'clear'
+            if os.name in ('nt', 'dos'):  # If Machine is running on Windows, use cls
+                command = 'cls'
+            os.system(command)
         except Exception as e:
             return await ctx.send(str(e))
-
         await ctx.check()
 
-
     @commands.command()
-    @commands.is_owner()
+    @is_dev()
     async def sudo(self, ctx, channel : Union[discord.TextChannel, None], who : Union[discord.Member, discord.User], *, command : str):
         """Run a command as another user optionally in another channel."""
 
@@ -463,13 +331,11 @@ class developer(commands.Cog, description="Developer commands."):
 
 
     @commands.command(help="Reloads all extensions", aliases=['rall'])
-    @commands.is_owner()
+    @is_dev()
     @commands.bot_has_permissions(send_messages=True, embed_links=True)
     async def reloadall(self, ctx, *extensions: jishaku.modules.ExtensionConverter):
         self.bot.last_rall = datetime.datetime.utcnow()
         pages = WrappedPaginator(prefix='', suffix='')
-        to_send = []
-        err = False
         first_reload_failed_extensions = []
 
         extensions = extensions or [await jishaku.modules.ExtensionConverter.convert(self, ctx, '~')]
@@ -524,7 +390,7 @@ class developer(commands.Cog, description="Developer commands."):
 
 
     @commands.command()
-    @commands.is_owner()
+    @is_dev()
     async def sql(self, ctx, *, query: str):
         """Run some SQL."""
 
@@ -561,20 +427,6 @@ class developer(commands.Cog, description="Developer commands."):
         else:
             await ctx.send(fmt)
 
-
-    @commands.command(name='input')
-    @commands.is_owner()
-    async def input(self, ctx, *, input_message : str):
-        """
-        Ask for input through console.
-        """
-        await ctx.check()
-        result = await self.bot.loop.run_in_executor(None, input, (f"{input_message}: "))
-        try:
-            await ctx.send(result)     
-        except discord.HTTPException:
-            await ctx.send("Cannot send an empty message!")   
-
     @commands.command()
     @is_dev()
     async def inspect(self, ctx : MyContext, *, object : str):
@@ -593,17 +445,20 @@ class developer(commands.Cog, description="Developer commands."):
 
     @commands.command()
     @commands.is_owner()
-    async def update(self, ctx: MyContext):
+    async def update(self, ctx: MyContext, *, restart: bool = False):
         """Update the bot."""
 
         message = await ctx.send("Restarting...")
 
         command = self.bot.get_command("jsk shell")
         await ctx.invoke(command, argument=codeblock_converter('git pull https://github.com/dartmern/metro master --allow-unrelated-histories'))
-
-        await asyncio.sleep(10)
+        await asyncio.sleep(8)
+        if restart is False:
+            rall = self.bot.get_command("rall")
+            await rall(ctx)
+            return await ctx.send("Updated!")
+             
         write_json({"id":message.id, "channel":message.channel.id}, 'restart')
-
         restart_program()
 
 def setup(bot):

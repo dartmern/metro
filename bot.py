@@ -1,7 +1,6 @@
 import collections
-from inspect import trace
 import re
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Union
 import typing
 import discord
 from discord.ext import commands
@@ -11,15 +10,14 @@ import os
 import async_cse
 import asyncpg
 import traceback
-from discord.ext.commands.converter import Option
 
 import mystbin
 import aiohttp
 import logging
 from utils.checks import check_dev
-from utils.constants import EMOTES
+from utils.constants import BOT_LOGGER_CHANNEL, DEVELOPER_IDS, EMOTES, SLASH_GUILDS, SUPPORT_GUILD, SUPPORT_STAFF
 
-from utils.useful import Cooldown
+from utils.useful import Cooldown, ts_now
 from utils.json_loader import read_json
 from utils.errors import UserBlacklisted
 from utils.custom_context import MyContext
@@ -88,6 +86,16 @@ async def load_blacklist():
         for record in records:
             bot.blacklist[record["member_id"]] = True
 
+async def load_guildblacklist():
+    await bot.wait_until_ready()
+
+    query = """
+            SELECT guild FROM guild_blacklist WHERE verify = True
+            """
+    records = await bot.db.fetch(query)
+    if records:
+        for record in records:
+            bot.guildblacklist[record["guild"]] = True
 
 class MetroBot(commands.AutoShardedBot):
 #class MetroBot(commands.Bot):
@@ -118,12 +126,11 @@ class MetroBot(commands.AutoShardedBot):
             command_prefix=self.get_pre,
             case_insensitive=True,
             allowed_mentions=allowed_mentions,
-            #owner_id=525843819850104842,
-            owner_ids=[525843819850104842],
+            owner_ids=DEVELOPER_IDS,
             #chunk_guilds_at_startup=False,
             help_command=None,
             #slash_commands=True,
-            slash_command_guilds=[812143286457729055],#, 917580286898888715],
+            slash_command_guilds=SLASH_GUILDS,
             strip_after_prefix=True,
             #shard_count=10,
             max_messages=5000
@@ -136,7 +143,7 @@ class MetroBot(commands.AutoShardedBot):
 
         self.maintenance = False
 
-        self.support_staff = [437325015994859532, 790618859173969952, 708143475186597909, 525843819850104842]
+        self.support_staff = SUPPORT_STAFF
 
         self.invite = 'https://discord.com/api/oauth2/authorize?client_id=788543184082698252&permissions=0&scope=applications.commands%20bot'
         self.support = 'https://discord.gg/2ceTMZ9qJh'
@@ -153,12 +160,41 @@ class MetroBot(commands.AutoShardedBot):
         #Cache
         self.prefixes = {}
         self.blacklist = {}
+        self.guildblacklist = {}
 
         #Tracking
         self.message_stats = collections.Counter()
         
         #Emojis
         self.emotes = EMOTES
+
+    async def add_to_guildblacklist(self, guild: discord.Guild, *, reason: Optional[str] = None, ctx: MyContext, silent: bool = False):
+        if guild.id == SUPPORT_GUILD:
+            return await ctx.send("I have been hard configurated to not blacklist this guild.", reply=False)
+
+        query = """
+                INSERT INTO guild_blacklist (guild, verify, moderator, added_time, reason)
+                VALUES ($1, $2, $3, $4, $5)
+                """
+        try:
+            await self.db.execute(query, guild.id, True, ctx.author, (discord.utils.utcnow().replace(tzinfo=None)), reason)
+        except asyncpg.exceptions.UniqueViolationError:
+            return await ctx.send("This guild is already blacklisted.", reply=False)
+        self.guildblacklist[guild.id] = True
+
+        if silent is False:
+            return await ctx.send(f"{self.emotes['check']} Added **{guild.name}** to blacklist.")
+
+    async def remove_from_guildblacklist(self, guild: discord.Guild, *, ctx: MyContext):
+        query = """
+                DELETE FROM guildblacklist WHERE guild = $1
+                """
+        status = await self.db.execute(query, guild.id)
+        if status == "DELETE 0":
+            await ctx.send(f"{self.emotes['cross']} **{guild.name}** is not currently blacklisted.")
+        else:
+            self.guildblacklist[guild.id] = False
+            await ctx.send(f"{self.emotes['check']} Removed **{guild.name}** from the blacklist.")
 
     async def add_to_blacklist(self, ctx : MyContext, member : Union[discord.Member, discord.User], reason : str = None, *, silent : bool = False):
         if check_dev(self, member):
@@ -167,10 +203,10 @@ class MetroBot(commands.AutoShardedBot):
             raise commands.BadArgument("I have been hard configured to not blacklist this user.")
 
         query = """
-                INSERT INTO blacklist(member_id, is_blacklisted, reason) VALUES ($1, $2, $3) 
+                INSERT INTO blacklist(member_id, is_blacklisted, moderator, added_time, reason) VALUES ($1, $2, $3, $4, $5) 
                 """
         try:
-            await self.db.execute(query, member.id, True, reason)
+            await self.db.execute(query, member.id, True, ctx.author, (discord.utils.utcnow().replace(tzinfo=None)), reason)
         except asyncpg.exceptions.UniqueViolationError:
             raise commands.BadArgument(f"This user is already blacklisted.")
         self.blacklist[member.id] = True
@@ -182,9 +218,12 @@ class MetroBot(commands.AutoShardedBot):
         query = """
                 DELETE FROM blacklist WHERE member_id = $1
                 """
-        await self.db.execute(query, member.id)
-        self.blacklist[member.id] = False
-        await ctx.send(f"{self.check} Removed **{member}** from the bot blacklist.")
+        status = await self.db.execute(query, member.id)
+        if status == "DELETE 0":
+            await ctx.send(f"{self.emotes['cross']} **{member}** is not currently blacklisted.")
+        else:
+            self.blacklist[member.id] = False
+            await ctx.send(f"{self.check} Removed **{member}** from the bot blacklist.")
 
 
     async def on_ready(self):
@@ -329,6 +368,46 @@ bot.cross = "<:mCross:819254444217860116>"
 async def mention_prefix(message: discord.Message):
     if re.fullmatch(rf"<@!?{bot.user.id}>", message.content):
         return await message.channel.send(f"\U0001f44b My prefixes here are: {', '.join(await bot.get_pre(bot, message, raw_prefix=True))}")
+    
+@bot.event
+async def on_guild_join(guild: discord.Guild):
+    if bot.guildblacklist.get(guild.id) is True:
+        embed = discord.Embed(color=discord.Color.red())
+        embed.description = f"I have automatically left this server due to it being blacklisted.\nPlease consider joining my [suppport server]({bot.support}) for more details."
+
+        if guild.system_channel and guild.system_channel.permissions_for(guild.me).send_messages:
+               
+            await guild.system_channel.send(embed=embed)
+            return await guild.leave()
+        else:
+            for channel in guild.text_channels:
+                if channel.permissions_for(guild.me).send_messages:
+                    await channel.send(embed=embed)
+                    break
+            return await guild.leave()
+    else:
+        channel = bot.get_channel(BOT_LOGGER_CHANNEL)
+
+        embed = discord.Embed(color=discord.Colour.green())
+        embed.title = "New Guild"
+        embed.description = f"\n__**Name:**__ {guild.name}"\
+                            f"\n__**Human/Bots:**__ {len(guild.humans)}/{len(guild.bots)}"\
+                            f"\n__**Owner:**__ {guild.owner} (ID: {guild.owner_id})"\
+                            f"\n__**Added*:**__ {ts_now('F')} ({ts_now('R')})"
+        count = discord.Embed(color=discord.Colour.purple(), description="Guilds count: **%s**" % len(bot.guilds))
+        await channel.send(embeds=[embed, count])
+
+@bot.event
+async def on_guild_remove(guild: discord.Guild):
+    channel = bot.get_channel(BOT_LOGGER_CHANNEL)
+
+    embed = discord.Embed(color=discord.Colour.red())
+    embed.title = "Left Guild"
+    embed.description = f"\n__**Name:**__ {guild.name}"\
+                            f"\n__**Human/Bots:**__ {len(guild.humans)}/{len(guild.bots)}"\
+                            f"\n__**Owner:**__ {guild.owner} (ID: {guild.owner_id})"
+    count = discord.Embed(color=discord.Colour.purple(), description="Guilds count: **%s**" % len(bot.guilds))
+    await channel.send(embeds=[embed, count])
 
 if __name__ == "__main__":
     # When running this file, if it is the 'main' file
@@ -341,5 +420,6 @@ if __name__ == "__main__":
 
     bot.load_extension('jishaku')
     bot.loop.create_task(load_blacklist())
+    bot.loop.create_task(load_guildblacklist())
     bot.loop.create_task(execute_scripts())
     bot.run(token)
