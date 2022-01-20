@@ -196,12 +196,9 @@ class developer(commands.Cog, description="Developer commands."):
             blacklisted = []
 
             for record in records:
-                guild = self.bot.get_guild(record['row'][0])
-                if not guild:
-                    continue
-                blacklisted.append(f'**{guild.name}** ({guild.id}) {record["row"][3] if record["row"][3] else ""}\nVia: <@{record["row"][1]}> {discord.utils.format_dt(pytz.utc.localize(record["row"][2]), "R")}')
+                blacklisted.append(f'{record["row"][0]} {record["row"][3] if record["row"][3] else ""}\nVia: <@{record["row"][1]}> {discord.utils.format_dt(pytz.utc.localize(record["row"][2]), "R")}')
 
-            await ctx.paginate(blacklisted, per_page=14, compact=True)
+            await ctx.paginate(blacklisted, per_page=10, compact=True)
         else:
             await ctx.send("No guilds are currently blacklisted.")
     
