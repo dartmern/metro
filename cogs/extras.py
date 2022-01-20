@@ -130,9 +130,10 @@ class extras(commands.Cog, description='Extra commands for your use.'):
 
     def read_tags(self, ctx : MyContext):
         ids, tags = [], []
+        
+        guild = ctx.bot.get_guild(336642139381301249)
 
-        DPY_GUILD = ctx.bot.get_guild(336642139381301249)
-        for member in DPY_GUILD.humans:
+        for member in guild.humans:
             ids.append(member.id)
         
         cwd = get_path()
@@ -154,18 +155,10 @@ class extras(commands.Cog, description='Extra commands for your use.'):
     @commands.command(hidden=True)
     @commands.is_owner()  
     @commands.bot_has_permissions(send_messages=True)  
-    async def tags(self, ctx : MyContext, per_page : int = 10):
+    async def tags(self, ctx : MyContext, per_page : int = 16):
         await ctx.check()
         result = await self.bot.loop.run_in_executor(None, self.read_tags, ctx)
         await ctx.paginate(result, per_page=per_page)
-        return
-        m = chunkIt(result, 20)
-
-        for i in m:
-            e = Embed()
-            e.description = ', '.join(i)
-            
-            #await ctx.author.send(embed=e)
 
 
     @commands.command(name='shorten_url', aliases=['shorten'])

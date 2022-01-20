@@ -463,8 +463,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         branch = 'master'
 
         if command is None:
-            embed = Embed()
-            embed.colour = discord.Colour.yellow()
+            embed = Embed(color=ctx.color)
             embed.set_author(name='Here is my source code:')
             embed.description = str(f"My code is under the [**MPL**]({license_url}) license\n → {source_url}")
             return await ctx.send(embed=embed, view=StopView(ctx))
@@ -477,7 +476,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         else:
             obj = self.bot.get_command(command.replace('.', ' '))
             if obj is None:
-                embed = Embed(description=f"Take the [**entire reposoitory**]({source_url})")
+                embed = Embed(description=f"Take the [**entire reposoitory**]({source_url})", color=ctx.color)
                 embed.set_footer(text='Please make sure you follow the license.')
                 return await ctx.send(embed=embed)
 
@@ -497,8 +496,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
         
         final_url = f'<{source_url}/blob/{branch}/{location}#L{firstlineno}-L{firstlineno + len(lines) - 1}>'
-        embed = Embed()
-        embed.colour = discord.Colour.purple()
+        embed = Embed(color=ctx.color)
         embed.description = f"**__My source code for `{str(obj)}` is located at:__**\n{final_url}"\
                 f"\n\nMy code is under licensed under the [**Mozilla Public License**]({license_url})."
 
@@ -507,7 +505,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
     async def github_request(self, method, url, *, params=None, data=None, headers=None):
         hdrs = {
             'Accept': 'application/vnd.github.inertia-preview+json',
-            'User-Agent': 'RoboDanny DPYExclusive Cog',
+            'User-Agent': 'MetroDiscordBot Utilties Cog',
             'Authorization': f'token {github_token}'
         }
 
@@ -685,7 +683,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         if not data:
             return await ctx.send(f"Your todo list is empty.")
 
-        menu = SimplePages(source=TodoListSource(entries=data, ctx=ctx), ctx=ctx, hide=True)
+        menu = SimplePages(source=TodoListSource(entries=data, ctx=ctx), ctx=ctx, hide=True, compact=True)
         await menu.start()
         
     @commands.command(aliases=['save'])

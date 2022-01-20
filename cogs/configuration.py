@@ -409,7 +409,7 @@ class configuration(commands.Cog, description='Configure the bot/server.'):
         await ctx.trigger_typing()
         query = "DELETE FROM command_config WHERE server_id = $1;"
         await self.bot.db.execute(query, ctx.guild.id)
-
+        self.command_config[ctx.guild.id].clear()
         await ctx.send('Cleared the server\'s disabled command list.')
 
 
@@ -616,7 +616,7 @@ class configuration(commands.Cog, description='Configure the bot/server.'):
 
         if cmd.name in EXCEPTIONS:
             return await ctx.send(
-                f'{self.bot.cross} Command `{cmd.qualified_name}`` cannot be disabled.'
+                f'{self.bot.cross} Command `{cmd.qualified_name}` cannot be disabled.'
             )
 
         cmd.enabled = not cmd.enabled
@@ -642,101 +642,6 @@ class configuration(commands.Cog, description='Configure the bot/server.'):
             await ctx.send(", ".join(disabled_commands))
         else:
             await ctx.send('No commands are toggled.')
-
-
-    @config.group(
-        name='blacklist',
-        invoke_without_command=True,
-        case_insensitive=True
-    )
-    @is_support()
-    async def config_blacklist(self, ctx : MyContext) -> discord.Message:
-        """Manage the bot's blacklist."""
-        await ctx.help()
-
-    
-    @config_blacklist.command(name='add')
-    @is_support()
-    async def config_blacklist_add(
-        self, ctx : MyContext, user : Union[discord.Member, discord.User], *, reason : str = None):
-        """Add a user to the bot blacklist."""
-        await self.bot.add_to_blacklist(ctx, user, reason)
-        
-    @config_blacklist.command(name='remove')
-    @is_support()
-    async def config_blacklist_remove(self, ctx : MyContext, user : Union[discord.Member, discord.User]):
-        """Remove a user from the bot blacklist."""
-        await self.bot.remove_from_blacklist(ctx, user)
-
-    @config_blacklist.command(name='info')
-    @is_support()
-    async def config_blacklist_info(self, ctx : MyContext, user : Union[discord.Member, discord.User]):
-        """Check information on a user's blacklist."""
-
-        query = """
-                SELECT reason FROM blacklist WHERE member_id = $1
-                """
-        data = await self.bot.db.fetchrow(query, user.id)
-        if not data:
-            return await ctx.send("This user is not blacklisted.")
-
-        await ctx.send(
-            f"\nUser: {user.mention}"
-            f"\nReason: {data['reason']}",
-            allowed_mentions=discord.AllowedMentions(users=False)
-        )
-
-
-    @config_blacklist.command(name='list', usage='[--cache]')
-    @is_support()
-    async def config_blacklist_list(self, ctx : MyContext, *, args : str = None):
-        """List all the users blacklisted from bot.
-        
-        Apply the `--cache` flag if you want me to search the cache instead of database.
-        Note: Searching the cache does not give the reason for blacklist.
-        """
-        
-        if args:
-            parser = Arguments(add_help=False, allow_abbrev=False)
-            parser.add_argument('--cache', action='store_true')
-
-            try:
-                args = parser.parse_args(shlex.split(args))
-            except Exception as e:
-                await ctx.send(str(e))
-                return
-
-            if args.cache:
-                if bool(self.bot.blacklist) == False:
-                    return await ctx.send('No users are currently blacklisted. (from cache)')
-
-                blacklist = []
-
-                for member_id, is_blacklisted in self.bot.blacklist.items():
-                    if is_blacklisted:
-                        blacklist.append(f'{member_id} (<@{member_id}>)')
-
-                try:
-                    return await ctx.paginate(blacklist, per_page=10)
-                except discord.errors.HTTPException:
-                    return await ctx.send('No users are currently blacklisted. (from cache)')
-
-        query = """
-                SELECT member_id, reason FROM blacklist WHERE is_blacklisted = True
-                """
-
-        records = await self.bot.db.fetch(query)
-        if records:
-            blacklisted = []
-
-            for record in records:
-                blacklisted.append(f'{record["member_id"]} (<@{record["member_id"]}>) {record["reason"] if record["reason"] else ""}')
-
-            await ctx.paginate(blacklisted, per_page=10)
-        else:
-            await ctx.send("No users are currently blacklisted.")
-
-
             
 def setup(bot):
     bot.add_cog(configuration(bot))

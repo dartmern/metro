@@ -1,9 +1,6 @@
 from discord.ext import commands
 
-
-SUPPORT_GUILD = 812143286457729055
-
-
+from utils.constants import SUPPORT_GUILD
 
 def in_support():
     def predicate(ctx):

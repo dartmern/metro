@@ -3,9 +3,6 @@ import operator
 import math
 from functools import cmp_to_key
 
-
-
-
 class NumericStringParser(object):
     """
     Most of this code comes from the fourFn.py pyparsing example

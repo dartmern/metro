@@ -1366,7 +1366,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             await ctx.trigger_typing()
             await guild.chunk()
 
-        messages = await ctx.bot.db.fetchval("SELECT COUNT(*) as c FROM messages WHERE server_id = $1", ctx.guild.id)
+        messages = await ctx.bot.db.fetchval("SELECT COUNT(*) as c FROM messages WHERE server_id = $1", guild.id)
 
         embed = discord.Embed(color=ctx.color)
         embed.set_author(name=guild.name, icon_url=guild.icon.url if guild.icon else EmptyEmbed)

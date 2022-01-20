@@ -1,20 +1,13 @@
 import re
 import discord
-import time
 from discord.ext import commands
+
 from bot import MetroBot
 from utils.constants import FEEDBACK_CHANNEL, SUPPORT_GUILD, SUPPORT_ROLE, BOTS_ROLE, BOT_REQUESTS_CHANNEL
-
-
 from utils.custom_context import MyContext
 from utils.converters import BotUser
 from utils.useful import Cooldown, Embed, ts_now
-from utils.decos import in_support, is_dev
-
-
-
-
-
+from utils.decos import in_support
 
 class support(commands.Cog, description='Support only commands.'):
     def __init__(self, bot : MetroBot):
@@ -22,7 +15,7 @@ class support(commands.Cog, description='Support only commands.'):
 
     @property
     def emoji(self) -> str:
-        return '🧪'
+        return '\U0001f9ea'
         
     @commands.Cog.listener()
     async def on_member_join(self, member : discord.Member):

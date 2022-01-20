@@ -346,18 +346,19 @@ class music(commands.Cog, description='Play high quality music in a voice channe
     @commands.command(name='lyrics')
     async def lyrics(self, ctx: MyContext, *, song: str):
         """Get the lyrics of a song."""
+        
+        async with ctx.typing():
+            headers = {'Authorization' : auth}
+            async with self.bot.session.get(
+                f"https://api.openrobot.xyz/api/lyrics/{quote_plus(song)}", headers=headers) as res:
 
-        headers = {'Authorization' : auth}
-        async with self.bot.session.get(
-            f"https://api.openrobot.xyz/api/lyrics/{quote_plus(song)}", headers=headers) as res:
+                if res.status != 200:
+                    raise commands.BadArgument("Openrobot API returned a bad response.")
 
-            if res.status != 200:
-                raise commands.BadArgument("Openrobot API returned a bad response.")
+                js = await res.json()
 
-            js = await res.json()
-
-        menu = SimplePages(source=LyricsSource(js['lyrics'].split("\n"), js), ctx=ctx, compact=True)
-        await menu.start()
+            menu = SimplePages(source=LyricsSource(js['lyrics'].split("\n"), js), ctx=ctx, compact=True)
+            await menu.start()
 
     @commands.command(name='join', aliases=['summon', 'connect'])
     async def join(self, ctx: MyContext, *, channel: Optional[discord.VoiceChannel]=None):

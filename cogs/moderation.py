@@ -9,7 +9,8 @@ from utils.custom_context import MyContext
 from utils.remind_utils import FutureTime, UserFriendlyTime, human_timedelta
 
 from utils.converters import ActionReason, MemberID
-from utils.checks import SUPPORT_GUILD, can_execute_action
+from utils.checks import can_execute_action
+from utils.constants import SUPPORT_GUILD
 
 from typing import Dict, Optional, Union
 from collections import Counter
@@ -208,6 +209,8 @@ class moderation(commands.Cog, description="Moderation commands."):
 
         if member == ctx.author:
             return await ctx.send(f'{self.bot.cross} You cannot kick yourself.')
+        if member == ctx.me:
+            return await ctx.send(f'{self.bot.emotes["cross"]} You cannot kick me.')
 
         if not can_execute_action(ctx, ctx.author, member):
             return await ctx.send('You are not high enough in role hierarchy to kick this member.')
@@ -249,6 +252,11 @@ class moderation(commands.Cog, description="Moderation commands."):
         """
         if delete_days and not 8 > delete_days > -1:
             raise commands.BadArgument(f"{self.bot.cross} `delete_days` must be between 0 and 7 days.")
+
+        if member == ctx.author:
+            return await ctx.send(f"{self.bot.emotes['cross']} You cannot softban yourself.")
+        if member == ctx.me:
+            return await ctx.send(f'{self.bot.emotes["cross"]} You cannot softban me.')
 
         if not can_execute_action(ctx, ctx.author, member):
             return await ctx.send('You are not high enough in role hierarchy to ban this member.')
@@ -304,7 +312,10 @@ class moderation(commands.Cog, description="Moderation commands."):
             return await ctx.send('`delete_days` must be less than or equal to 7 days.')
 
         if member == ctx.author:
-            return await ctx.send(f'{self.bot.cross} You cannot ban yourself!')
+            return await ctx.send(f"{self.bot.emotes['cross']} You cannot ban yourself.")
+        if member == ctx.me:
+            return await ctx.send(f'{self.bot.emotes["cross"]} You cannot ban me.')
+
         if member in ctx.guild.members:
             if not can_execute_action(ctx, ctx.author, member):
                 return await ctx.send('You are not high enough in role hierarchy to ban this member.')

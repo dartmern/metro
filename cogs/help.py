@@ -160,7 +160,7 @@ class InviteView(discord.ui.View):
         except:
             await interaction.message.edit(view=self)
 
-        embed = Embed(color=self.ctx.color, description="Please enter a permissions integer.\nUse this calculator to find the permission value if you are unsure what to put.")
+        embed = Embed(color=self.ctx.color, description="Please enter a permissions integer.\nUse [this calculator](https://discordapi.com/permissions.html) to find the permission value if you are unsure what to put.")
         await interaction.response.send_message(embed=embed)
         
         def check(message : discord.Message) -> bool:
