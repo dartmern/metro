@@ -433,12 +433,16 @@ class developer(commands.Cog, description="Developer commands."):
         command = self.bot.get_command('eval')
         await command(ctx, body=f'import inspect\nreturn inspect.getsource({object})')
 
-    @commands.command(aliases=['reboot', 'off'])
-    @is_dev()
-    async def shutdown(self, ctx: MyContext):
-        """Shutdown the bot."""
-        command = self.bot.get_command("jsk shutdown")
-        await command(ctx)
+    def do_restart(self, message: discord.Message):
+        write_json({"id": message.id, "channel": message.channel.id, "now": ((discord.utils.utcnow()).replace(tzinfo=None)).timestamp()}, 'restart')
+        restart_program()
+
+    @commands.command(name='restart', aliases=['reboot'])
+    @is_support()
+    async def restart(self, ctx: MyContext):
+        """Restart the bot."""
+        message = await ctx.send(f"Restarting...", reply=False)
+        self.do_restart(message)
 
     @commands.command()
     @commands.is_owner()
@@ -455,8 +459,7 @@ class developer(commands.Cog, description="Developer commands."):
             await rall(ctx)
             return await ctx.send("Updated!")
              
-        write_json({"id":message.id, "channel":message.channel.id}, 'restart')
-        restart_program()
+        self.do_restart(message)
 
 def setup(bot):
     bot.add_cog(developer(bot))

@@ -1,4 +1,5 @@
 import collections
+import datetime
 import re
 from typing import List, Optional, Union
 import typing
@@ -16,6 +17,7 @@ import aiohttp
 import logging
 from utils.checks import check_dev
 from utils.constants import BOT_LOGGER_CHANNEL, DEVELOPER_IDS, EMOTES, SLASH_GUILDS, SUPPORT_GUILD, SUPPORT_STAFF
+from utils.remind_utils import human_timedelta
 
 from utils.useful import Cooldown, ts_now
 from utils.json_loader import read_json
@@ -142,6 +144,7 @@ class MetroBot(commands.AutoShardedBot):
         self.add_check(self.user_blacklisted)
 
         self.maintenance = False
+        self.owner = None
 
         self.support_staff = SUPPORT_STAFF
 
@@ -258,9 +261,10 @@ class MetroBot(commands.AutoShardedBot):
         if data:
             channel = self.get_channel(data['channel'])
             message = channel.get_partial_message(data['id'])
+            dt = datetime.datetime.fromtimestamp(data['now'])
             
             try:
-                await message.edit(content=f'{self.emotes["check"]} Restart complete...')
+                await message.edit(content=f'{self.emotes["check"]} Restart complete after {human_timedelta(dt, suffix=False)}')
             except discord.HTTPException:
                 pass # eh it's fine
 

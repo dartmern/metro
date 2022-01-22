@@ -14,6 +14,7 @@ import contextlib
 
 import asyncio
 import psutil
+import speedtest
 import time
 
 from difflib import get_close_matches
@@ -447,34 +448,21 @@ class NewHelpView(discord.ui.View):
 
 
 class View(discord.ui.View):
-    def __init__(self, author):
+    def __init__(self, ctx: MyContext):
         super().__init__(timeout=60)
-        self.user = author
-
-    async def on_timeout(self) -> None:
-        self.foo.disabled = True
-        try:
-            await self.message.edit(view=self)
-        except:
-            pass
+        self.ctx = ctx
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if self.user == interaction.user:
+        if self.ctx.author == interaction.user:
             return True
-        await interaction.response.send_message(f"Only {self.user} can use this menu. Run the command yourself to use it.",
+        await interaction.response.send_message(f"Only {self.ctx.author} can use this menu. Run the command yourself to use it.",
                                                 ephemeral=True)
         return False
 
     @discord.ui.button(emoji='\U0001f5d1', style=discord.ButtonStyle.gray)
     async def foo(self, _, interaction: discord.Interaction) -> None:
+        await self.ctx.message.add_reaction(self.ctx.bot.emotes['check'])
         await interaction.message.delete()
-
-    @classmethod
-    async def start(cls, ctx, embed):
-        self = cls(ctx.author)
-        self.message = await ctx.channel.send(embed=embed, view=self)
-        return self
-
 
 class HelpSource(menus.ListPageSource):
     def __init__(self, data, *, prefix):
@@ -805,18 +793,6 @@ class MetroHelp(commands.HelpCommand):
         )
 
         return em
-        
-
-    async def handle_help(self, command, old_ctx : MyContext = None):
-        with contextlib.suppress(commands.CommandError):
-            if not await command.can_run(old_ctx):
-                raise commands.CommandError
-            if old_ctx.interaction:
-                return await old_ctx.interaction.response.send_message(embed=self.get_command_help(command),ephemeral=True)
-            else:
-                return await old_ctx.send(embed=await self.get_command_help(command, old_ctx),view=View(old_ctx))
-        raise commands.BadArgument("You do not have the permissions to view this command's help.")
-
 
     async def send_bot_help(self, mapping):
 
@@ -842,7 +818,7 @@ class MetroHelp(commands.HelpCommand):
 
     
     async def send_command_help(self, command):
-        return await self.context.send(embed=await self.get_command_help(command),view=View(self.context.author), hide=True)
+        return await self.context.send(embed=await self.get_command_help(command),view=View(self.context), hide=True)
 
     async def send_group_help(self, group):
         
@@ -929,8 +905,7 @@ class meta(commands.Cog, description='Get bot stats and information.'):
 
         await ctx.send(f'I have an uptime of: **{get_bot_uptime(self.bot, brief=False)}**',hide=True)
 
-
-    @commands.command()
+    @commands.command(name='ping', aliases=['pong'])
     @commands.check(Cooldown(1, 5, 1, 3, commands.BucketType.member))
     async def ping(self, ctx):
         """Show the bot's latency in milliseconds.
@@ -962,7 +937,6 @@ class meta(commands.Cog, description='Get bot stats and information.'):
                     f'\n<:msql:904157158608867409> **Database:** | {round(database_ping, 1)} ms'
                     f'\n<:mdiscord:904157585266049104> **Websocket:** | {round(self.bot.latency*1000)} ms'
                     f'\n:infinity: **Shard Latency:** | {round(shard.latency *1000)} ms \n{mess}')
-
 
     @commands.command(name='invite',slash_command=True)
     @commands.bot_has_permissions(send_messages=True)
@@ -1018,66 +992,18 @@ class meta(commands.Cog, description='Get bot stats and information.'):
         view = VoteView(ctx, bot, bot_instance=self.bot)
         await view.start()
 
-    @commands.command(name='bot-info', aliases=['botinfo', 'bi', 'info'])
+    @commands.command(name='bot-info', aliases=['botinfo', 'bi', 'info', 'stats', 'about'])
     async def _bot_info(self, ctx: MyContext):
         """Get all the information about me."""
         embed = await NewHelpView(ctx, {}, ctx.bot.help_command).bot_info_embed()
         await ctx.reply(embed=embed)
 
-    @commands.command()
+    @commands.command(aliases=['tos'])
     async def privacy(self, ctx: MyContext):
         """Privacy for the bot."""
-
-        desc = ""
-
-        desc += (
-            """
-            - By interacting with Metro which will be refered to as "bot", 
-            you agree that message data (the message id, message author, 
-            the time the message was sent) WILL be recorded but 
-            message CONTENT (the content of the messages sent, this includes 
-            attachments, embeds and the actual content) will NOT be recorded.
-            Your user id (to identify you) is another piece of information
-            will be recorded in my database. This data is encrypted in a 
-            secure database that only developers have access to. The bot 
-            collects this data for moderation purpose and to track stats 
-            with the tracking module which tracks message count. If
-            you do not consent to having your data tracking please join the
-            bot's support server. The bot does not collect data like presences, 
-            statuses, about me, connections about you.
-            """
-        )
-        desc +=(
-            """
-            - By inviting Metro to your server you agree that your guild's 
-            messages are recorded (except message content) for stat purposes. 
-            You can view this in the tracking module (message count). The bot 
-            will not store but access guild member count and channel count for 
-            bot stats which you may view on my help command.
-            """
-        )
-        desc += (
-            """
-            \nIf you have any privacy concerns you may view the source code
-            for **any** command with the `source` command. You can view
-            the entire github repository by clicking [here](https://github.com/dartmern/metro) <:github:744345792172654643>
-            """
-        )
-        desc += (
-            """
-            \nAny concerns? Join my [support server](https://discord.gg/2ceTMZ9qJh) if you have any concerns or issues.
-            """
-        )
-        desc += (
-            f"""
-            \nYou can now optout of having your messages tracked by running `{ctx.clean_prefix}optout`
-            Add the `--remove` flag to remove previously stored data.
-            """
-        )
-        embed = discord.Embed(color=ctx.color)
-        embed.description = desc
+        embed = discord.Embed(color=ctx.color, description="**Privacy Policy:** https://dartmern.github.io/metro/privacy/privacy/\n**Terms of Service:** https://dartmern.github.io/metro/privacy/tos")
         await ctx.reply(embed=embed)
-        
+
     @commands.command(name='linecount', aliases=['lc'])
     @commands.check(Cooldown(1, 10, 1, 8, commands.BucketType.user))
     async def _linecount(self, ctx: MyContext):
