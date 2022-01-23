@@ -241,21 +241,24 @@ class core(commands.Cog, description="Core events."):
         elif isinstance(error, commands.CommandOnCooldown):
 
             if check_dev(ctx.bot, ctx.author):
-                await ctx.reinvoke() # bypass cooldowns for now
-                return 
+                #await ctx.reinvoke() # bypass cooldowns for now
+                #return 
+                pass
 
             command = ctx.command
-            cooldown = discord.utils.find(lambda x: isinstance(x, Cooldown), command.checks) or Cooldown(1, 3, 1, 1,
+            cooldown = discord.utils.find(lambda x: isinstance(x, Cooldown), command.checks) or Cooldown(2, 8, 2, 6,
                                                                                                         commands.BucketType.user)
 
             default_cooldown_per = cooldown.default_mapping._cooldown.per
+            altered_cooldown_per = cooldown.altered_mapping._cooldown.per
 
             default_cooldown_rate = cooldown.default_mapping._cooldown.rate
+            altered_cooldown_rate = cooldown.altered_mapping._cooldown.rate
 
             cooldowns = ""
             if default_cooldown_rate is not None:
                 cooldowns += (
-                    f"\n\n**Cooldowns:**\nDefault: `{default_cooldown_rate}` time(s) every `{default_cooldown_per}` seconds"
+                    f"\n\n**Cooldowns:**\nDefault: `{default_cooldown_rate}` time(s) every `{default_cooldown_per}` seconds\nPremium: `{altered_cooldown_rate}` time(s) every `{altered_cooldown_per}` seconds"
                 )
             em = Embed(
                 description=f"You are on cooldown! Try again in **{humanize.precisedelta(dt.timedelta(seconds=error.retry_after), format='%.0f' if error.retry_after > 1 else '%.1f')}**"
