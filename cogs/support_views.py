@@ -34,8 +34,8 @@ class support(commands.Cog, description='Support only commands.'):
         if payload.channel_id != BOT_REQUESTS_CHANNEL:
             return
 
-        if self.bot.user.id == 795373951043633232:
-            return 
+        #if self.bot.user.id == 795373951043633232:
+            #return 
         if payload.user_id == self.bot.user.id:
             return # Lmao
 
@@ -54,16 +54,15 @@ class support(commands.Cog, description='Support only commands.'):
 
             embed = discord.Embed(color=discord.Colour.green())
             embed.description = f"The bot you requested, <@{bot_id}> was added to **{guild.name}**"
-
             
-            await author.send(embed=embed)
+            return await author.send(embed=embed)
 
         if str(payload.emoji) == "<:mCross:819254444217860116>":
             channel = (
                 self.bot.get_channel(payload.channel_id) or
                 await self.bot.fetch_channel(payload.channel_id)
             )
-            guild = await self.bot.get_guild(SUPPORT_GUILD) # We're gonna assume it's the support server because we won't even be here
+            guild = self.bot.get_guild(SUPPORT_GUILD) # We're gonna assume it's the support server because we won't even be here
             message = await channel.fetch_message(payload.message_id)
             
             author_id = message.embeds[0].footer.text
@@ -71,7 +70,7 @@ class support(commands.Cog, description='Support only commands.'):
 
             author = await self.bot.get_or_fetch_member(guild, author_id)
 
-            embed = discord.Embed(color=discord.Colour.green())
+            embed = discord.Embed(color=discord.Colour.red())
             embed.description = f"The bot you requested, <@{bot_id}> was rejected from **{guild.name}**"
             
             await author.send(embed=embed)
