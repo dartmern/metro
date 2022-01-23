@@ -48,6 +48,8 @@ token = info_file['bot_token']
 
 google_token = info_file['google_token']
 
+webhooks = info_file['webhooks']
+
 async def create_db_pool(user, password, database, host, port) -> asyncpg.Pool:
     details = {
         "user" : user,
@@ -120,8 +122,7 @@ class MetroBot(commands.AutoShardedBot):
         intents = discord.Intents.all()
 
         allowed_mentions = discord.AllowedMentions(
-            roles=False, users=True, everyone=False, replied_user=False)
-        
+            roles=True, users=True, everyone=False, replied_user=False)
 
         super().__init__(
             intents=intents,
@@ -170,6 +171,9 @@ class MetroBot(commands.AutoShardedBot):
         
         #Emojis
         self.emotes = EMOTES
+
+        #Loggers
+        self.error_logger = discord.Webhook.from_url(webhooks['error_handler'], session=self.session)
 
     async def add_to_guildblacklist(self, guild: discord.Guild, *, reason: Optional[str] = None, ctx: MyContext, silent: bool = False):
         if guild.id == SUPPORT_GUILD:
