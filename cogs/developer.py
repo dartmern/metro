@@ -7,7 +7,9 @@ from typing import Optional, Union
 import traceback
 import time
 import os
+from numpy import isin
 import pytz
+import asyncpg
 import io
 import datetime
 import sys
@@ -251,6 +253,52 @@ class developer(commands.Cog, description="Developer commands."):
             await ctx.paginate(blacklisted, per_page=10, compact=True)
         else:
             await ctx.send("No users are currently blacklisted.")
+
+    @commands.group(name='premium', aliases=['pm'], invoke_without_command=True, case_insensitive=True)
+    @is_support()
+    async def premium(self, ctx: MyContext):
+        """Manage bot premium."""
+        await ctx.help()
+
+    @premium.command(name='add', aliases=['+'])
+    @is_support()
+    async def premium_add(self, ctx: MyContext, *, object: Union[discord.Guild, discord.User]):
+        """Add premium to a guild or a user."""
+        
+        if isinstance(object, discord.Guild):
+            query = """
+                    INSERT INTO premium_guilds (server, is_premium, added_time) VALUES ($1, $2, $3)
+                    """
+            try:
+                await self.bot.db.execute(query, object.id, True, (discord.utils.utcnow()).replace(tzinfo=None))
+                self.bot.premium_guilds[object.id] = True
+            except asyncpg.exceptions.UniqueViolationError:
+                raise commands.BadArgument(f"{self.bot.emotes['cross']} This guild already has premium perks!")
+
+            await ctx.send(f"{self.bot.emotes['check']} Added premium perks to **{object.name}**")
+        else:
+            await ctx.send("Only premium **guilds** are available.")
+
+    @premium.command(name='remove', aliases=['-'])
+    @is_support()
+    async def premium_remove(self, ctx: MyContext, *, object: Union[discord.Guild, discord.User]):
+        """Remove premium from a guild or user."""
+
+        if isinstance(object, discord.Guild):
+            query = """
+                    DELETE FROM premium_guilds WHERE server = $1
+                    """
+            status = await self.bot.db.execute(query, object.id)
+            self.bot.premium_guilds[object.id] = False
+            if status == "DELETE 0":
+                raise commands.BadArgument(f"{self.bot.emotes['cross']} This guild doesn't even have premium perks.")
+
+            await ctx.send(f"{self.bot.emotes['check']} Removed premium perks from **{object.name}**")
+            
+        else:
+            await ctx.send("Only premium **guilds** are available.")
+
+
 
     @commands.command(slash_command=False)
     @is_dev()

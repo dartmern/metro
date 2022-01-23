@@ -101,6 +101,18 @@ async def load_guildblacklist():
         for record in records:
             bot.guildblacklist[record["guild"]] = True
 
+async def load_premiumguilds():
+    await bot.wait_until_ready()
+
+    query = """
+            SELECT server FROM premium_guilds WHERE is_premium = True
+            """
+    records = await bot.db.fetch(query)
+    if records:
+        for record in records:
+            bot.premium_guilds[record['server']] = True
+
+
 class MetroBot(commands.AutoShardedBot):
 #class MetroBot(commands.Bot):
     PRE: tuple = ('m.', 'm?')
@@ -165,6 +177,9 @@ class MetroBot(commands.AutoShardedBot):
         self.prefixes = {}
         self.blacklist = {}
         self.guildblacklist = {}
+        
+        #self.premium_users = {} --soon
+        self.premium_guilds = {}
 
         #Tracking
         self.message_stats = collections.Counter()
@@ -281,7 +296,7 @@ class MetroBot(commands.AutoShardedBot):
         super().add_command(command)
         command.cooldown_after_parsing = True
 
-        command.checks.append(Cooldown(3, 7, 5, 7, commands.BucketType.user))
+        command.checks.append(Cooldown(2, 10, 2, 6, commands.BucketType.user))
 
     async def get_context(self, message, *, cls=MyContext):
         """Making our custom context"""
@@ -429,5 +444,6 @@ if __name__ == "__main__":
     bot.load_extension('jishaku')
     bot.loop.create_task(load_blacklist())
     bot.loop.create_task(load_guildblacklist())
+    bot.loop.create_task(load_premiumguilds())
     bot.loop.create_task(execute_scripts())
     bot.run(token)
