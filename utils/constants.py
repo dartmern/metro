@@ -37,6 +37,10 @@ DEVELOPER_ROLE = 932354056020709448
 
 RDANNY_ID = 80528701850124288
 
-
+PATREON_URL = "https://www.patreon.com/metrobot"
+DOCUMENTATION = 'https://dartmern.github.io/metro/'
+DEFAULT_INVITE = "https://discord.com/oauth2/authorize?client_id=788543184082698252&scope=bot+applications.commands&permissions=140932115831"
+GITHUB_URL = 'https://github.com/dartmern/metro'
+SUPPORT_URL = 'https://discord.gg/2ceTMZ9qJh'
 
 

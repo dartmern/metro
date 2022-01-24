@@ -16,7 +16,7 @@ import mystbin
 import aiohttp
 import logging
 from utils.checks import check_dev
-from utils.constants import BOT_LOGGER_CHANNEL, DEVELOPER_IDS, EMOTES, SLASH_GUILDS, SUPPORT_GUILD, SUPPORT_STAFF
+from utils.constants import BOT_LOGGER_CHANNEL, DEFAULT_INVITE, DEVELOPER_IDS, DOCUMENTATION, EMOTES, GITHUB_URL, PATREON_URL, SLASH_GUILDS, SUPPORT_GUILD, SUPPORT_STAFF, SUPPORT_URL
 from utils.remind_utils import human_timedelta
 
 from utils.useful import Cooldown, ts_now
@@ -161,12 +161,6 @@ class MetroBot(commands.AutoShardedBot):
 
         self.support_staff = SUPPORT_STAFF
 
-        self.invite = 'https://discord.com/api/oauth2/authorize?client_id=788543184082698252&permissions=0&scope=applications.commands%20bot'
-        self.support = 'https://discord.gg/2ceTMZ9qJh'
-        self.donate = 'https://www.patreon.com/metrodiscordbot'
-        self.docs = 'https://dartmern.github.io/metro/' # New docs! woo
-        self.github = 'https://github.com/dartmern/metro'
-
         self.noprefix = False
         self.started = False
 
@@ -189,6 +183,34 @@ class MetroBot(commands.AutoShardedBot):
 
         #Loggers
         self.error_logger = discord.Webhook.from_url(webhooks['error_handler'], session=self.session)
+
+    @property
+    def donate(self) -> str:
+        return PATREON_URL
+
+    @property
+    def patreon(self) -> str:
+        return self.donate
+
+    @property
+    def docs(self) -> str:
+        return DOCUMENTATION
+
+    @property
+    def invite(self) -> str:
+        return DEFAULT_INVITE
+
+    @property
+    def github(self) -> str:
+        return GITHUB_URL
+
+    @property
+    def source(self) -> str:
+        return self.github
+
+    @property
+    def support(self) -> str:
+        return SUPPORT_URL
 
     async def add_to_guildblacklist(self, guild: discord.Guild, *, reason: Optional[str] = None, ctx: MyContext, silent: bool = False):
         if guild.id == SUPPORT_GUILD:
