@@ -882,6 +882,8 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
         Times are in UTC.
         """
+        if not when:
+            raise commands.BadArgument('Invalid time provided, try e.g. "tomorrow" or "3 days"')
         try:
             await self.create_timer(
             when.dt,
