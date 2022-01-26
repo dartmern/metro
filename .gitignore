@@ -1,12 +1,3 @@
-<<<<<<< HEAD
-config/info.json
-cogs/__pycache__
-__pycache
-venv
-.idea
-discord.txt
-request.txt
-=======
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -136,7 +127,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
->>>>>>> refs/remotes/metro/main
 cogs/__pycache__/buttons.cpython-38.pyc
 cogs/__pycache__/core.cpython-38.pyc
 cogs/__pycache__/help.cpython-38.pyc
@@ -151,6 +141,7 @@ cogs/__pycache__/moderation.cpython-38.pyc
 cogs/__pycache__/remind.cpython-38.pyc
 cogs/__pycache__/rtfm.cpython-38.pyc
 config/restart.json
+config/info.json
 utils/__pycache__/useful.cpython-38.pyc
 utils/__pycache__/converters.cpython-38.pyc
 utils/__pycache__/useful.cpython-38.pyc
@@ -158,3 +149,5 @@ lavalink/logs/spring.log.2022-01-14.0.gz
 lavalink/logs/spring.log.2022-01-15.0.gz
 cogs/fun.py
 lavalink/logs/spring.log.2022-01-16.0.gz
+/lavalink
+/venv
