@@ -44,7 +44,7 @@ class SupportView(discord.ui.View):
         await interaction.response.send_message('This pagination menu cannot be controlled by you, sorry!', ephemeral=True)
         return False
 
-    async def start(self, interaction: discord.Interaction):
+    async def start(self, interaction: Optional[discord.Interaction] = None):
         self.add_item(discord.ui.Button(label='Support Server', url='https://discord.gg/2ceTMZ9qJh'))
 
         embed = Embed()
@@ -52,17 +52,10 @@ class SupportView(discord.ui.View):
         embed.description = '__**Are you sure you want to join my support server?**__'\
             f'\n Joining is completely at your own will. \nThis message is here to protect people from accidentally joining.'\
             f'\n You can kindly dismiss this message if you clicked by accident.'
-        await interaction.response.send_message(embed=embed, ephemeral=True, view=self)
-
-    async def start_normal(self):
-        self.add_item(discord.ui.Button(label='Support Server', url='https://discord.gg/2ceTMZ9qJh'))
-
-        embed = Embed()
-        embed.colour = discord.Colour.orange()
-        embed.description = '__**Are you sure you want to join my support server?**__'\
-            f'\n Joining is completely at your own will. \nThis message is here to protect people from accidentally joining.'\
-            f'\n You can kindly dismiss this message if you clicked by accident.'
-        await self.ctx.send(embed=embed, ephemeral=True, view=self)
+        if interaction:
+            await interaction.response.send_message(embed=embed, ephemeral=True, view=self)
+        else:
+            await self.ctx.send(embed=embed, view=self)
 
 class VoteView(discord.ui.View):
     def __init__(self, ctx: MyContext, bot: discord.User, *, bot_instance: MetroBot):
@@ -950,7 +943,7 @@ class meta(commands.Cog, description='Get bot stats and information.'):
     @commands.command()
     @commands.bot_has_permissions(send_messages=True, embed_links=True)
     async def support(self, ctx: MyContext):
-        await SupportView(ctx).start_normal()
+        await SupportView(ctx).start(None)
 
     @commands.command(name='search', aliases=['commandsearch'])
     async def search(self, ctx: MyContext, *, search_query: str):
