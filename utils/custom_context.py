@@ -122,20 +122,24 @@ class MyContext(commands.Context):
 
     async def paginate(
         self,
-        entries : List,
         *,
-        per_page : int = 8,
-        source : Optional[menus.ListPageSource] = None,
-        hide : bool = False,
+        entries: Optional[List] = None,
+        per_page: int = 8,
+        source: Optional[menus.ListPageSource] = None,
+        hide: bool = False,
         compact: bool = False
 
     ):
+        if not entries and not source:
+            raise RuntimeError("supply either entires of a source")
 
-        default_source = SimplePageSource(
-            entries=list(entries),
-            per_page=per_page
-        )
-        source = source or default_source
+        if entries:
+            source = SimplePageSource(
+                entries=list(entries),
+                per_page=per_page
+            )
+        else:
+            source = source
 
         menu = SimplePages(
             source=source, ctx=self, hide=hide, compact=compact)
