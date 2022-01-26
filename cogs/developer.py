@@ -255,7 +255,10 @@ class developer(commands.Cog, description="Developer commands."):
     @is_support()
     async def premium(self, ctx: MyContext):
         """Manage bot premium."""
-        await ctx.help()
+        
+        embed = discord.Embed(title='Metro Premium', color=ctx.color)
+        embed.description = f"This bot is fully free and little to none of my features are locked behind a paywall. We want to keep it this way for as long as we can. You can get \"Metro Premium\" by supporting my patreon, that way you can support the bot and get great perks.\n\n{self.bot.donate}"
+        await ctx.send(embed=embed)
 
     @premium.command(name='add', aliases=['+'])
     @is_support()
