@@ -4,6 +4,7 @@ from typing import Optional, Union
 import discord
 import re
 from discord.embeds import EmptyEmbed
+from numpy import isin
 import pytz
 import unicodedata
 import unidecode
@@ -1140,6 +1141,8 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         This deletes the channel and creates the same channel again.
         """
         channel = channel or ctx.channel
+        if isinstance(channel, discord.Thread):
+            raise commands.BadArgument("You cannot nuke threads.")
 
         confirm = await ctx.confirm(f'Are you sure you want to nuke {channel.mention}', timeout=30.0)
         if confirm is False:
