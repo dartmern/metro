@@ -120,8 +120,9 @@ class SourceView(discord.ui.View):
 
 
 class MySource(menus.ListPageSource):
-    def __init__(self, data):
+    def __init__(self, data, amount: int):
         super().__init__(data, per_page=5)
+        self.amount = amount
 
     async def format_page(self, menu, entries):
 
@@ -130,7 +131,7 @@ class MySource(menus.ListPageSource):
         for i in entries:
             embed.add_field(name=f'ID: {i.get("id")}: {discord.utils.format_dt((i.get("expires")).replace(tzinfo=datetime.timezone.utc), "R")}',value=i.get("?column?"),inline=False)
 
-        embed.set_footer(text=f'{len(entries)} reminder{"s" if len(entries) > 1 else ""}')
+        embed.set_footer(text=f'{self.amount} reminder{"s" if self.amount > 1 else ""}')
 
         return embed
 
@@ -903,7 +904,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         aliases=['show'],
         slash_command=True
     )
-    async def reminders_list(self, ctx):
+    async def reminders_list(self, ctx: MyContext):
         """
         Display all your current reminders.
         """
@@ -920,10 +921,9 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
         if not records:
             return await ctx.send('You have no reminders.')
-
-        menu = ExtraPages(source=MySource(records))
         
-        await menu.start(ctx)
+        await ctx.paginate(compact=True, source=MySource(records, len(records)))
+    
 
     
     @reminder.command(
