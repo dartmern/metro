@@ -103,12 +103,12 @@ class core(commands.Cog, description="Core events."):
                 view = ErrorView(ctx, traceback_string)
 
                 if check_dev(self.bot, ctx.author):
-                    return await ctx.send("\U000026a0 **An error has occurred!**\nSince you are a developer this error has not been logged.", view=view)
+                    return await ctx.send("\U000026a0 **An error has occurred!**\nSince you are a developer this error has not been logged.", view=view, reply=False)
                 
                 embed = discord.Embed(color=discord.Colour.red(), title='Command Error')
                 embed.description = "Oops! This command seems to have errored. The error has been fowarded to the owner and will be fixed soon. Please refrain from repeatedly invoking this command in the meanwhile."\
                                     f"\n\nIn the meantime you can join my support server to gain some context on this error and give any extra information by clicking the button below. You can send the error ID below in #support and the command you ran.\n```prolog\nError ID: {ctx.message.id}\n```"
-                await ctx.send(embed=embed, view=view)
+                await ctx.send(embed=embed, view=view, reply=False)
 
                 channel = self.bot.get_channel(self.error_channel)
 
@@ -296,28 +296,35 @@ class core(commands.Cog, description="Core events."):
             return await ctx.send(str(error))
 
         else:
-                # technically this can't be triggered
                 traceback_string = "".join(traceback.format_exception(
                     etype=None, value=error, tb=error.__traceback__))
 
                 view = ErrorView(ctx, traceback_string)
-                await ctx.send(':warning: **An error occurred!**', view=view)
+
+                if check_dev(self.bot, ctx.author):
+                    return await ctx.send("\U000026a0 **An error has occurred!**\nSince you are a developer this error has not been logged.", view=view, reply=False)
+                
+                embed = discord.Embed(color=discord.Colour.red(), title='Command Error')
+                embed.description = "Oops! This command seems to have errored. The error has been fowarded to the owner and will be fixed soon. Please refrain from repeatedly invoking this command in the meanwhile."\
+                                    f"\n\nIn the meantime you can join my support server to gain some context on this error and give any extra information by clicking the button below. You can send the error ID below in #support and the command you ran.\n```prolog\nError ID: {ctx.message.id}\n```"
+                await ctx.send(embed=embed, view=view, reply=False)
 
                 channel = self.bot.get_channel(self.error_channel)
 
                 embeds = []
                 embed = Embed()
-                embed.title = 'An error occurred.'
+                embed.title = 'Command Error'
+                embed.set_footer(text=f'ID: {ctx.message.id}')
                 if ctx.guild:
-                    embed.description = f'```yaml\nby: {ctx.author} (id: {ctx.author.id})'\
-                                        f'\nguild_id: {ctx.guild.id}'\
-                                        f'\nchannel_id: {ctx.channel.id}'\
-                                        f'\nmessage_id: {ctx.message.id}'\
-                                        f'\ncommand: {ctx.message.content[0:1500]}'\
-                                        f'\nis bot admin: {await ctx.emojify(ctx.me.guild_permissions.administrator, False)}\n```'
+                    embed.description = f'\n```prolog\nAuthor: {ctx.author} ({ctx.author.id})'\
+                                        f'\nGuild ID: {ctx.guild.id}'\
+                                        f'\nChannel ID: {ctx.channel.id}'\
+                                        f'\nCommand: {ctx.message.content[0:1500]}'\
+                                        f'\nAdmin: {await ctx.emojify(ctx.me.guild_permissions.administrator, False)}\n```'
                 else:
-                    embed.description = f'```yaml\nby: {ctx.author} (id: {ctx.author.id})'\
-                                        f'\ncommand: {ctx.message.content[0:1500]}\n```'  
+                    embed.description = f'```prolog\nID: {ctx.message.id}'\
+                                        f'\nAuthor: {ctx.author} (ID: {ctx.author.id})'\
+                                        f"\nCommand: {ctx.message.content[0:1500]}\n```"
 
                 traceback_embed = Embed(color=discord.Colour.red())
                 traceback_embed.title = 'Full Traceback'
@@ -327,11 +334,10 @@ class core(commands.Cog, description="Core events."):
                 embeds.append(traceback_embed)
                 
                 try:
-                    await channel.send(embeds=embeds)
+                    await self.bot.error_logger.send(channel.guild.get_role(DEVELOPER_ROLE).mention, embeds=embeds)
                 except (discord.Forbidden, discord.HTTPException):
-                    await channel.send(content='Traceback string was too long to output.', embed=embed, file=discord.File(io.StringIO(traceback_string)))
-                
-
+                    await self.bot.error_logger.send(content=f'{channel.guild.get_role(DEVELOPER_ROLE).mention} Traceback string was too long to output.', embed=embed, file=discord.File(io.StringIO(traceback_string), filename='traceback.py'))
+                return 
 
 def setup(bot):
     bot.add_cog(core(bot))
