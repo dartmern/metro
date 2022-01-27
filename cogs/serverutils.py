@@ -4,7 +4,6 @@ from typing import Optional, Union
 import discord
 import re
 from discord.embeds import EmptyEmbed
-from numpy import isin
 import pytz
 import unicodedata
 import unidecode
