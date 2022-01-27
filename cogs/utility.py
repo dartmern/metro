@@ -924,7 +924,8 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         if not records:
             return await ctx.send('You have no reminders.')
         
-        await ctx.paginate(compact=True, source=MySource(records, len(records)))
+        menu = SimplePages(source=MySource(records, len(records)), compact=True, ctx=ctx)
+        await menu.start()
     
 
     
