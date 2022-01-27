@@ -1342,8 +1342,8 @@ class moderation(commands.Cog, description="Moderation commands."):
             )
             raise commands.BadArgument(to_send)
 
-        created_at = ctx.message.created_at
-        if duration.dt < (created_at + datetime.timedelta(minutes=5)):
+        created_at = discord.utils.utcnow()
+        if duration.dt < (created_at + datetime.timedelta(minutes=4, seconds=59)):
             raise commands.BadArgument("Duration is too short. Must be at least 5 minutes.")
 
         if duration.dt > (created_at + datetime.timedelta(days=1)):
