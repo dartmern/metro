@@ -135,9 +135,9 @@ class core(commands.Cog, description="Core events."):
                 embeds.append(traceback_embed)
                 
                 try:
-                    await self.bot.error_logger.send(channel.guild.get_role(DEVELOPER_ROLE).mention, embeds=embeds)
+                    await self.bot.error_logger.send(f"{channel.guild.get_role(DEVELOPER_ROLE).mention} ID: {ctx.message.id}", embeds=embeds)
                 except (discord.Forbidden, discord.HTTPException):
-                    await self.bot.error_logger.send(content=f'{channel.guild.get_role(DEVELOPER_ROLE).mention} Traceback string was too long to output.', embed=embed, file=discord.File(io.StringIO(traceback_string), filename='traceback.py'))
+                    await self.bot.error_logger.send(content=f'{channel.guild.get_role(DEVELOPER_ROLE).mention} ID: {ctx.message.id} | Traceback string was too long to output.', embed=embed, file=discord.File(io.StringIO(traceback_string), filename='traceback.py'))
                 return 
 
         elif isinstance(error, commands.errors.BotMissingPermissions):
@@ -334,9 +334,9 @@ class core(commands.Cog, description="Core events."):
                 embeds.append(traceback_embed)
                 
                 try:
-                    await self.bot.error_logger.send(channel.guild.get_role(DEVELOPER_ROLE).mention, embeds=embeds)
+                    await self.bot.error_logger.send(f"{channel.guild.get_role(DEVELOPER_ROLE).mention} ID: {ctx.message.id}", embeds=embeds)
                 except (discord.Forbidden, discord.HTTPException):
-                    await self.bot.error_logger.send(content=f'{channel.guild.get_role(DEVELOPER_ROLE).mention} Traceback string was too long to output.', embed=embed, file=discord.File(io.StringIO(traceback_string), filename='traceback.py'))
+                    await self.bot.error_logger.send(content=f'{channel.guild.get_role(DEVELOPER_ROLE).mention} ID: {ctx.message.id} | Traceback string was too long to output.', embed=embed, file=discord.File(io.StringIO(traceback_string), filename='traceback.py'))
                 return 
 
 def setup(bot):
