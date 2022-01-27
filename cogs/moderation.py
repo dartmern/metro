@@ -1,5 +1,7 @@
 import asyncio
+from html import entities
 import shlex
+from click import exceptions
 import discord
 import copy
 
@@ -24,7 +26,7 @@ import asyncpg
 from humanize.time import precisedelta
 
 from utils import remind_utils
-from utils.useful import Cooldown, Embed
+from utils.useful import Cooldown, Embed, ts_now
 
 SUPPORT_ROLE = 814018291353124895
 
@@ -181,6 +183,15 @@ class MuteRoleView(discord.ui.View):
 class moderation(commands.Cog, description="Moderation commands."):
     def __init__(self, bot : MetroBot):
         self.bot = bot
+        self.actions = {
+            "ban" : discord.Colour.red(),
+            "mute" : discord.Colour.dark_orange(),
+            "kick" : discord.Colour.blue(),
+            "unmute" : discord.Colour.green(),
+            "tempban" : 0xFFC0CB,
+            "unban" : 0x1ABC9C,
+            "selfmute": discord.Colour.orange()
+        }
 
     @property
     def emoji(self) -> str:
@@ -1482,6 +1493,146 @@ class moderation(commands.Cog, description="Moderation commands."):
             await member.send(embed=e)
         except discord.HTTPException:
             pass # DMs off or somehow cannot dm them
+
+    async def get_modlog(self, guild: discord.Guild) -> discord.TextChannel:
+        modlog = await self.bot.db.fetchval('SELECT modlog FROM servers WHERE server_id = $1', guild.id)
+        if not modlog:
+            return None
+        return modlog
+
+    @commands.group(name='modlog', aliases=['ml'], invoke_without_command=True, case_insensitive=True)
+    @commands.has_guild_permissions(administrator=True)
+    @commands.bot_has_guild_permissions(administrator=True)
+    @commands.guild_only()
+    async def modlog(self, ctx: MyContext):
+        """Base command for modifying modlog."""
+        await ctx.help()
+
+    @modlog.command(name='channel')
+    @commands.guild_only()
+    @commands.has_guild_permissions(administrator=True)
+    @commands.bot_has_guild_permissions(administrator=True)
+    @commands.check(Cooldown(1, 5, 1, 3, commands.BucketType.user))
+    async def modlog_channel(self, ctx: MyContext, *, channel: Optional[discord.TextChannel]):
+        """Set a channel as the modlog.
+        
+        Run this command without arguments to remove the channel."""
+        if not channel:
+            await ctx.send("Removed the modlog channel.")
+            try:
+                await self.bot.db.execute("INSERT INTO servers (modlog, server_id) VALUES ($1, $2)", None, ctx.guild.id)
+            except asyncpg.exceptions.UniqueViolationError:
+                await self.bot.db.execute("UPDATE servers SET modlog = $1 WHERE server_id = $2", None, ctx.guild.id)
+            return 
+
+        message = await channel.send(
+            "\nThis channel has been set as the modlog channel."\
+            "\nAny moderation action will be logged here."\
+            f"\nYou can edit the reason with `{ctx.clean_prefix}reason <case> <reason>`"\
+            "\nIt is recommended to keep this channel visible for everyone but that's up to you."
+        )
+        await message.pin()
+        await ctx.send(f"Set {channel.mention} as the modlog channel.")
+
+        try:
+            await self.bot.db.execute("INSERT INTO servers (modlog, server_id) VALUES ($1, $2)", channel.id, ctx.guild.id)
+        except asyncpg.exceptions.UniqueViolationError:
+            await self.bot.db.execute("UPDATE servers SET modlog = $1 WHERE server_id = $2", channel.id, ctx.guild.id)
+
+    @commands.command(name='reason')
+    @commands.guild_only()
+    @commands.bot_has_guild_permissions(administrator=True)
+    @commands.has_guild_permissions(manage_guild=True)
+    @commands.check(Cooldown(1, 5, 1, 3, commands.BucketType.member))
+    async def reason(self, ctx: MyContext, case: int, *, reason: str):
+        """Set a reason for a modlog case."""
+        modlog = await self.get_modlog(ctx.guild)
+        if not modlog:
+            raise commands.BadArgument("Modlog channel was not found for this guild.")
+
+        query = """
+                SELECT (added_time, moderator, action, target, message_id)
+                FROM modlogs
+                WHERE guild_id = $1
+                AND case_number = $2
+                """
+        data = await self.bot.db.fetchval(query, ctx.guild.id, case)
+        if not data:
+            raise commands.BadArgument("That case number was not found.")
+
+        await ctx.message.delete(silent=True)
+        modlog = ctx.guild.get_channel(modlog)
+        message = modlog.get_partial_message(data[4])
+        if not message:
+            raise commands.BadArgument("This modlog case was found but I cannot find the message, perhaps it was deleted?")
+
+        member = await self.bot.try_user(data[3])
+        moderator = ctx.guild.get_member(data[1])
+
+        embed = discord.Embed(title=f"{data[2]} | case {case}", color=self.actions[data[2]])
+        embed.description = f"\n**Offender:** {member if member else 'Not Found.'} (<@{data[3]}>)"\
+                            f"\n**Reason:** {reason}"\
+                            f"\n**Responsible moderator:** {moderator if moderator else 'Not Found'}"\
+                            f"\n**Occurred:** {discord.utils.format_dt(pytz.utc.localize(data[0]), 'F')} ({discord.utils.format_dt(pytz.utc.localize(data[0]), 'R')})"
+        embed.set_footer(text=f"ID: {data[3]}")
+
+        await message.edit(embed=embed)
+
+    async def get_next_case(self, guild: discord.Guild):
+        row = await self.bot.db.fetchval("SELECT max(case_number) FROM modlogs WHERE guild_id = $1", guild.id)
+        return row or 1
+
+    async def create_modlog_case(
+        self, 
+        guild: discord.Guild, 
+        modlog: discord.TextChannel,
+        *, 
+        action: str, 
+        moderator: Union[discord.Member, discord.User],
+        reason: str,
+        target: Union[discord.Member, discord.User]
+        ):
+        case = await self.get_next_case(guild)
+
+        embed = discord.Embed(title=f"{action} | case {case}", color=self.actions[action])
+        embed.description = f"\n**Offender:** {target} ({target.mention})"\
+                            f"\n**Reason:** {reason}"\
+                            f"\n**Responsible moderator:** {moderator}"\
+                            f"\n**Occurred:** {ts_now('F')} ({ts_now('R')})"
+        embed.set_footer(text=f'ID: {target.id}')
+        
+        try:
+            message = await modlog.send(embed=embed)
+        except:
+            return # no perms somehow wtf
+        
+        query = """
+                INSERT INTO modlogs (guild_id, added_time, moderator, action, target, reason, case_number, message_id)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                """
+        await self.bot.db.execute(query, guild.id, discord.utils.utcnow().replace(tzinfo=None), moderator.id, action, target, reason, case, message.id)
+
+    @commands.Cog.listener()
+    async def on_member_ban(self, guild: discord.Guild, user: Union[discord.Member, discord.User]):
+        modlog = await self.get_modlog(guild)
+        if not modlog:
+            return # No modlog what do you expect
+
+        if not guild.me.guild_permissions.view_audit_log:
+            return # Not even the simpliest perms
+
+        entries = await guild.audit_logs(action=discord.AuditLogAction.ban, limit=5).flatten()
+        moderator = entries[0].user
+        reason = entries[0].reason 
+
+        modlog = guild.get_channel(modlog)
+
+        await self.create_modlog_case(guild, modlog, action="ban", moderator=moderator, reason=reason, target=user)
+
+        
+
+
+
 
 def setup(bot):
     bot.add_cog(moderation(bot))
