@@ -45,6 +45,45 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
     def emoji(self) -> str:
         return '📓'
 
+    @commands.Cog.listener()
+    async def on_lockdown_timer_complete(self, timer):
+        await self.bot.wait_until_ready()
+        guild_id, mod_id, channel_id = timer.args
+        perms = timer.kwargs["perms"]
+
+        guild = self.bot.get_guild(guild_id)
+        if guild is None:
+            # RIP
+            return
+
+        channel = self.bot.get_channel(channel_id)
+        if channel is None:
+            # RIP
+            return
+
+        moderator = guild.get_member(mod_id)
+        if moderator is None:
+            try:
+                moderator = await self.bot.fetch_user(mod_id)
+            except:
+                # request failed somehow
+                moderator = f"Mod ID {mod_id}"
+            else:
+                moderator = f"{moderator} (ID: {mod_id})"
+        else:
+            moderator = f"{moderator} (ID: {mod_id})"
+
+        reason = (
+            f"Automatic unlock from timer made on {timer.created_at} by {moderator}."
+        )
+        overwrites = channel.overwrites_for(guild.default_role)
+        overwrites.send_messages = perms
+        await channel.set_permissions(
+            guild.default_role,
+            overwrite=overwrites,
+            reason=reason,
+        )
+
     @commands.command(name="lockdown", brief="Lockdown a channel.", aliases=["lock"])
     @commands.has_permissions(send_messages=True, manage_channels=True)
     @commands.bot_has_permissions(send_messages=True, manage_channels=True)

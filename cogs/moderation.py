@@ -14,7 +14,7 @@ from utils.converters import ActionReason, MemberID
 from utils.checks import can_execute_action
 from utils.constants import SUPPORT_GUILD
 
-from typing import Dict, Optional, Union
+from typing import Any, Dict, Optional, Union
 from collections import Counter
 
 import pytz
@@ -186,11 +186,13 @@ class moderation(commands.Cog, description="Moderation commands."):
         self.actions = {
             "ban" : discord.Colour.red(),
             "mute" : discord.Colour.dark_orange(),
+            "selfmute": discord.Colour.orange(),
             "kick" : discord.Colour.blue(),
             "unmute" : discord.Colour.green(),
             "tempban" : 0xFFC0CB,
             "unban" : 0x1ABC9C,
-            "selfmute": discord.Colour.orange()
+            "selfmute": discord.Colour.orange(),
+            "softban": discord.Colour.dark_orange()
         }
 
     @property
@@ -244,59 +246,18 @@ class moderation(commands.Cog, description="Moderation commands."):
 
         await ctx.guild.kick(member, reason=converted_action)
 
+        modlog = await self.get_modlog(ctx.guild)
+        if modlog:
+            await self.create_modlog_case(ctx.guild, modlog, action='kick', moderator=ctx.author, reason=reason, target=member, duration=None)
+
         embed = Embed()
         embed.description = f'**{ctx.author.mention}** has kicked **{member}**'
         embed.set_footer(text=f'ID: {member.id} | DM successful: {success}')
 
         await ctx.send(embed=embed)
 
-    @commands.command(
-        name='softban'
-    )
-    @commands.has_guild_permissions(ban_members=True)
-    @commands.bot_has_guild_permissions(ban_members=True)
-    async def soft_ban(self, ctx : MyContext, member : Union[discord.Member, discord.User], delete_days : Optional[int] = 1, *, reason : Optional[str] = None):
-        """
-        Soft-bans a member from the server.
-        
-        A softban bans the user and immediately unbans them to delete their messages.
-        """
-        if delete_days and not 8 > delete_days > -1:
-            raise commands.BadArgument(f"{self.bot.cross} `delete_days` must be between 0 and 7 days.")
 
-        if member == ctx.author:
-            return await ctx.send(f"{self.bot.emotes['cross']} You cannot softban yourself.")
-        if member == ctx.me:
-            return await ctx.send(f'{self.bot.emotes["cross"]} You cannot softban me.')
-
-        if not can_execute_action(ctx, ctx.author, member):
-            return await ctx.send('You are not high enough in role hierarchy to ban this member.')
-
-        await ctx.guild.ban(member, reason=f'Soft-ban requested by: {ctx.author} (ID: {ctx.author.id})\n{f"Reason: {reason}" if reason else ""}')
-        await ctx.guild.unban(member, reason=f'Soft-ban requested by: {ctx.author} (ID: {ctx.author.id})\n{f"Reason: {reason}" if reason else ""}')
-
-        e = Embed()
-        e.colour = discord.Colour.green()
-        e.description = f"You were soft-banned in **{ctx.guild}** by {ctx.author}"
-        e.set_footer(text=f'{f"Reason: {reason}" if reason else "No reason provided..."}')
-
-        try:
-            await member.send(embed=e)
-            success = '✅'
-        except discord.HTTPException:
-            success = '❌'
-        
-        embed = Embed()
-        embed.description = f'**{ctx.author.mention}** has banned **{member}**\n{f"Reason: {reason}" if reason else "No reason provided..."}'
-        embed.set_footer(text=f'ID: {member.id} | DM successful: {success}')
-
-        await ctx.send(embed=embed)
-
-
-    @commands.command(
-        name="ban",
-        brief="Ban a member from the server."
-    )
+    @commands.command(name="ban", brief="Ban a member from the server.")
     @commands.has_guild_permissions(ban_members=True)
     @commands.bot_has_permissions(send_messages=True, ban_members=True)
     async def ban_cmd(
@@ -348,19 +309,19 @@ class moderation(commands.Cog, description="Moderation commands."):
         else:
             success = '❌'
 
-
         embed = Embed()
         embed.description = f'**{ctx.author.mention}** has banned **{member}**\n{real_reason}'
         embed.set_footer(text=f'ID: {member.id} | DM successful: {success}')
 
         await ctx.guild.ban(member, reason=converted_action, delete_message_days=delete_days)
+
+        modlog = await self.get_modlog(ctx.guild)
+        if modlog:
+            await self.create_modlog_case(ctx.guild, modlog, action='ban', moderator=ctx.author, reason=reason, target=member, duration=None)
+
         await ctx.send(embed=embed)
-          
 
-
-    @commands.command(name="unban",
-                      brief="Unban a previously banned member.",
-                      usage="<member>")
+    @commands.command(name="unban", brief="Unban a previously banned member.", usage="<member>")
     @commands.has_guild_permissions(ban_members=True)
     @commands.bot_has_permissions(send_messages=True, ban_members=True)
     @commands.check(Cooldown(2, 8, 2, 4, commands.BucketType.member))
@@ -379,9 +340,13 @@ class moderation(commands.Cog, description="Moderation commands."):
         for ban in bans:
             user = ban.user
             if user.id == member.id:
+                modlog = await self.get_modlog(ctx.guild)
+                if modlog:
+                    await self.create_modlog_case(ctx.guild, modlog, action='unban', moderator=ctx.author, reason=reason, target=user, duration=None)
+
                 await ctx.guild.unban(user, reason=reason)
-                await ctx.send(f"Unbanned **{user}**")
-                return
+                await ctx.send(f"Unbaned **{user}**")
+                
         raise commands.BadArgument(
             "**" + member.name + "** was not a previously banned member."
         )
@@ -431,9 +396,13 @@ class moderation(commands.Cog, description="Moderation commands."):
         
         d = await ctx.send("Banning...")
 
+        modlog = await self.get_modlog(ctx.guild)
+
         fails = 0
         for member in members:
             try:
+                if modlog:
+                    await self.create_modlog_case(ctx.guild, modlog, action='ban', moderator=ctx.author, reason=reason, target=member, duration=None)
                 await ctx.guild.ban(member, reason=reason)
             except:
                 fails += 1
@@ -530,7 +499,7 @@ class moderation(commands.Cog, description="Moderation commands."):
         if not can_execute_action(ctx, ctx.author, member):
             return await ctx.send(f'You are not high enough in role hierarchy to ban this member.')
 
-        embed = Embed()
+        embed = Embed(color=ctx.color)
         embed.description = (f'You were tempbanned from **{ctx.guild.name}**'
                                 f'\nExpires: {delta}'
                                 f'\nAction requested by: {ctx.author} (ID: {ctx.author.id})'
@@ -555,13 +524,15 @@ class moderation(commands.Cog, description="Moderation commands."):
                                                                     connection=self.bot.db,
                                                                     created=ctx.message.created_at
         )
+        modlog = await self.get_modlog(ctx.guild)
+        if modlog:
+            await self.create_modlog_case(ctx.guild, modlog, action='ban', moderator=ctx.author, reason=reason, target=member, duration=human_timedelta(duration.dt))
 
         embed = Embed()
         embed.description = f'**{ctx.author.mention}** has tempbanned **{member}**\nExpires: {delta}\n{real_reason}'
         embed.set_footer(text=f'ID: {member.id} | DM successful: {success}')
         
         await ctx.send(embed=embed)
-
 
     @commands.Cog.listener()
     async def on_tempban_timer_complete(self, timer):
@@ -591,48 +562,7 @@ class moderation(commands.Cog, description="Moderation commands."):
             await guild.unban(discord.Object(id=member_id), reason=reason)
         except discord.errors.NotFound:
             pass
-
-
-    @commands.Cog.listener()
-    async def on_lockdown_timer_complete(self, timer):
-        await self.bot.wait_until_ready()
-        guild_id, mod_id, channel_id = timer.args
-        perms = timer.kwargs["perms"]
-
-        guild = self.bot.get_guild(guild_id)
-        if guild is None:
-            # RIP
-            return
-
-        channel = self.bot.get_channel(channel_id)
-        if channel is None:
-            # RIP
-            return
-
-        moderator = guild.get_member(mod_id)
-        if moderator is None:
-            try:
-                moderator = await self.bot.fetch_user(mod_id)
-            except:
-                # request failed somehow
-                moderator = f"Mod ID {mod_id}"
-            else:
-                moderator = f"{moderator} (ID: {mod_id})"
-        else:
-            moderator = f"{moderator} (ID: {mod_id})"
-
-        reason = (
-            f"Automatic unlock from timer made on {timer.created_at} by {moderator}."
-        )
-        overwrites = channel.overwrites_for(guild.default_role)
-        overwrites.send_messages = perms
-        await channel.set_permissions(
-            guild.default_role,
-            overwrite=overwrites,
-            reason=reason,
-        )
         
-
     @staticmethod
     async def do_removal(ctx : MyContext, limit : int, predicate, *, before = None, after = None, bulk : bool = True):
         if limit > 2000:
@@ -1044,10 +974,7 @@ class moderation(commands.Cog, description="Moderation commands."):
         except:
             pass  
 
-
-    @commands.command(
-        name='muterole'
-    )
+    @commands.command(name='muterole')
     @commands.guild_only()
     @commands.has_guild_permissions(manage_roles=True)
     @commands.bot_has_guild_permissions(manage_roles=True, manage_channels=True)
@@ -1161,8 +1088,14 @@ class moderation(commands.Cog, description="Moderation commands."):
 
             await self.bot.db.fetchval("DELETE FROM reminders WHERE event = 'mute' AND extra->'kwargs'->>'user_id' = $1", str(user.id))
             try:
+                modlog = await self.get_modlog(ctx.guild)
+                if modlog:
+                    if endtime:
+                        await self.create_modlog_case(ctx.guild, modlog, action="mute", moderator=ctx.author, reason=real_reason, target=user, duration=ftime)
+                    else:
+                        await self.create_modlog_case(ctx.guild, modlog, action="mute", moderator=ctx.author, reason=real_reason, target=user, duration=None)
                 if endtime:
-                    timer = await reminder_cog.create_timer(
+                    await reminder_cog.create_timer(
                         duration.dt,
                         "mute",
                         ctx.guild.id,
@@ -1173,6 +1106,7 @@ class moderation(commands.Cog, description="Moderation commands."):
                         created=ctx.message.created_at
                     )
                     desc = f"for `{ftime}`"
+                    
                 else:
                     desc = ""
 
@@ -1261,6 +1195,10 @@ class moderation(commands.Cog, description="Moderation commands."):
             if not muterole in user.roles:
                 failed.append(f"• `{user}` is not even muted.")
                 continue
+
+            modlog = await self.get_modlog(ctx.guild)
+            if modlog:
+                await self.create_modlog_case(ctx.guild, modlog, action="unmute", moderator=ctx.author, reason=reason, target=user, duration=None)
 
             query = """
                     select (id, extra)
@@ -1430,6 +1368,9 @@ class moderation(commands.Cog, description="Moderation commands."):
 
         await self.bot.db.fetchval("DELETE FROM reminders WHERE event = 'mute' AND extra->'kwargs'->>'user_id' = $1", str(ctx.author.id))
         try:
+            modlog = await self.get_modlog(ctx.guild)
+            if modlog:
+                await self.create_modlog_case(ctx.guild, modlog, action="selfmute", moderator=ctx.author, reason="No reason provided... (Selfmute)", target=ctx.author, duration=ftime)
             await reminder_cog.create_timer(
                         duration.dt.replace(tzinfo=None),
                         "mute",
@@ -1449,15 +1390,17 @@ class moderation(commands.Cog, description="Moderation commands."):
         await self.bot.wait_until_ready()
         guild_id, mod_id, member_id = timer.args
 
-
-        print("fired")
         guild = self.bot.get_guild(guild_id)
         if guild is None:
             # RIP
             return
 
-        moderator = guild.get_member(mod_id)
-        if moderator is None:
+        member = guild.get_member(member_id)
+        if not member:
+            return  # They left or aren't cached so idrc
+
+        moderator_object = guild.get_member(mod_id)
+        if moderator_object is None:
             try:
                 moderator = await self.bot.fetch_user(mod_id)
             except:
@@ -1465,25 +1408,30 @@ class moderation(commands.Cog, description="Moderation commands."):
                 moderator = f"Mod ID {mod_id}"
             else:
                 moderator = f"{moderator} ({mod_id})"
-        else:
-            moderator = f"{moderator} ({mod_id})"
 
-        reason = (
-            f"Automatic unmute from timer made on {timer.created_at} by {moderator}."
-        )
-        member = guild.get_member(member_id)
-        if not member:
-            return  # They left...
+            reason = f"Automatic unmute from timer made on {timer.created_at} by {moderator}."
+
+            modlog = await self.get_modlog(guild)
+            if modlog:
+                await self.create_modlog_case(guild, modlog, action="unmute", moderator=mod_id, reason=reason, target=member, duration=None)
+        else:
+            reason = f"Automatic unmute from timer made on {timer.created_at} by {moderator_object}."
+            
+            modlog = await self.get_modlog(guild)
+            if modlog:
+                await self.create_modlog_case(guild, modlog, action="unmute", moderator=moderator_object, reason=reason, target=member, duration=None)
+
+            moderator = f"{moderator_object} ({mod_id})"
 
         muterole = await self.bot.db.fetchval("SELECT muterole FROM servers WHERE server_id = $1", guild.id)
         muterole = guild.get_role(muterole)
         if not muterole:
             return # Muted role somehow not found...
 
-        #try:
-        await member.remove_roles(muterole, reason=reason)
-        #except Exception:  # They probably removed roles lmao.
-        #return
+        try:
+            await member.remove_roles(muterole, reason=reason)
+        except Exception:  # They probably removed roles lmao.
+            return
         
         e = Embed()
         e.colour = discord.Colour.yellow()
@@ -1498,89 +1446,12 @@ class moderation(commands.Cog, description="Moderation commands."):
         modlog = await self.bot.db.fetchval('SELECT modlog FROM servers WHERE server_id = $1', guild.id)
         if not modlog:
             return None
-        return modlog
-
-    @commands.group(name='modlog', aliases=['ml'], invoke_without_command=True, case_insensitive=True)
-    @commands.has_guild_permissions(administrator=True)
-    @commands.bot_has_guild_permissions(administrator=True)
-    @commands.guild_only()
-    async def modlog(self, ctx: MyContext):
-        """Base command for modifying modlog."""
-        await ctx.help()
-
-    @modlog.command(name='channel')
-    @commands.guild_only()
-    @commands.has_guild_permissions(administrator=True)
-    @commands.bot_has_guild_permissions(administrator=True)
-    @commands.check(Cooldown(1, 5, 1, 3, commands.BucketType.user))
-    async def modlog_channel(self, ctx: MyContext, *, channel: Optional[discord.TextChannel]):
-        """Set a channel as the modlog.
-        
-        Run this command without arguments to remove the channel."""
-        if not channel:
-            await ctx.send("Removed the modlog channel.")
-            try:
-                await self.bot.db.execute("INSERT INTO servers (modlog, server_id) VALUES ($1, $2)", None, ctx.guild.id)
-            except asyncpg.exceptions.UniqueViolationError:
-                await self.bot.db.execute("UPDATE servers SET modlog = $1 WHERE server_id = $2", None, ctx.guild.id)
-            return 
-
-        message = await channel.send(
-            "\nThis channel has been set as the modlog channel."\
-            "\nAny moderation action will be logged here."\
-            f"\nYou can edit the reason with `{ctx.clean_prefix}reason <case> <reason>`"\
-            "\nIt is recommended to keep this channel visible for everyone but that's up to you."
-        )
-        await message.pin()
-        await ctx.send(f"Set {channel.mention} as the modlog channel.")
-
-        try:
-            await self.bot.db.execute("INSERT INTO servers (modlog, server_id) VALUES ($1, $2)", channel.id, ctx.guild.id)
-        except asyncpg.exceptions.UniqueViolationError:
-            await self.bot.db.execute("UPDATE servers SET modlog = $1 WHERE server_id = $2", channel.id, ctx.guild.id)
-
-    @commands.command(name='reason')
-    @commands.guild_only()
-    @commands.bot_has_guild_permissions(administrator=True)
-    @commands.has_guild_permissions(manage_guild=True)
-    @commands.check(Cooldown(1, 5, 1, 3, commands.BucketType.member))
-    async def reason(self, ctx: MyContext, case: int, *, reason: str):
-        """Set a reason for a modlog case."""
-        modlog = await self.get_modlog(ctx.guild)
-        if not modlog:
-            raise commands.BadArgument("Modlog channel was not found for this guild.")
-
-        query = """
-                SELECT (added_time, moderator, action, target, message_id)
-                FROM modlogs
-                WHERE guild_id = $1
-                AND case_number = $2
-                """
-        data = await self.bot.db.fetchval(query, ctx.guild.id, case)
-        if not data:
-            raise commands.BadArgument("That case number was not found.")
-
-        await ctx.message.delete(silent=True)
-        modlog = ctx.guild.get_channel(modlog)
-        message = modlog.get_partial_message(data[4])
-        if not message:
-            raise commands.BadArgument("This modlog case was found but I cannot find the message, perhaps it was deleted?")
-
-        member = await self.bot.try_user(data[3])
-        moderator = ctx.guild.get_member(data[1])
-
-        embed = discord.Embed(title=f"{data[2]} | case {case}", color=self.actions[data[2]])
-        embed.description = f"\n**Offender:** {member if member else 'Not Found.'} (<@{data[3]}>)"\
-                            f"\n**Reason:** {reason}"\
-                            f"\n**Responsible moderator:** {moderator if moderator else 'Not Found'}"\
-                            f"\n**Occurred:** {discord.utils.format_dt(pytz.utc.localize(data[0]), 'F')} ({discord.utils.format_dt(pytz.utc.localize(data[0]), 'R')})"
-        embed.set_footer(text=f"ID: {data[3]}")
-
-        await message.edit(embed=embed)
+        channel = guild.get_channel(modlog)
+        return channel if channel else None
 
     async def get_next_case(self, guild: discord.Guild):
         row = await self.bot.db.fetchval("SELECT max(case_number) FROM modlogs WHERE guild_id = $1", guild.id)
-        return row or 1
+        return row+1 if row is not None else 1
 
     async def create_modlog_case(
         self, 
@@ -1588,29 +1459,35 @@ class moderation(commands.Cog, description="Moderation commands."):
         modlog: discord.TextChannel,
         *, 
         action: str, 
-        moderator: Union[discord.Member, discord.User],
+        moderator: Union[discord.Member, discord.User, int],
         reason: str,
-        target: Union[discord.Member, discord.User]
+        target: Union[discord.Member, discord.User],
+        duration: Optional[str] = None
         ):
         case = await self.get_next_case(guild)
 
-        embed = discord.Embed(title=f"{action} | case {case}", color=self.actions[action])
-        embed.description = f"\n**Offender:** {target} ({target.mention})"\
-                            f"\n**Reason:** {reason}"\
-                            f"\n**Responsible moderator:** {moderator}"\
-                            f"\n**Occurred:** {ts_now('F')} ({ts_now('R')})"
+        description = ""
+        description += (
+            f"\n**Offender:** {target} ({target.mention})"\
+            f"\n**Reason:** {reason}"\
+        )
+        if duration:
+            description += f"\n**Duration:** {duration}"
+        description += (
+            f"\n**Responsible moderator:** {moderator}"\
+            f"\n**Occurred:** {ts_now('F')} ({ts_now('R')})"
+        )
+
+        embed = discord.Embed(title=f"{action} | case {case}", color=self.actions[action], description=description)          
         embed.set_footer(text=f'ID: {target.id}')
         
-        try:
-            message = await modlog.send(embed=embed)
-        except:
-            return # no perms somehow wtf
+        message = await modlog.send(embed=embed)
         
         query = """
-                INSERT INTO modlogs (guild_id, added_time, moderator, action, target, reason, case_number, message_id)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                INSERT INTO modlogs (guild_id, added_time, moderator, action, target, reason, case_number, message_id, duration)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                 """
-        await self.bot.db.execute(query, guild.id, discord.utils.utcnow().replace(tzinfo=None), moderator.id, action, target, reason, case, message.id)
+        await self.bot.db.execute(query, guild.id, discord.utils.utcnow().replace(tzinfo=None), moderator.id, action, target, reason, case, message.id, duration)
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild: discord.Guild, user: Union[discord.Member, discord.User]):
@@ -1625,12 +1502,37 @@ class moderation(commands.Cog, description="Moderation commands."):
         moderator = entries[0].user
         reason = entries[0].reason 
 
-        modlog = guild.get_channel(modlog)
+        await self.create_modlog_case(guild, modlog, action="ban", moderator=moderator, reason=reason, target=user, duration=None)
 
-        await self.create_modlog_case(guild, modlog, action="ban", moderator=moderator, reason=reason, target=user)
+    @commands.Cog.listener()
+    async def on_member_kick(self, guild: discord.Guild, user: Union[discord.Member, discord.User]):
+        modlog = await self.get_modlog(guild)
+        if not modlog:
+            return # No modlog what do you expect
 
-        
+        if not guild.me.guild_permissions.view_audit_log:
+            return # Not even the simpliest perms
 
+        entries = await guild.audit_logs(action=discord.AuditLogAction.kick, limit=5).flatten()
+        moderator = entries[0].user
+        reason = entries[0].reason 
+
+        await self.create_modlog_case(guild, modlog, action="kick", moderator=moderator, reason=reason, target=user, duration=None)
+
+    @commands.Cog.listener()
+    async def on_member_unban(self, guild: discord.Guild, user: discord.User):
+        modlog = await self.get_modlog(guild)
+        if not modlog:
+            return # No modlog what do you expect
+
+        if not guild.me.guild_permissions.view_audit_log:
+            return # Not even the simpliest perms
+
+        entries = await guild.audit_logs(action=discord.AuditLogAction.unban, limit=5).flatten()
+        moderator = entries[0].user
+        reason = entries[0].reason 
+
+        await self.create_modlog_case(guild, modlog, action="unban", moderator=moderator, reason=reason, target=user, duration=None)
 
 
 
