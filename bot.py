@@ -134,7 +134,7 @@ class MetroBot(commands.AutoShardedBot):
         intents = discord.Intents.all()
 
         allowed_mentions = discord.AllowedMentions(
-            roles=True, users=True, everyone=False, replied_user=False)
+            roles=False, users=True, everyone=False, replied_user=False)
 
         super().__init__(
             intents=intents,
