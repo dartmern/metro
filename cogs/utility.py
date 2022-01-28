@@ -1183,8 +1183,9 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
                 SELECT extra FROM reminders
                 WHERE id = $1
                 AND event = 'giveaway'
+                AND extra #>> '{args,0}' = $2
                 """
-        data = await self.bot.db.fetchrow(query, id) # Kinda have to do 2 queries to get the jump_url and proper data
+        data = await self.bot.db.fetchrow(query, id, str(ctx.guild.id)) # Kinda have to do 2 queries to get the jump_url and proper data
         if not data:
             return await ctx.send(f"Could not delete any giveaways with that ID.\nUse `{ctx.prefix}g list` to list all the running giveaways.")
 
@@ -1203,7 +1204,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
                 AND event = 'giveaway'
                 AND extra #>> '{args,1}' = $2;
                 """
-        status = await self.bot.db.execute(query, id, str(ctx.author.id))
+        await self.bot.db.execute(query, id, str(ctx.author.id))
 
         if self._current_timer and self._current_timer.id == id:
             self._task.cancel()
