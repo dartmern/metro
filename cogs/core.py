@@ -277,7 +277,7 @@ class core(commands.Cog, description="Core events."):
                 else:
                     return
             else:
-                await ctx.send(embed=em)
+                await ctx.send(embed=em, delete_after=error.retry_after)
 
         elif isinstance(error, commands.TooManyArguments):
             return await ctx.send("Too many arguments were passed to this command!")
