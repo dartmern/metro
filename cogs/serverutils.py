@@ -1,5 +1,6 @@
 import datetime
 import json
+import queue
 from typing import Optional, Union
 import discord
 import re
@@ -18,7 +19,7 @@ from utils.custom_context import MyContext
 from utils.remind_utils import FutureTime, UserFriendlyTime, human_timedelta
 from utils.useful import Cooldown, Embed
 from utils.parsing import RoleParser
-from cogs.utility import Timer
+from cogs.utility import Timer, utility
 
 EMOJI_RE = re.compile(r"(<(a)?:[a-zA-Z0-9_]+:([0-9]+)>)") 
 
@@ -44,6 +45,33 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
     @property
     def emoji(self) -> str:
         return '📓'
+
+    @commands.Cog.listener()
+    async def on_serverlockdown_timer_complete(self, timer):
+        await self.bot.wait_until_ready()
+        guild_id, author_id = timer.args
+
+        guild = self.bot.get_guild(guild_id)
+        if guild is None:
+            return # fuck
+
+        author = guild.get_member(author_id)
+        if not author:
+            author = await self.bot.try_user(author_id)
+            if not author:
+                author = "Mod ID: %s" % author_id
+            else:
+                author = f"{author} (ID: {author.id})"
+        else:
+            author = f"{author} (ID: {author.id})"
+
+        perms = guild.default_role.permissions
+        perms.update(send_messages=True)
+
+        try:
+            await guild.default_role.edit(permissions=perms, reason=f'Automatic unlockdown by {author}') 
+        except:
+            pass
 
     @commands.Cog.listener()
     async def on_lockdown_timer_complete(self, timer):
@@ -84,7 +112,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             reason=reason,
         )
 
-    @commands.command(name="lockdown", brief="Lockdown a channel.", aliases=["lock"])
+    @commands.group(name="lockdown", brief="Lockdown a channel.", aliases=["lock"], invoke_without_command=True, case_insensitive=True)
     @commands.has_permissions(send_messages=True, manage_channels=True)
     @commands.bot_has_permissions(send_messages=True, manage_channels=True)
     async def lockdown_cmd(
@@ -163,12 +191,65 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         
         ft = f" for {timefmt}" if timefmt else ""
         await message.edit(content=f'{self.bot.check} Channel {channel.mention} locked{ft}')
+
+    @lockdown_cmd.command(name='server', aliases=['guild'])
+    @commands.has_permissions(manage_guild=True)
+    @commands.bot_has_permissions(manage_roles=True)
+    async def lockdown_server(self, ctx: MyContext, *, 
+                        duration: UserFriendlyTime(commands.clean_content, default='\u2026') = None):
+        """Lockdown the entire guild."""
         
-    @commands.command(name="unlockdown", brief="Unlock a channel.", aliases=["unlock"])
+        async with ctx.typing():
+            query = """
+                    SELECT (id, extra)
+                    FROM reminders
+                    WHERE event = 'serverlockdown'
+                    AND extra->'kwargs'->>'guild_id' = $1;
+                    """
+            data = await self.bot.db.fetchval(query, str(ctx.guild.id))
+            if data:
+                raise commands.BadArgument("The server is already locked.")
+
+            overwrites = ctx.guild.default_role.permissions.send_messages
+            if overwrites is False:
+                raise commands.BadArgument("This server is already locked.")
+
+            reminder_cog: utility = self.bot.get_cog("utility")
+            if not reminder_cog:
+                raise commands.BadArgument("This feature is currently unavailable.")
+
+            message = await ctx.send("Locking the server...")
+
+            perms = ctx.guild.default_role.permissions
+            perms.update(send_messages=False)
+
+            await ctx.guild.default_role.edit(permissions=perms, reason=f'Server lockdown by {ctx.author} (ID: {ctx.author.id})') 
+
+            endtime = duration.dt.replace(tzinfo=None) if duration and duration.dt else None
+            if endtime:
+                await reminder_cog.create_timer(
+                    endtime,
+                    "serverlockdown",
+                    ctx.guild.id,
+                    ctx.author.id,
+                    guild_id=ctx.guild.id,
+                    connection=self.bot.db,
+                    created=discord.utils.utcnow().replace(tzinfo=None)
+                )      
+            
+            if duration and duration.dt:
+                timefmt = human_timedelta(endtime)
+            else:
+                timefmt = None
+
+            ft = f" for {timefmt}" if timefmt else ""
+            await message.edit(content=f"{self.bot.emotes['check']} Server locked{ft}")
+        
+    @commands.group(name="unlockdown", brief="Unlock a channel.", aliases=["unlock"], invoke_without_command=True, case_insensitive=True)
     @commands.has_permissions(manage_channels=True)
     @commands.bot_has_permissions(send_messages=True, manage_channels=True)
     async def unlockdown_cmd(self,
-                           ctx : MyContext,
+                           ctx : MyContext, *,
                            channel: discord.TextChannel = None):
         """
         Unlocks down a channel by changing permissions for the default role.
@@ -228,7 +309,42 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         await message.edit(
             content=f"{self.bot.check} Channel {channel.mention} unlocked."
         )
+
+    @unlockdown_cmd.command(name='server', aliases=['guild'])
+    @commands.has_permissions(manage_guild=True)
+    @commands.bot_has_permissions(manage_roles=True)
+    async def unlockdown_server(self, ctx: MyContext):
+        """Unlocked the entire guild."""
+
+        query = """
+                SELECT (id, extra)
+                FROM reminders
+                WHERE event = 'serverlockdown'
+                AND extra->'kwargs'->>'guild_id' = $1;
+                """
+        s = await self.bot.db.fetchval(query, str(ctx.guild.id))
+        if not s:
+            if ctx.guild.default_role.permissions.send_messages:
+                raise commands.BadArgument("This server is already unlocked.")
+            else:
+                pass
     
+        message = await ctx.send("Unlocking...")
+        if s:
+            task_id = s[0]
+            args_and_kwargs = json.loads(s[1])
+            
+            query = """
+                    DELETE FROM reminders
+                    WHERE id = $1
+                    """
+            await self.bot.db.execute(query, task_id)
+
+        perms = ctx.guild.default_role.permissions
+        perms.update(send_messages=True)
+
+        await ctx.guild.default_role.edit(permissions=perms, reason=f'Server unlockdown by {ctx.author} (ID: {ctx.author.id})') 
+        await message.edit(content=f'{self.bot.emotes["check"]} Unlocked the server.')
 
     async def cleanup_code(self, content):
         """Automatically removes code blocks from the code."""
