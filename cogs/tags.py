@@ -64,8 +64,8 @@ class tags(commands.Cog, description='Manage and create tags'):
             raise commands.BadArgument("This tag already exists.")
 
 
-        await self.bot.db.execute("INSERT INTO tags (name, guild_id, owner_id, text, uses, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-            id, name, ctx.guild.id, ctx.author.id, tag[0:1950], 0, discord.utils.utcnow().astimezone(datetime.timezone.utc).replace(tzinfo=None))
+        await self.bot.db.execute("INSERT INTO tags (name, guild_id, owner_id, text, uses, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+            name, ctx.guild.id, ctx.author.id, tag[0:1950], 0, discord.utils.utcnow().astimezone(datetime.timezone.utc).replace(tzinfo=None))
         
         await ctx.send("Created the tag \"{}\": \n> {}".format(name, tag[0:1950]))
 
