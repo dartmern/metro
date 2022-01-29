@@ -18,7 +18,7 @@ from utils.useful import Cooldown, Embed, ts_now
 
 
 def setup(bot: MetroBot):
-    bot.add_cog(basic_cog(bot))
+    bot.add_cog(giveaways(bot))
 
 class WinnerConverter(commands.Converter):
     async def convert(self, ctx : MyContext, argument : str):
@@ -66,7 +66,7 @@ class RequirementConverter(commands.Converter):
         
         return to_return 
 
-class basic_cog(commands.Cog, description='Create and manage giveaways.'):
+class giveaways(commands.Cog, description='Create and manage giveaways.'):
     def __init__(self, bot: MetroBot):
         self.bot = bot
 
