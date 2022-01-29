@@ -22,7 +22,7 @@ from difflib import get_close_matches
 from utils.custom_context import MyContext
 from utils.remind_utils import UserFriendlyTime
 from utils.useful import Embed, Cooldown, OldRoboPages, get_bot_uptime
-from utils.converters import BotUserObject
+from utils.converters import BotUserObject, DiscordCommand
 
 """
 Hey, I highly discourage you taking code from this cog
@@ -598,7 +598,7 @@ class ButtonMenuSrc(menus.ListPageSource):
         else:
             title = f"`{self.group}` `{self.group.signature}`"
 
-        embed = Embed(title=title, description=self.description)
+        embed = Embed(title=title, description=self.description, color=self.ctx.color)
 
 
         cooldown = discord.utils.find(lambda x: isinstance(x, Cooldown), self.group.checks) or Cooldown(1, 3, 1, 1,
@@ -996,6 +996,18 @@ class meta(commands.Cog, description='Get bot stats and information.'):
         """Privacy for the bot."""
         embed = discord.Embed(color=ctx.color, description="**Privacy Policy:** https://dartmern.github.io/metro/privacy/privacy/\n**Terms of Service:** https://dartmern.github.io/metro/privacy/tos")
         await ctx.reply(embed=embed)
+
+    @commands.command()
+    async def diagnose(self, ctx: MyContext, *, command: DiscordCommand):
+        """Diagnose a command."""
+
+        command: commands.Command = command
+        if await command.can_run(ctx):
+            check = self.bot.emotes['check']
+        else:
+            check = self.bot.emotes['cross']
+
+        await ctx.send(f"**{command.name} command**\n\nCan use: {check}\nCategory: {command.cog_name}")
 
     @commands.command(name='linecount', aliases=['lc'])
     @commands.check(Cooldown(1, 10, 1, 8, commands.BucketType.user))
