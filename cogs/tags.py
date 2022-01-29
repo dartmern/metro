@@ -56,9 +56,6 @@ class tags(commands.Cog, description='Manage and create tags'):
     async def tag_add(self, ctx: MyContext, name: commands.clean_content, *, tag: commands.clean_content):
         """Create/Add a new tag."""
 
-        if name in self.in_making:
-            raise commands.BadArgument("This tag is already being made.")
-
         if name in self.blacklisted_names:
             raise commands.BadArgument("This tag name is blacklisted. Aborting.")
 
