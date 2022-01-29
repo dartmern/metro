@@ -32,8 +32,7 @@ class TagSource(menus.ListPageSource):
 class tags(commands.Cog, description='Manage and create tags'):
     def __init__(self, bot: MetroBot):
         self.bot = bot
-        self.in_making = []
-        self.blacklisted_names = ['add', 'make', 'remove', 'owner', 'info', 'make', 'list', 'create', 'raw']
+        self.blacklisted_names = ['add', 'delete', 'remove', 'owner', 'info', 'list', 'create', 'raw']
 
     @property
     def emoji(self) -> str:
@@ -46,7 +45,7 @@ class tags(commands.Cog, description='Manage and create tags'):
         if not tag:
             return await ctx.help()
 
-        data = await self.bot.db.fetchval("SELECT (text, uses) FROM tags WHERE guild_id = $1 AND name = $2", ctx.guild.id, tag)
+        data = await self.bot.db.fetchval("SELECT (text, uses) FROM tags WHERE guild_id = $1 AND name = $2", ctx.guild.id, tag.lower())
         if not data:
             raise commands.BadArgument("Tag not found.")
         else:
@@ -67,10 +66,8 @@ class tags(commands.Cog, description='Manage and create tags'):
         if check:
             raise commands.BadArgument("This tag already exists.")
 
-        id = await self.bot.db.fetchval("SELECT MAX(id) FROM tags;")
-        id = id or 1
 
-        await self.bot.db.execute("INSERT INTO tags (id, name, guild_id, owner_id, text, uses, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+        await self.bot.db.execute("INSERT INTO tags (name, guild_id, owner_id, text, uses, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
             id, name, ctx.guild.id, ctx.author.id, tag[0:1950], 0, discord.utils.utcnow().astimezone(datetime.timezone.utc).replace(tzinfo=None))
         
         await ctx.send("Created the tag \"{}\": \n> {}".format(name, tag[0:1950]))
@@ -135,52 +132,3 @@ class tags(commands.Cog, description='Manage and create tags'):
         
         menu = SimplePages(source=TagSource(data, per_page=15), ctx=ctx, compact=True)
         await menu.start()
-
-    @tag.command(name='make', usage='')
-    async def tag_make(self, ctx: MyContext, *, args: Optional[str]):
-        """Make a tag by answering questions."""
-
-        if args:
-            raise commands.BadArgument("Please just call **%stag make**" % ctx.clean_prefix)
-
-        name_message = await ctx.send(f"What would you like to name this tag?")
-        try:
-            name = await self.bot.wait_for('message', check=lambda m: m.author == ctx.author and m.channel == ctx.channel, timeout=60)
-            await name_message.delete(silent=True)
-        except asyncio.TimeoutError:
-            await name_message.delete(silent=True)
-            raise commands.BadArgument("Timed out.")
-
-        if name.content in self.blacklisted_names:
-            raise commands.BadArgument("This tag name is blacklisted. Aborting.")
-
-        if name in self.in_making:
-            raise commands.BadArgument("This tag is already being made.")
-
-        check = await self.bot.db.fetchval("SELECT * FROM tags WHERE name = $1 AND guild_id = $2", name.content, ctx.guild.id)
-        if check:
-            raise commands.BadArgument("This tag already exists. Aborting.")
-        
-        self.in_making.append(name)
-        content_message = await ctx.send(f'Nice, your tag will be named "{name}"\nPlease enter the tag\'s content.')
-        try:
-            content = await self.bot.wait_for('message', check=lambda m: m.author == ctx.author and m.channel == ctx.channel, timeout=120)
-            await content_message.delete(silent=True)
-        except asyncio.TimeoutError:
-            await content_message.delete(silent=True)
-            raise commands.BadArgument("Timed out.")
-
-        id = await self.bot.db.fetchval("SELECT MAX(id) FROM tags;")
-        id = id or 1
-
-        await self.bot.db.execute("INSERT INTO tags (id, name, guild_id, owner_id, text, uses, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-            id, name.content, ctx.guild.id, ctx.author.id, content.content[0:1950], 0, discord.utils.utcnow().astimezone(datetime.timezone.utc).replace(tzinfo=None))
-        
-        await ctx.send("Created the tag \"{}\": \n> {}".format(name, content.content[0:1950]))
-        self.in_making.remove(name)
-
-
-
-
-        
-        
