@@ -466,7 +466,6 @@ class View(discord.ui.View):
         button.disabled = True
         button.style = discord.ButtonStyle.gray
         await self.message.edit(view=self)
-        await interaction.response.defer()
 
         self.command = self.command.name
 
@@ -478,10 +477,10 @@ class View(discord.ui.View):
             embed = Embed(color=self.ctx.color)
             embed.set_author(name='Here is my source code:')
             embed.description = str(f"My code is under the [**MPL**]({license_url}) license\n → {source_url}")
-            return await self.message.reply(embed=embed, view=StopView(self.ctx))
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
         if self.command == 'help':
-            src = type(self.bot.help_command)
+            src = type(self.ctx.bot.help_command)
             module = src.__module__
             filename = inspect.getsourcefile(src)
             obj = 'help'
@@ -490,7 +489,7 @@ class View(discord.ui.View):
             if obj is None:
                 embed = Embed(description=f"Take the [**entire reposoitory**]({source_url})", color=self.ctx.color)
                 embed.set_footer(text='Please make sure you follow the license.')
-                return await self.message.reply(embed=embed, view=StopView(self.ctx))
+                return await interaction.response.send_message(embed=embed, ephemeral=True)
 
             src = obj.callback.__code__
             module = obj.callback.__module__
@@ -511,7 +510,7 @@ class View(discord.ui.View):
         embed.description = f"**__My source code for `{str(obj)}` is located at:__**\n{final_url}"\
                 f"\n\nMy code is under licensed under the [**Mozilla Public License**]({license_url})."
 
-        await self.message.reply(embed=embed, view=StopView(self.ctx))
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 class HelpSource(menus.ListPageSource):
     def __init__(self, data, *, prefix):
