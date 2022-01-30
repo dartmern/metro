@@ -229,24 +229,6 @@ class extras(commands.Cog, description='Extra commands for your use.'):
         embed.set_image(url=url)
         await ctx.send(embed=embed)
 
-    @commands.command(name='poll')
-    @commands.check(Cooldown(1, 30, 1, 30, commands.BucketType.member))
-    async def poll(self, ctx: MyContext, *, question: commands.clean_content):
-        """
-        Simple yes/no poll with reactions.
-        
-        This command can be used regardless of permissions.
-
-        If you an admin that doesn't like this please use
-        `config disable ~ poll` to disable this command.
-        """
-
-        await ctx.message.delete(silent=True)
-
-        message = await ctx.send(f"**{ctx.author}** is asking a question: \n> {question}", reply=False)
-        await message.add_reaction('\U0001f44d')
-        await message.add_reaction('\U0001f44e')
-
     @commands.command()
     @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.user))
     async def google(self, ctx: MyContext, *, query: str):

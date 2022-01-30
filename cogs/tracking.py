@@ -162,28 +162,6 @@ class tracking(commands.Cog, description='Module for user and server stats.'):
                             f"\n*Message tracking started {discord.utils.format_dt(ctx.guild.me.joined_at, 'R')}*"
         await ctx.send(embed=embed)
 
-    @commands.command(aliases=['mg'])
-    @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.member))
-    async def messages_global(self, ctx : MyContext, *, user : Optional[discord.User] = commands.Option(description='User\'s messages you want to check')):
-        """
-        Show total amount of messages a user has sent globally.
-        
-        This only inculdes guilds I share with the user.
-        """
-        user = user or ctx.author
-        await ctx.defer()
-        query = """
-                SELECT COUNT(*) as c
-                FROM messages
-                WHERE author_id = $1
-                """
-        count = await self.bot.db.fetchval(query, user.id)
-
-        embed = Embed()
-        embed.colour = discord.Colour.yellow()
-        embed.description = f'**{user}** has sent **{count:,}** message{"" if count == 1 else "s"} globally'\
-                            f"\n*Message tracking started {discord.utils.format_dt(ctx.guild.me.joined_at, 'R')}*"
-        await ctx.send(embed=embed)
 
     @commands.command(aliases=['mt'])
     async def messages_total(self, ctx : MyContext):
