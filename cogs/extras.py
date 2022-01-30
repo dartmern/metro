@@ -77,16 +77,6 @@ class extras(commands.Cog, description='Extra commands for your use.'):
     def emoji(self) -> str:
         return '<:mplus:904450883633426553>'
 
-    @commands.command()
-    async def whatcog(self, ctx: MyContext, *, command: DiscordCommand) -> discord.Message:
-        """Show what cog a command belongs to."""
-        return await ctx.send(f"`{command.qualified_name}` belongs to the `{command.cog.qualified_name.capitalize() if command.cog else 'No Category'}` category")
-
-    @commands.command()
-    async def length(self, ctx: MyContext, *, object: str) -> discord.Message:
-        """Get the length of a string."""
-        return await ctx.send(f"That string is `{len(object)}` characters long.")
-
     @commands.command(aliases=['calc'])
     async def calculate(self, ctx, *, formula : str):
         """
