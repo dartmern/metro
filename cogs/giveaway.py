@@ -84,7 +84,8 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
         winners: int, 
         prize: str,
         message: str,
-        role: int) -> bool:
+        role: int,
+        requirements: int) -> bool:
         """Helper function to end a giveaway by it's giveaway id."""
 
         guild = self.bot.get_guild(guild_id)
@@ -102,13 +103,25 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
             except discord.NotFound:
                 return False
 
+        if requirements:
+            requirement = f"\nRequired Role: <@&{requirements}>"
+        else:
+            requirement = ""
+
+        required_role = guild.get_role(requirements)
+
         reactions = await _message.reactions[0].users().flatten()
         reactions.remove(guild.me)
+
+        for member in reactions:
+            if required_role not in member.roles:
+                reactions.remove(member) 
+
         if len(reactions) < 1:
             embed = discord.Embed(color=discord.Colour(3553599))
             embed.set_author(name=prize)
             embed.description = f"\nNot enough entrants to determine a winner!"\
-                                f"\nEnded {discord.utils.format_dt(discord.utils.utcnow(), 'R')}"\
+                                f"\nEnded {discord.utils.format_dt(discord.utils.utcnow(), 'R')}{requirement}"\
                                 f"\nHosted by: <@{host_id}>" # No API call needed
             embed.set_footer(text=f'{winners} winner{"s" if winners > 1 else ""}')
             
@@ -135,7 +148,7 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
 
                 try:
                     await member.send(embed=embed)
-                except discord.HTTPException:
+                except:
                     pass
 
                 winners_string.append(winner.id)
@@ -143,7 +156,7 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
             embed = discord.Embed(color=discord.Color(3553599))
             embed.set_author(name=prize)
             embed.description = f"\nWinner{'s: ' if len(winners_string) > 1 else ':'} {', '.join(f'<@{users}>' for i, users in enumerate(winners_string))}"\
-                                f"\nEnded {ts_now('R')}"\
+                                f"\nEnded {ts_now('R')}{requirement}"\
                                 f"\nHosted by: <@{host_id}>" # No API call needed
             embed.set_footer(text=f'{winners} winner{"s" if winners > 1 else ""}')
 
@@ -189,64 +202,77 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
         winners : Optional[WinnerConverter] = 1, *, prize : str):
         """
         Start a giveaway!
+
+        All flags are **optional** and by default the giveaway is sent to the current channel.
         
         Vaild Flags:
         `--ping`: A mention or name of a role to ping
         `--message`: A string to include as the giveaway message
         `--pin`: Pin the giveaway after creating it
+        `--channel`: A text channel to send this giveaway to
         `--require`: A mention, name or id of a role that's required to join
 
         For additional help join my [support server](https://discord.gg/2ceTMZ9qJh)
         """
-        await ctx.defer()
 
         prize = prize.split('--')[0]
         flags = ctx.message.content
-
 
         parser = NoExitParser()
         parser.add_argument('--ping', nargs='*', type=str, default=None)
         parser.add_argument('--message', nargs='*', type=str, default=None)
         parser.add_argument('--pin', action='store_true', default=False)
+        parser.add_argument('--channel', nargs='*', type=str, default=None)
+        parser.add_argument('--require', nargs="*", type=str, default=None)
         
-        role, message, pin = None, None, False
+        role, message, pin, channel = None, None, False, ctx.channel
         try:
             flags = vars(parser.parse_known_args(flags.split())[0])
             
             if flags['ping']:
                 try:
-                    role = await RoleConverter().convert(ctx, str(flags['ping']))
+                    role = await RoleConverter().convert(ctx, str(flags['ping'][0]))
                 except Exception as e:
                     return await ctx.send(str(e))
             if flags['message']:
                 message = ' '.join(list(flags['message']))
             if flags['pin']:
                 pin = True
-
+            if flags['channel']:
+                try:
+                    channel = await commands.TextChannelConverter().convert(ctx, str(flags['channel'][0]))
+                except Exception as e:
+                    return await ctx.send(str(e))
+            if flags['require']:
+                try:
+                    require = await RoleConverter().convert(ctx, str(flags['require'][0]))
+                except Exception as e:
+                    return await ctx.send(str(e))
+                
         except Exception as e:
-            return await ctx.send(str(e))
+            return await ctx.send(f"Invaild flags: {str(e)}")
 
         if duration.dt < (ctx.message.created_at + datetime.timedelta(seconds=5)):
             return await ctx.send("Duration is too short. Must be at least 5 seconds.")
 
-        #if requirements:
-            #requirement = f"\nRequired Role{'s:' if len(requirements) > 1 else ':'} {', '.join(f'<@&{users}>' for i, users in enumerate(requirements))}"
-        #else:
-            #requirement = ""
+        if require:
+            requirement = f"\nRequired Role: {require.mention}"
+        else:
+            requirement = ""
 
         e = Embed()
         e.colour = 0xe91e63
         e.set_author(name=prize[0:40])
         e.description = f"\nReact with \U0001f389 to enter!"\
-                        f"\nEnds {discord.utils.format_dt(duration.dt, 'R')} ({discord.utils.format_dt(duration.dt, 'f')})"\
+                        f"\nEnds {discord.utils.format_dt(duration.dt, 'R')} ({discord.utils.format_dt(duration.dt, 'f')}){requirement}"\
                         f"\nHosted by: {ctx.author.mention}"
         e.set_footer(text=f'{winners} winner{"s" if winners > 1 else ""}')
 
         embeds = [e] if not message else [e, discord.Embed(description=message[0:1500], color=discord.Colour.blue())]
 
-        giveaway_message = await ctx.send(f":tada: **GIVEAWAY!** :tada: \n{role.mention if role else ''}",embeds=embeds, allowed_mentions=discord.AllowedMentions.all(), reply=None)
+        giveaway_message = await channel.send(f":tada: **GIVEAWAY!** :tada: \n{role.mention if role else ''}",embeds=embeds, allowed_mentions=discord.AllowedMentions.all())
         await giveaway_message.add_reaction('\U0001f389')
-        if pin is True and ctx.channel.permissions_for(ctx.guild.me).manage_messages:
+        if pin is True and channel.permissions_for(ctx.guild.me).manage_messages:
             await giveaway_message.pin()
 
         reminder_cog = self.bot.get_cog("utility")
@@ -259,13 +285,13 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
                 "giveaway",
                 ctx.guild.id,
                 ctx.author.id,
-                ctx.channel.id,
+                channel.id,
                 giveaway_message.id,
                 winners=winners,
                 prize=prize,
                 message=message,
                 role=None if role == None else role.id,
-                #requirements=requirements,
+                requirements=require.id,
                 connection=self.bot.db
             )
         except Exception as e:
@@ -276,8 +302,8 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
             return
         e.set_footer(text=f'{winners} winner{"s" if winners > 1 else ""} | Giveaway ID: {timer.id}')
 
-        return await giveaway_message.edit(f":tada: **GIVEAWAY!** :tada:\n{role.mention if role else ''}",embeds=embeds, allowed_mentions=discord.AllowedMentions.all())
-        
+        await giveaway_message.edit(f":tada: **GIVEAWAY!** :tada:\n{role.mention if role else ''}",embeds=embeds, allowed_mentions=discord.AllowedMentions.all())
+        return await ctx.check()
 
     @giveaway.command(name='list')
     @commands.check(Cooldown(4, 8, 6, 8, commands.BucketType.member))
@@ -363,6 +389,7 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
 
         _message = extra['kwargs'].get("message")
         role = extra['kwargs'].get("role")
+        requirements = extra['kwargs'].get('requirements')
 
         query = """
                 DELETE FROM reminders
@@ -388,7 +415,8 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
                         winners=winners,
                         prize=prize,
                         message=_message,
-                        role=role
+                        role=role,
+                        requirements=requirements
                     )
         if status is False:
             return await ctx.send("Failed to end that giveaway. The giveaway has been deleted from my database.")
@@ -403,6 +431,7 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
 
         _message = timer.kwargs.get('message')
         role = timer.kwargs.get('role')
+        requirements = timer.kwargs.get('requirements')
 
         await self.bot.wait_until_ready()
 
@@ -414,5 +443,6 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
             winners=winners,
             prize=prize,
             message=_message,
-            role=role
+            role=role,
+            requirements=requirements
         )
