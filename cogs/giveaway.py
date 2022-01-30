@@ -6,6 +6,7 @@ from typing import Dict, List, Optional
 import discord
 from discord.ext import commands
 import argparse
+from numpy import isin
 
 import pytz
 import re
@@ -73,6 +74,11 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
     @property
     def emoji(self) -> str:
         return '\U0001f389'
+
+    @commands.Cog.listener()
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+        """Handle the requirement giveaways."""
+        pass
     
     async def end_giveaway(
         self, 
@@ -114,7 +120,10 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
         reactions.remove(guild.me)
 
         for member in reactions:
-            if required_role not in member.roles:
+            if isinstance(member, discord.User): # meaning they left the server
+                reactions.remove(member)
+                continue
+            if required_role is not None and required_role not in member.roles:
                 reactions.remove(member) 
 
         if len(reactions) < 1:
@@ -131,26 +140,19 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
             view.add_item(discord.ui.Button(label='Jump to giveaway', url=_message.jump_url))
 
             await _message.edit(embeds=embeds, content=f"\U0001f389\U0001f389 **GIVEAWAY ENDED** \U0001f389\U0001f389\n{'<@&%s>' % role if role else ''}", allowed_mentions=discord.AllowedMentions.all())
-            await _message.channel.send(f"There were no vaild entries for the **{prize}** giveaway.", view=view)
+            await _message.channel.send(f"There were no vaild entries for the **{prize}** giveaway.\nThis may be due to the requirement to join or users joined then left the server.", view=view)
             return True
         else:
             winners_string = []
             winners_list = reactions
+            total_entires = len(winners_list)
+
+            if winners > len(winners_list):
+                winners = len(winners_list)
 
             for _ in range(winners):
                 winner = random.choice(winners_list)
                 winners_list.pop(winners_list.index(winner))
-
-                member = guild.get_member(winner.id)
-
-                embed = discord.Embed(
-                    color=discord.Colour.green(), description=f"You won the giveaway for [{prize}]({_message.jump_url} \"Jump to message\") in **{guild.name}**")
-
-                try:
-                    await member.send(embed=embed)
-                except:
-                    pass
-
                 winners_string.append(winner.id)
             
             embed = discord.Embed(color=discord.Color(3553599))
@@ -167,7 +169,8 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
 
             await _message.edit(embeds=embeds, content=f"\U0001f389\U0001f389 **GIVEAWAY ENDED** \U0001f389\U0001f389\n{'<@&%s>' % role if role else ''}", allowed_mentions=discord.AllowedMentions.all())
             await _message.channel.send(
-                f'{", ".join(f"<@{users}>" for i, users in enumerate(winners_string))} {"have" if len(winners_string) > 1 else "has"} won the giveaway for **{prize}**',
+                f'{", ".join(f"<@{users}>" for i, users in enumerate(winners_string))} {"have" if len(winners_string) > 1 else "has"} won the giveaway for **{prize}**'\
+                f'\nThere was **{total_entires}** vaild ent{"ries" if total_entires > 1 else "ry"} making the chances to win **{round((winners/total_entires)*100, 2)}%**',
                 view=view)
             return True
 
@@ -225,7 +228,7 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
         parser.add_argument('--channel', nargs='*', type=str, default=None)
         parser.add_argument('--require', nargs="*", type=str, default=None)
         
-        role, message, pin, channel = None, None, False, ctx.channel
+        role, message, pin, channel, require = None, None, False, ctx.channel, None
         try:
             flags = vars(parser.parse_known_args(flags.split())[0])
             
@@ -291,7 +294,7 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
                 prize=prize,
                 message=message,
                 role=None if role == None else role.id,
-                requirements=require.id,
+                requirements=require.id if require else None,
                 connection=self.bot.db
             )
         except Exception as e:
