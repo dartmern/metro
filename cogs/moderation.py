@@ -289,6 +289,7 @@ class moderation(commands.Cog, description="Moderation commands."):
             return await ctx.send(f'{self.bot.emotes["cross"]} You cannot ban me.')
 
         if member in ctx.guild.members:
+            member = ctx.guild.get_member(member.id)
             if not can_execute_action(ctx, ctx.author, member):
                 return await ctx.send('You are not high enough in role hierarchy to ban this member.')
 
