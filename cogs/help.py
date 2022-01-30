@@ -467,7 +467,7 @@ class View(discord.ui.View):
         button.style = discord.ButtonStyle.gray
         await self.message.edit(view=self)
 
-        self.command = self.command.name
+        self.command = self.command.qualified_name
 
         source_url = 'https://github.com/dartmern/metro'
         license_url = 'https://github.com/dartmern/metro/blob/master/LICENSE'
