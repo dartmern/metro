@@ -287,7 +287,7 @@ class core(commands.Cog, description="Core events."):
             return
 
         elif isinstance(error, commands.errors.DisabledCommand):
-            return await ctx.send(str(error))
+            return await ctx.send(f"The command `{ctx.command}` is currently globally disabled.")
 
         elif isinstance(error, commands.BadArgument):
             return await ctx.send(str(error))
