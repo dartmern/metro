@@ -6,6 +6,7 @@ from typing import Dict, Optional
 import discord
 from discord.ext import commands
 import argparse
+import asyncio
 
 import pytz
 import re
@@ -13,7 +14,7 @@ import re
 from bot import MetroBot
 from utils.converters import RoleConverter
 from utils.custom_context import MyContext
-from utils.remind_utils import FutureTime
+from utils.remind_utils import FutureTime, UserFriendlyTime
 from utils.useful import Cooldown, Embed, ts_now
 
 
@@ -186,9 +187,116 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
     async def giveaway_make(self, ctx: MyContext):
         """Make a giveaway interactively."""
 
-        await ctx.send("work in progress stop running this command")
-    
+        reminder_cog = self.bot.get_cog("utility")
+        if reminder_cog is None:
+            raise commands.BadArgument("This feature is currently unavailable.")
+        
+        embed = discord.Embed(description=f"Please enter a duration for this giveaway.\nThe input can be any direct date (e.g. YYYY-MM-DD) or a human readable offset.", color=ctx.color)
+        embed.set_footer(text=f'You can type {ctx.prefix}abort to abort giveaway creation.')
+        first_message = await ctx.send(embed=embed)
 
+        try:
+            m = await self.bot.wait_for('message', timeout=30, check=lambda x: x.author == ctx.author and x.channel == ctx.channel)
+            await first_message.delete(silent=True)
+        except asyncio.TimeoutError:
+            await first_message.delete(silent=True)
+            return await ctx.send("Timed out.")
+
+        if m.content == ctx.prefix + 'abort':
+            raise commands.BadArgument("Aborting...")
+
+        converted_time = await FutureTime(m.content).convert(ctx, m.content)
+        if converted_time.dt < (discord.utils.utcnow() + datetime.timedelta(seconds=5)):
+            return await ctx.send("Duration is too short. Must be at least 5 seconds.")
+        if converted_time.dt > (discord.utils.utcnow() + datetime.timedelta(days=60)):
+            return await ctx.send("Duration is too long. Must be less than 60 days.")
+        
+        embed = discord.Embed(description=f"Please enter the amount of winners.\nYou may suffix it with a `w` or just enter a integer 1-20", color=ctx.color)
+        embed.set_footer(text=f'You can type {ctx.prefix}abort to abort giveaway creation.')
+        second_message = await ctx.send(embed=embed)
+
+        try:
+            m = await self.bot.wait_for('message', timeout=30, check=lambda x: x.author == ctx.author and x.channel == ctx.channel)
+            await second_message.delete(silent=True)
+        except asyncio.TimeoutError:
+            await second_message.delete(silent=True)
+            return await ctx.send("Timed out.")
+
+        if m.content == ctx.prefix + 'abort':
+            raise commands.BadArgument("Aborting...")
+
+        winners = await WinnerConverter().convert(ctx, m.content)
+        
+        embed = discord.Embed(description=f"Please enter the prize your giving away.", color=ctx.color)
+        embed.set_footer(text=f'You can type {ctx.prefix}abort to abort giveaway creation.')
+        third_message = await ctx.send(embed=embed)
+
+        try:
+            m = await self.bot.wait_for('message', timeout=60, check=lambda x: x.author == ctx.author and x.channel == ctx.channel)
+            await third_message.delete(silent=True)
+        except asyncio.TimeoutError:
+            await third_message.delete(silent=True)
+            return await ctx.send("Timed out.")
+
+        if m.content == ctx.prefix + 'abort':
+            raise commands.BadArgument("Aborting...")
+
+        prize = m.content
+
+        embed = discord.Embed(description=f"Please enter the channel this giveaway should be hosted in.", color=ctx.color)
+        embed.set_footer(text=f'You can type {ctx.prefix}abort to abort giveaway creation.')
+        fourth_message = await ctx.send(embed=embed)
+
+        try:
+            m = await self.bot.wait_for('message', timeout=60, check=lambda x: x.author == ctx.author and x.channel == ctx.channel)            
+            await fourth_message.delete(silent=True)
+        except asyncio.TimeoutError:
+            await fourth_message.delete(silent=True)
+            return await ctx.send("Timed out.")
+
+        if m.content == ctx.prefix + 'abort':
+            raise commands.BadArgument("Aborting...")
+
+        channel = await commands.TextChannelConverter().convert(ctx, m.content)
+
+        e = Embed()
+        e.colour = 0xe91e63
+        e.set_author(name=prize[0:40])
+        e.description = f"\nReact with \U0001f389 to enter!"\
+                        f"\nEnds {discord.utils.format_dt(converted_time.dt, 'R')} ({discord.utils.format_dt(converted_time.dt, 'f')})"\
+                        f"\nHosted by: {ctx.author.mention}"
+        e.set_footer(text=f'{winners} winner{"s" if winners > 1 else ""}')
+
+        giveaway_message = await channel.send(f":tada: **GIVEAWAY!** :tada:",embeds=[e], allowed_mentions=discord.AllowedMentions.all())
+        await giveaway_message.add_reaction('\U0001f389')
+
+        try:
+            timer = await reminder_cog.create_timer(
+                converted_time.dt,
+                "giveaway",
+                ctx.guild.id,
+                ctx.author.id,
+                channel.id,
+                giveaway_message.id,
+                winners=winners,
+                prize=prize,
+                message=None,
+                role=None,
+                requirements=None,
+                connection=self.bot.db
+            )
+        except Exception as e:
+            traceback_string = "".join(traceback.format_exception(
+                    etype=None, value=e, tb=e.__traceback__)
+            )
+            await ctx.send(str(traceback_string))
+            return  
+
+        e.set_footer(text=f'{winners} winner{"s" if winners > 1 else ""} | Giveaway ID: {timer.id}')
+
+        await giveaway_message.edit(f":tada: **GIVEAWAY!** :tada:",embeds=[e], allowed_mentions=discord.AllowedMentions.all())
+        return await ctx.send(f"Giveaway created in {channel.mention}")
+              
     @giveaway.command(
         name='start',
         extras={
@@ -254,8 +362,10 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
         except Exception as e:
             return await ctx.send(f"Invaild flags: {str(e)}")
 
-        if duration.dt < (ctx.message.created_at + datetime.timedelta(seconds=5)):
+        if duration.dt < (discord.utils.utcnow() + datetime.timedelta(seconds=5)):
             return await ctx.send("Duration is too short. Must be at least 5 seconds.")
+        if duration.dt > (discord.utils.utcnow() + datetime.timedelta(days=60)):
+            return await ctx.send("Duration is too long. Must be less than 60 days.")
 
         if require:
             requirement = f"\nRequired Role: {require.mention}"
