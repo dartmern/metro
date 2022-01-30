@@ -2,11 +2,10 @@ import datetime
 import json
 import random
 import traceback
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 import discord
 from discord.ext import commands
 import argparse
-from numpy import isin
 
 import pytz
 import re
@@ -14,7 +13,7 @@ import re
 from bot import MetroBot
 from utils.converters import RoleConverter
 from utils.custom_context import MyContext
-from utils.remind_utils import FutureTime, plural
+from utils.remind_utils import FutureTime
 from utils.useful import Cooldown, Embed, ts_now
 
 

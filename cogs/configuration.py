@@ -6,19 +6,18 @@ import asyncpg
 
 from collections import defaultdict
 
-from typing import Optional, Union
+from typing import Optional
 
 from bot import MetroBot
 
 #Arg parsing stuff
-from cogs.moderation import Arguments
 import shlex
 from utils.checks import check_dev
 
-from utils.converters import ChannelOrRoleOrMember, DiscordCommand, RoleConverter
+from utils.converters import ChannelOrRoleOrMember, DiscordCommand
 from utils.useful import Embed
 from utils.custom_context import MyContext
-from utils.decos import is_dev, is_support
+from utils.decos import is_dev
 
 def mod_check():
     def predicate(ctx: MyContext):
