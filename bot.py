@@ -183,6 +183,7 @@ class MetroBot(commands.AutoShardedBot):
 
         #Loggers
         self.error_logger = discord.Webhook.from_url(webhooks['error_handler'], session=self.session)
+        self.status_logger = discord.Webhook.from_url(webhooks['status_logger'], session=self.session)
 
     @property
     def donate(self) -> str:
@@ -211,6 +212,22 @@ class MetroBot(commands.AutoShardedBot):
     @property
     def support(self) -> str:
         return SUPPORT_URL
+
+    async def on_shard_disconnect(self, shard_id: int):
+        embed = discord.Embed(color=discord.Color.red(), description=f"{self.emotes['dnd']} Shard #{shard_id} has disconnected.")
+        await self.status_logger.send(embed=embed)
+
+    async def on_shard_ready(self, shard_id: int):
+        embed = discord.Embed(color=discord.Color.green(), description=f"{self.emotes['online']} Shard #{shard_id} is ready.")
+        await self.status_logger.send(embed=embed)
+
+    async def on_shard_resumed(self, shard_id: int):
+        embed = discord.Embed(color=discord.Color.green(), description=f"{self.emotes['online']} Shard #{shard_id} has resumed.")
+        await self.status_logger.send(embed=embed)
+
+    async def on_shard_connect(self, shard_id: int):
+        embed = discord.Embed(color=discord.Color.orange(), description=f"{self.emotes['idle']} Shard #{shard_id} has connected.")
+        await self.status_logger.send(embed=embed)
 
     async def add_to_guildblacklist(self, guild: discord.Guild, *, reason: Optional[str] = None, ctx: MyContext, silent: bool = False):
         if guild.id == SUPPORT_GUILD:
