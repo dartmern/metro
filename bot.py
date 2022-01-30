@@ -16,7 +16,7 @@ import mystbin
 import aiohttp
 import logging
 from utils.checks import check_dev
-from utils.constants import BOT_LOGGER_CHANNEL, DEFAULT_INVITE, DEVELOPER_IDS, DOCUMENTATION, EMOTES, GITHUB_URL, PATREON_URL, SLASH_GUILDS, SUPPORT_GUILD, SUPPORT_STAFF, SUPPORT_URL
+from utils.constants import BOT_LOGGER_CHANNEL, DEFAULT_INVITE, DEVELOPER_IDS, DOCUMENTATION, EMOTES, GITHUB_URL, PATREON_URL, SLASH_GUILDS, SUPPORT_GUILD, SUPPORT_STAFF, SUPPORT_URL, TEST_BOT_ID
 from utils.remind_utils import human_timedelta
 
 from utils.useful import Cooldown, ts_now
@@ -180,6 +180,7 @@ class MetroBot(commands.AutoShardedBot):
         
         #Emojis
         self.emotes = EMOTES
+        self.TEST_BOT_ID = TEST_BOT_ID
 
         #Loggers
         self.error_logger = discord.Webhook.from_url(webhooks['error_handler'], session=self.session)
@@ -214,18 +215,26 @@ class MetroBot(commands.AutoShardedBot):
         return SUPPORT_URL
 
     async def on_shard_disconnect(self, shard_id: int):
+        if self.user.id == self.TEST_BOT_ID:
+            return 
         embed = discord.Embed(color=discord.Color.red(), description=f"{self.emotes['dnd']} Shard #{shard_id} has disconnected.")
         await self.status_logger.send(embed=embed)
 
     async def on_shard_ready(self, shard_id: int):
+        if self.user.id == self.TEST_BOT_ID:
+            return 
         embed = discord.Embed(color=discord.Color.green(), description=f"{self.emotes['online']} Shard #{shard_id} is ready.")
         await self.status_logger.send(embed=embed)
 
     async def on_shard_resumed(self, shard_id: int):
+        if self.user.id == self.TEST_BOT_ID:
+            return 
         embed = discord.Embed(color=discord.Color.green(), description=f"{self.emotes['online']} Shard #{shard_id} has resumed.")
         await self.status_logger.send(embed=embed)
 
     async def on_shard_connect(self, shard_id: int):
+        if self.user.id == self.TEST_BOT_ID:
+            return 
         embed = discord.Embed(color=discord.Color.orange(), description=f"{self.emotes['idle']} Shard #{shard_id} has connected.")
         await self.status_logger.send(embed=embed)
 
