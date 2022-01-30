@@ -152,7 +152,7 @@ class MuteRoleView(discord.ui.View):
             return
         
         # Remove from db
-        await self.ctx.bot.db.execute("DELETE FROM servers WHERE muterole = $1", self.role_id)
+        await self.ctx.bot.db.execute("UPDATE servers SET muterole = $1 WHERE server_id = $2", None, self.ctx.guild.id)
 
         await self.ctx.reply(f":wastebasket: Removed the existing mutedrole for this guild.")
 
