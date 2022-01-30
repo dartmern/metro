@@ -69,6 +69,8 @@ class stars(commands.Cog, description='Manage and create starboard commands. \nT
 
         self._about_to_be_deleted = set()
 
+        self.spoilers = re.compile(r'\|\|(.+?)\|\|')
+
 
     @property
     def emoji(self) -> str:
