@@ -42,8 +42,7 @@ class StarboardConfig:
     def __init__(self, *, guild_id, bot, record=None):
         self.id = guild_id
         self.bot = bot
-        self.spoilers = re.compile(r'\|\|(.+?)\|\|')
-
+        
         if record:
             self.channel_id = record['channel_id']
             self.threshold = record['threshold']
