@@ -1,8 +1,11 @@
+import inspect
 import itertools
+import os
 from typing import Dict, List, Optional
 
 from discord.ext.commands.help import HelpCommand
 from bot import MetroBot
+from cogs.utility import StopView
 from utils.new_pages import SimplePages
 import discord
 import pathlib
@@ -441,9 +444,10 @@ class NewHelpView(discord.ui.View):
 
 
 class View(discord.ui.View):
-    def __init__(self, ctx: MyContext):
+    def __init__(self, ctx: MyContext, *, command: commands.Command):
         super().__init__(timeout=60)
         self.ctx = ctx
+        self.command = command
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if self.ctx.author == interaction.user:
@@ -452,10 +456,62 @@ class View(discord.ui.View):
                                                 ephemeral=True)
         return False
 
-    @discord.ui.button(emoji='\U0001f5d1', style=discord.ButtonStyle.gray)
+    @discord.ui.button(emoji='\U0001f5d1', style=discord.ButtonStyle.red)
     async def foo(self, _, interaction: discord.Interaction) -> None:
         await self.ctx.message.add_reaction(self.ctx.bot.emotes['check'])
         await interaction.message.delete()
+
+    @discord.ui.button(emoji='\U0001f4ce', label='Source', style=discord.ButtonStyle.blurple)
+    async def bar(self, button: discord.ui.Button, interaction: discord.Interaction):
+        button.disabled = True
+        button.style = discord.ButtonStyle.gray
+        await self.message.edit(view=self)
+        await interaction.response.defer()
+
+        self.command = self.command.name
+
+        source_url = 'https://github.com/dartmern/metro'
+        license_url = 'https://github.com/dartmern/metro/blob/master/LICENSE'
+        branch = 'master'
+
+        if self.command is None:
+            embed = Embed(color=self.ctx.color)
+            embed.set_author(name='Here is my source code:')
+            embed.description = str(f"My code is under the [**MPL**]({license_url}) license\n → {source_url}")
+            return await self.message.reply(embed=embed, view=StopView(self.ctx))
+
+        if self.command == 'help':
+            src = type(self.bot.help_command)
+            module = src.__module__
+            filename = inspect.getsourcefile(src)
+            obj = 'help'
+        else:
+            obj = self.ctx.bot.get_command(self.command.replace('.', ' '))
+            if obj is None:
+                embed = Embed(description=f"Take the [**entire reposoitory**]({source_url})", color=self.ctx.color)
+                embed.set_footer(text='Please make sure you follow the license.')
+                return await self.message.reply(embed=embed, view=StopView(self.ctx))
+
+            src = obj.callback.__code__
+            module = obj.callback.__module__
+            filename = src.co_filename
+
+        lines, firstlineno = inspect.getsourcelines(src)
+        code_lines = inspect.getsource(src)
+        if not module.startswith('discord'):
+            # not a built-in command
+            location = os.path.relpath(filename).replace('\\', '/')
+        else:
+            location = module.replace('.', '/') + '.py'
+            source_url = 'https://github.com/Rapptz/discord.py'
+            branch = 'master'
+        
+        final_url = f'<{source_url}/blob/{branch}/{location}#L{firstlineno}-L{firstlineno + len(lines) - 1}>'
+        embed = Embed(color=self.ctx.color)
+        embed.description = f"**__My source code for `{str(obj)}` is located at:__**\n{final_url}"\
+                f"\n\nMy code is under licensed under the [**Mozilla Public License**]({license_url})."
+
+        await self.message.reply(embed=embed, view=StopView(self.ctx))
 
 class HelpSource(menus.ListPageSource):
     def __init__(self, data, *, prefix):
@@ -811,14 +867,17 @@ class MetroHelp(commands.HelpCommand):
 
     
     async def send_command_help(self, command):
-        return await self.context.send(embed=await self.get_command_help(command),view=View(self.context), hide=True)
+        view = View(self.context, command=command)
+        view.message = await self.context.send(embed=await self.get_command_help(command),view=view, hide=True)
 
     async def send_group_help(self, group):
         
         entries = list(group.commands)
         
         if int(len(group.commands)) == 0 or len(entries) == 0:
-            return await self.context.send(embed=await self.get_command_help(group),view=View(self.context.author), hide=True)
+            view = View(self.context, command=group)
+            view.message = await self.context.send(embed=await self.get_command_help(group),view=view, hide=True)
+            return 
 
         menu = SimplePages(ButtonMenuSrc(group, entries, prefix=self.context.clean_prefix, ctx=self.context),ctx=self.context, compact=True)
         await menu.start()
