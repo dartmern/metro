@@ -7,7 +7,6 @@ import discord
 from discord.ext import commands
 import argparse
 import asyncio
-from numpy import require
 
 import pytz
 import re
