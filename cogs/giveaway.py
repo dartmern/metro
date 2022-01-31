@@ -7,6 +7,7 @@ import discord
 from discord.ext import commands
 import argparse
 import asyncio
+from numpy import require
 
 import pytz
 import re
@@ -78,7 +79,53 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
         """Handle the requirement giveaways."""
-        pass
+        if str(payload.emoji) != '\U0001f389':
+            return 
+        if payload.user_id == self.bot.user.id:
+            return 
+        if not payload.guild_id:
+            return 
+
+        query = """
+                SELECT extra FROM reminders
+                WHERE event='giveaway'
+                AND extra #>> '{args,0}' = $1
+                AND extra #>> '{args,3}' = $2
+                """
+        data = await self.bot.db.fetchrow(query, str(payload.guild_id), str(payload.message_id))
+        requirements = json.loads(data['extra'])['kwargs']['requirements']
+        if requirements:
+            guild = self.bot.get_guild(payload.guild_id)
+            if not guild:
+                return 
+
+            role = guild.get_role(requirements)
+            if not role:
+                return 
+
+            member = await self.bot.get_or_fetch_member(guild, payload.user_id)
+            if not member:
+                return 
+
+            channel = self.bot.get_channel(payload.channel_id)
+            if not channel:
+                return 
+
+            message = channel.get_partial_message(payload.message_id)
+            if not message:
+                return 
+
+            if role not in member.roles:
+                try:
+                    await message.remove_reaction('\U0001f389', member)
+                except discord.HTTPException:
+                    pass
+                embed = discord.Embed(color=discord.Colour.red(), description=f"You do not have the **{role.name}** role to join this giveaway.")
+                try:
+                    await member.send(embed=embed)
+                except discord.HTTPException:
+                    pass
+
     
     async def end_giveaway(
         self, 

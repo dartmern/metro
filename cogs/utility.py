@@ -807,10 +807,11 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
         timer = Timer.temporary(event=event, args=args, kwargs=kwargs, expires=when, created=now)
         delta = (when - now).total_seconds()
-        if delta <= 30:
-            # a shortcut for small timers
-            self.bot.loop.create_task(self.short_timer_optimisation(delta, timer))
-            return timer
+        if event != 'giveaway':
+            if delta <= 30:
+                # a shortcut for small timers
+                self.bot.loop.create_task(self.short_timer_optimisation(delta, timer))
+                return timer
 
         next_id_query = """SELECT MAX(id) FROM reminders;"""
         id = await connection.fetch(next_id_query)
