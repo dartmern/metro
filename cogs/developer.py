@@ -137,7 +137,7 @@ class developer(commands.Cog, description="Developer commands."):
             if guild.owner_id == member.id:
                 owns.append(guild.id)
 
-        await ctx.send(f"{member} owns: {', '.join(owns)}")
+        await ctx.send(f"{member} owns: {', '.join(map(str, owns))}")
 
     @moderator.command(name='guilds', aliases=['servers'])
     @is_support()
