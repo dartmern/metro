@@ -126,6 +126,19 @@ class developer(commands.Cog, description="Developer commands."):
         """Base command for bot moderator actions."""
         await ctx.help()
 
+    @moderator.command(name='whatown')
+    @is_support()
+    async def moderator_whatown(self, ctx: MyContext, *, member: discord.Member):
+        """See what server a user owns that has Metro it in."""
+
+        owns = []
+
+        for guild in self.bot.guilds:
+            if guild.owner_id == member.id:
+                owns.append(guild.id)
+
+        await ctx.send(f"{member} owns: {', '.join(owns)}")
+
     @moderator.command(name='guilds', aliases=['servers'])
     @is_support()
     async def moderator_guilds(self, ctx, search=None):
