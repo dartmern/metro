@@ -41,7 +41,7 @@ class SupportView(discord.ui.View):
         super().__init__(timeout=300)
         self.ctx = ctx
         
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+    async def interaction_check(self, item: discord.ui.Item, interaction: discord.Interaction) -> bool:
         if interaction.user.id == self.ctx.author.id:
             return True
         await interaction.response.send_message('This pagination menu cannot be controlled by you, sorry!', ephemeral=True)
@@ -72,7 +72,7 @@ class VoteView(discord.ui.View):
 
         self.bot_instance = bot_instance
 
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+    async def interaction_check(self, item: discord.ui.Item, interaction: discord.Interaction) -> bool:
         if interaction.user.id == self.ctx.author.id:
             return True
         await interaction.response.send_message('This pagination menu cannot be controlled by you, sorry!', ephemeral=True)
@@ -121,7 +121,7 @@ class InviteView(discord.ui.View):
         self.client = None
         self.message: Optional[discord.Message] = None
 
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+    async def interaction_check(self, item: discord.ui.Item, interaction: discord.Interaction) -> bool:
         if interaction.user.id == self.ctx.author.id:
             return True
         await interaction.response.send_message('This pagination menu cannot be controlled by you, sorry!', ephemeral=True)
@@ -201,7 +201,7 @@ class NeedHelp(discord.ui.View):
         self.old_embed = None
         self.old_view = old_view # For the go home button
 
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+    async def interaction_check(self, item: discord.ui.Item, interaction: discord.Interaction) -> bool:
         if interaction.user.id == self.ctx.author.id:
             return True
         await interaction.response.send_message('This pagination menu cannot be controlled by you, sorry!', ephemeral=True)
@@ -436,7 +436,7 @@ class NewHelpView(discord.ui.View):
         self.start_select()
         self.message = await self.ctx.send(embed=self.home_page_embed(), view=self)
 
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+    async def interaction_check(self, item: discord.ui.Item, interaction: discord.Interaction) -> bool:
         if interaction.user.id == self.ctx.author.id:
             return True
         await interaction.response.send_message('This pagination menu cannot be controlled by you, sorry!', ephemeral=True)
@@ -449,7 +449,7 @@ class View(discord.ui.View):
         self.ctx = ctx
         self.command = command
 
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+    async def interaction_check(self, item: discord.ui.Item, interaction: discord.Interaction) -> bool:
         if self.ctx.author == interaction.user:
             return True
         await interaction.response.send_message(f"Only {self.ctx.author} can use this menu. Run the command yourself to use it.",

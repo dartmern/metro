@@ -20,7 +20,7 @@ class ConfirmationView(discord.ui.View):
         self.ctx = ctx
         self.message: Optional[discord.Message] = None
 
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+    async def interaction_check(self, item: discord.ui.Item, interaction: discord.Interaction) -> bool:
         if interaction.user and interaction.user.id == self.author_id:
             return True
         else:

@@ -117,7 +117,7 @@ class RoboPages(discord.ui.View):
             # An error happened that can be handled, so ignore it.
             pass
 
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+    async def interaction_check(self, item: discord.ui.item, interaction: discord.Interaction) -> bool:
         if interaction.user.id == self.ctx.author.id:
             return True
         await interaction.response.send_message('This pagination menu cannot be controlled by you, sorry!', ephemeral=True)

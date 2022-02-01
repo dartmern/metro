@@ -40,7 +40,7 @@ class StopView(discord.ui.View):
         super().__init__(timeout=120)
         self.ctx = ctx
 
-    async def interaction_check(self, interaction):
+    async def interaction_check(self, item: discord.ui.Item, interaction: discord.Interaction):
         if self.ctx.author.id == interaction.user.id:
             return True
         else:
@@ -66,7 +66,7 @@ class SourceView(discord.ui.View):
         self.ctx = ctx
         self.code = code
 
-    async def interaction_check(self, interaction):
+    async def interaction_check(self, item: discord.ui.Item, interaction: discord.Interaction):
         if self.ctx.author.id == interaction.user.id:
             return True
         else:

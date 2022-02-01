@@ -70,7 +70,7 @@ class MuteRoleView(discord.ui.View):
         self.ctx = ctx
         self.role_id = role_id
 
-    async def interaction_check(self, interaction):
+    async def interaction_check(self, item: discord.ui.Item, interaction: discord.Interaction):
         if self.ctx.author.id == interaction.user.id:
             return True
         else:
