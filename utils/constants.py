@@ -13,7 +13,12 @@ EMOTES = {
             'dnd' : '<:dnd:819254444028854324>',
             'online' : '<:online:819254444151537665>',
             'idle': '<:idle:819254444185223170>',
-            'booster' : '<:booster:930991028998144040>'
+            'booster' : '<:booster:930991028998144040>',
+            'moderator': '<:moderator:940085806947774556>',
+            'discord': '<:mdiscord:904157585266049104>',
+            'inviteme': '<:inviteme:924868244525940807>',
+            'github': '<:github:940086675957235742>',
+            'docs': '<:docs:940086882069540915>'
         }
 
 BOOST_BADGES = {
@@ -38,6 +43,7 @@ BOT_LOGGER_CHANNEL = 933508950337396736
 DEVELOPER_ROLE = 932354056020709448
 
 RDANNY_ID = 80528701850124288
+DISBOARD_ID = 302050872383242240
 
 PATREON_URL = "https://www.patreon.com/metrobot"
 DOCUMENTATION = 'https://dartmern.github.io/metro/'
