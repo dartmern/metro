@@ -7,6 +7,7 @@ import re
 from discord.embeds import EmptyEmbed
 import pytz
 import unicodedata
+import asyncpg
 import unidecode
 import stringcase
 import humanize
@@ -14,6 +15,7 @@ from discord.ext import commands
 
 from bot import MetroBot
 from utils.checks import can_execute_action, check_dev
+from utils.constants import DISBOARD_ID
 from utils.converters import ActionReason, ImageConverter, RoleConverter
 from utils.custom_context import MyContext
 from utils.remind_utils import FutureTime, UserFriendlyTime, human_timedelta
@@ -41,6 +43,8 @@ def setup(bot: MetroBot):
 class serverutils(commands.Cog, description='Server utilities like role, lockdown, nicknames.'):
     def __init__(self, bot: MetroBot):
         self.bot = bot
+        self.default_message = "It's been 2 hours since the last successful bump, may someone run `!d bump`?"
+        self.default_thankyou = "Thank you for bumping the server! Come back in 2 hours to bump again."
 
     @property
     def emoji(self) -> str:
@@ -1687,3 +1691,153 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             raise commands.BadArgument("Discord returned invaild data.")
         except discord.HTTPException:
             raise commands.BadArgument("I have having trouble creating this emoji. Permissions error?")
+
+    @commands.group(name='bumpreminder', aliases=['bprm'])
+    @commands.has_guild_permissions(manage_guild=True)
+    @commands.bot_has_guild_permissions(manage_messages=True, manage_channels=True)
+    async def bumpreminder(self, ctx: MyContext):
+        """Set reminders to bump on Disboard."""
+        if not ctx.guild.chunked:
+            await ctx.guild.chunk()
+        member = ctx.guild.get_member(DISBOARD_ID)
+        if member not in ctx.guild.members:
+            raise commands.BadArgument("Disboard doesn't seem to be in this server...")
+        if not ctx.invoked_subcommand:
+            await ctx.help()
+
+    @bumpreminder.command(name='channel')
+    @commands.has_guild_permissions(manage_guild=True)
+    @commands.bot_has_guild_permissions(manage_messages=True, manage_channels=True)
+    async def bumpreminder_channel(self, ctx: MyContext, *, channel: Optional[discord.TextChannel]):
+        """Set the channel to send bump reminders to."""
+        if not channel:
+            await self.bot.db.execute('UPDATE bumpreminder SET channel = $1 WHERE guild_id = $2', None, ctx.guild.id)
+            return await ctx.send(f"{self.bot.emotes['minus']} Toggled off bump reminders for this guild.")
+
+        if not channel.permissions_for(ctx.guild.me).send_messages:
+            await ctx.send(f'I cannot send messages in that channel')
+
+        try:
+            await self.bot.db.execute('INSERT INTO bumpreminder (guild_id, channel) VALUES ($1, $2)', ctx.guild.id, channel.id)
+        except asyncpg.exceptions.UniqueViolationError:
+            await self.bot.db.execute('UPDATE bumpreminder SET channel = $1 WHERE guild_id = $2', channel.id, ctx.guild.id)
+        await ctx.send(f"{self.bot.emotes['plus']} Successfully set {channel.mention} as the bump reminder channel. \nI will not send my first reminders until a successful bump as registered.")
+
+    @bumpreminder.command(name='message', aliases=['msg'])
+    @commands.has_guild_permissions(manage_guild=True)
+    @commands.bot_has_guild_permissions(manage_messages=True, manage_channels=True)
+    async def bumpreminder_message(self, ctx: MyContext, *, message: Optional[commands.clean_content] = None):
+        """Change the message used for bump reminders.
+        
+        Provide no message to reset back to the default message:
+        > It's been 2 hours since the last successful bump, may someone run `!d bump`?
+        """
+        message = message or self.default_message
+        try:
+            await self.bot.db.execute('INSERT INTO bumpreminder (guild_id, message) VALUES ($1, $2)', ctx.guild.id, message)
+        except asyncpg.exceptions.UniqueViolationError:
+            await self.bot.db.execute('UPDATE bumpreminder SET message = $1 WHERE guild_id = $2', message, ctx.guild.id)
+
+        await ctx.send(f"{self.bot.emotes['plus']} Updated the bump reminder message.")
+
+    @bumpreminder.command(name='thankyou', aliases=['ty'])
+    @commands.has_guild_permissions(manage_guild=True)
+    @commands.bot_has_guild_permissions(manage_messages=True, manage_channels=True)
+    async def bumpreminder_thankyou(self, ctx: MyContext, *, message: Optional[commands.clean_content] = None):
+        """Change the thankyou message used for bump reminders.
+        
+        Provide no message to reset back to the default message:
+        > Thank you for bumping the server! Come back in 2 hours to bump again.
+        """
+        message = message or self.default_thankyou
+        try:
+            await self.bot.db.execute('INSERT INTO bumpreminder (guild_id, thankyou) VALUES ($1, $2)', ctx.guild.id, message)
+        except asyncpg.exceptions.UniqueViolationError:
+            await self.bot.db.execute('UPDATE bumpreminder SET thankyou = $1 WHERE guild_id = $2', message, ctx.guild.id)
+
+        await ctx.send(f"{self.bot.emotes['plus']} Updated the bump reminder thankyou message.")
+
+    @bumpreminder.command(name='pingrole', aliases=['ping'])
+    @commands.has_guild_permissions(manage_guild=True)
+    @commands.bot_has_guild_permissions(manage_messages=True, manage_channels=True)
+    async def bumpreminder_pingrole(self, ctx: MyContext, *, role: RoleConverter):
+        """Set a role to ping for bump reminders."""
+        try:
+            await self.bot.db.execute('INSERT INTO bumpreminder (guild_id, pingrole) VALUES ($1, $2)', ctx.guild.id, role.id)
+        except asyncpg.exceptions.UniqueViolationError:
+            await self.bot.db.execute('UPDATE bumpreminder SET pingrole = $1 WHERE guild_id = $2', role.id, ctx.guild.id)
+
+        await ctx.send(f"{self.bot.emotes['plus']} Updated the pinged role for bump reminders.")
+
+    @bumpreminder.command(name='settings', aliases=['show'])
+    @commands.has_guild_permissions(manage_guild=True)
+    @commands.bot_has_guild_permissions(manage_messages=True, manage_channels=True)
+    async def bumpreminder_settings(self, ctx: MyContext):
+        """Show your Bump Reminder settings."""
+        
+        js = await self.bot.db.fetchval(
+            'SELECT (channel, message, thankyou, lock, pingrole) '
+            'FROM bumpreminder WHERE guild_id = $1', ctx.guild.id
+        )
+        if not js:
+            raise commands.BadArgument("This server does not have bump reminder set up yet.")
+
+        em = discord.Embed(color=ctx.color, title='Bump Reminder Settings')
+        em.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon if ctx.guild.icon else EmptyEmbed)
+        em.description = f"**Channel:** {f'<#{js[0]}>' if js[0] else 'No bump reminder channel set...'}"\
+                        f"\n**Ping role:** {f'<@&{js[4]}>' if js[4] else 'No ping role set...'}"\
+                        f"\n**Auto-lock channel:** {await ctx.emojify(js[3])}"
+        em.add_field(name='Message', value=f"```\n{js[1] if js[1] else self.default_message}\n```", inline=False)
+        em.add_field(name='Thank you message', value=f"```\n{js[2] if js[2] else self.default_thankyou}\n```", inline=False)
+        await ctx.send(embed=em)
+
+    @commands.Cog.listener('on_message')
+    async def bumpreminder_handler(self, message: discord.Message):
+        """Handle the bump reminders."""
+        
+        if message.author.id != DISBOARD_ID:
+            return 
+
+        if "Bump done!" in message.embeds[0].description: # really need daddy regex but just need to push an update out asap
+            thankyou = await self.bot.db.fetchval('SELECT (channel, thankyou, message) FROM bumpreminder WHERE guild_id = $1', message.guild.id)
+            if not thankyou[0]:
+                return
+            if thankyou[0] != message.channel.id:
+                return 
+            await message.channel.send(thankyou[1] if thankyou[1] else self.default_thankyou)
+
+            utility_cog: utility = self.bot.get_cog("utility")
+            if not utility_cog:
+                return # im a dumbass!!!
+
+            await utility_cog.create_timer(
+                discord.utils.utcnow() + datetime.timedelta(seconds=10),
+                'bumpreminder',
+                message.guild.id,
+                message.channel.id
+            )
+
+    @commands.Cog.listener()
+    async def on_bumpreminder_timer_complete(self, timer):
+        guild_id, channel_id = timer.args
+
+        guild = self.bot.get_guild(guild_id)
+        if not guild:
+            return 
+
+        channel = self.bot.get_channel(channel_id)
+        if not channel:
+            return
+
+        message = await self.bot.db.fetchval("SELECT (message, pingrole) FROM bumpreminder WHERE guild_id = $1", guild_id)
+        await channel.send(f"{f'<@&{message[1]}>:' if message[1] else ''} {message[0]}", allowed_mentions=discord.AllowedMentions(roles=True))
+        
+
+    
+
+
+
+
+
+
+

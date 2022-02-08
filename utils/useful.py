@@ -7,7 +7,7 @@ from discord.ext.commands.cooldowns import BucketType
 import re
 import asyncio
 
-from utils.checks import can_execute_action, check_dev
+import utils.checks
 
 
 from typing import Dict, Any, Optional
