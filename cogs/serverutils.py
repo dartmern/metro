@@ -1811,7 +1811,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
                 return # im a dumbass!!!
 
             await utility_cog.create_timer(
-                discord.utils.utcnow() + datetime.timedelta(seconds=10),
+                discord.utils.utcnow() + datetime.timedelta(hours=2),
                 'bumpreminder',
                 message.guild.id,
                 message.channel.id
