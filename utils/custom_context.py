@@ -82,6 +82,11 @@ class MyContext(commands.Context):
             if self.bot.http.token in content:
                 content = content.replace(self.bot.http.token, "[Token Hidden for privacy reasons]")
 
+        try:
+            kwargs.pop("ephemeral")
+        except KeyError:
+            pass
+
         if reply:
             reference = self.message
         message = await super().send(content=content, reference=reference, embed=embed, ephemeral=hide, **kwargs)
