@@ -304,10 +304,10 @@ class NewHelpView(discord.ui.View):
 
     async def bot_info_embed(self) -> discord.Embed:
         embed = Embed(color=self.ctx.color)
-        embed.description = f'\n <:mdiscord:904157585266049104> [Support Server]({self.ctx.bot.support})'\
-                f'\n <:inviteme:924868244525940807> [Invite Link]({self.ctx.bot.invite})'\
-                f'\n <:github:744345792172654643> [Github]({self.ctx.bot.github})'\
-                f'\n <:readthedocs:596577085036953611> [Documentation]({self.ctx.bot.docs})' 
+        embed.description = f'\n{self.ctx.bot.emotes["discord"]} [Support Server]({self.ctx.bot.support})'\
+                f'\n{self.ctx.bot.emotes["inviteme"]} [Invite Link]({self.ctx.bot.invite})'\
+                f'\n{self.ctx.bot.emotes["github"]} [Github]({self.ctx.bot.github})'\
+                f'\n{self.ctx.bot.emotes["docs"]} [Documentation]({self.ctx.bot.docs})' 
         
         embed.set_author(name=f"Created by {self.ctx.bot.owner}", icon_url=self.ctx.bot.owner.display_avatar.url)
         embed.colour = self.ctx.guild.me.colour
@@ -377,10 +377,10 @@ class NewHelpView(discord.ui.View):
         )
         embed.add_field(
             name='Quick Links',
-            value=f'\n <:mdiscord:904157585266049104> [Support Server]({self.ctx.bot.support})'\
-                f'\n <:inviteme:924868244525940807> [Invite Link]({self.ctx.bot.invite})'\
-                f'\n <:github:744345792172654643> [Github]({self.ctx.bot.github})'\
-                f'\n <:readthedocs:596577085036953611> [Documentation]({self.ctx.bot.docs})' 
+            value=f'\n{self.ctx.bot.emotes["discord"]} [Support Server]({self.ctx.bot.support})'\
+                f'\n{self.ctx.bot.emotes["inviteme"]} [Invite Link]({self.ctx.bot.invite})'\
+                f'\n{self.ctx.bot.emotes["github"]} [Github]({self.ctx.bot.github})'\
+                f'\n{self.ctx.bot.emotes["docs"]} [Documentation]({self.ctx.bot.docs})' 
         )
         embed.set_author(
             name=self.ctx.author.name + " | Help Menu",
