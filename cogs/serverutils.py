@@ -46,6 +46,10 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         self.default_message = "It's been 2 hours since the last successful bump, may someone run `!d bump`?"
         self.default_thankyou = "Thank you for bumping the server! Come back in 2 hours to bump again."
 
+        self.afk_users = {}
+
+        bot.loop.create_task(self.load_afkusers())
+
     @property
     def emoji(self) -> str:
         return '📓'
@@ -1832,9 +1836,56 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         message = await self.bot.db.fetchval("SELECT (message, pingrole) FROM bumpreminder WHERE guild_id = $1", guild_id)
         await channel.send(f"{f'<@&{message[1]}>:' if message[1] else ''} {message[0]}", allowed_mentions=discord.AllowedMentions(roles=True))
         
+    async def load_afkusers(self):
+        await self.bot.wait_until_ready()
 
-    
+        query = """
+                SELECT _user FROM afk WHERE is_afk = True
+                """
 
+        records = await self.bot.db.fetch(query)
+        if records:
+            for record in records:
+                self.afk_users[record['_user']] = True
+
+    @commands.command(name='afk')
+    async def _afk(self, ctx: MyContext, *, message: Optional[commands.clean_content] = None):
+        """Set an AFK status when users mention you."""
+        message = message or 'No reason provided...'
+
+        query = """
+                INSERT INTO afk (_user, is_afk, added_time, message) VALUES ($1, $2, $3, $4)
+                """
+        try:
+            await self.bot.db.execute(query, ctx.author.id, True, discord.utils.utcnow().replace(tzinfo=None), message)
+        except asyncpg.exceptions.UniqueViolationError:
+            return
+
+        self.afk_users[ctx.author.id] = True
+        await ctx.send(f"{self.bot.emotes['dnd']} Your AFK has been set for: \n> {message}")
+
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message):
+        if self.afk_users.get(message.author.id):
+            query = """
+                    SELECT added_time FROM afk WHERE _user = $1
+                    """
+            data = await self.bot.db.fetchval(query, message.author.id)
+            await self.bot.db.execute("DELETE FROM afk WHERE _user = $1", message.author.id)
+            self.afk_users[message.author.id] = False
+            return await message.reply(f"👋 Welcome back **{message.author}**, you've been afk since {discord.utils.format_dt(pytz.utc.localize(data), 'R')}")
+        if not message.mentions:
+            return 
+        for mention in message.mentions:
+            if not self.afk_users.get(mention.id):
+                return 
+
+            query = """
+                    SELECT (message, added_time) FROM afk WHERE _user = $1
+                    """
+            data = await self.bot.db.fetchval(query, mention.id)
+            if data:
+                await message.reply(f"Seems like **{mention}** is currently afk since {discord.utils.format_dt(pytz.utc.localize(data[1]), 'R')}\n> {data[0]}")
 
 
 
