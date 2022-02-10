@@ -144,7 +144,7 @@ class MetroBot(commands.AutoShardedBot):
             owner_ids=DEVELOPER_IDS,
             #chunk_guilds_at_startup=False,
             help_command=None,
-            slash_commands=True,
+            #slash_commands=True,
             #slash_command_guilds=SLASH_GUILDS,
             strip_after_prefix=True,
             #shard_count=10,
@@ -177,6 +177,7 @@ class MetroBot(commands.AutoShardedBot):
 
         #Tracking
         self.message_stats = collections.Counter()
+        self.command_stats = {}
         
         #Emojis
         self.emotes = EMOTES
