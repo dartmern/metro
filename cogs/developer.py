@@ -361,7 +361,7 @@ class developer(commands.Cog, description="Developer commands."):
                 self._last_result = ret
                 await ctx.send(f'```py\n{value}{ret}\n```')
 
-    @commands.command(aliases=['cc'])
+    @commands.command(aliases=['cls'])
     @is_dev()
     async def clearconsole(self, ctx):
         try:
