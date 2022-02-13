@@ -131,8 +131,23 @@ class MetroBot(commands.AutoShardedBot):
             raise UserBlacklisted
 
     def __init__(self):
-        intents = discord.Intents.all()
-
+        intents = discord.Intents(
+            guild_reactions=True,  # reaction add/remove/clear
+            guild_messages=True,  # message create/update/delete
+            guilds=True,  # guild/channel join/remove/update
+            integrations=True,  # integrations update
+            voice_states=True,  # voice state update
+            dm_reactions=True,  # reaction add/remove/clear
+            guild_typing=True,  # on typing
+            dm_messages=True,  # message create/update/delete
+            presences=True,  # member/user update for games/activities
+            dm_typing=True,  # on typing
+            webhooks=True,  # webhook update
+            members=True,  # member join/remove/update
+            invites=True,  # invite create/delete
+            emojis=True,  # emoji update
+            bans=True  # member ban/unban
+        )
         allowed_mentions = discord.AllowedMentions(
             roles=False, users=True, everyone=False, replied_user=False)
 
@@ -462,7 +477,7 @@ async def on_guild_join(guild: discord.Guild):
 
         embed = discord.Embed(color=discord.Colour.green())
         embed.title = "New Guild"
-        embed.description = f"\n__**Name:**__ {guild.name}"\
+        embed.description = f"\n__**Name:**__ {guild.name} (ID: {guild.id})"\
                             f"\n__**Human/Bots:**__ {len(guild.humans)}/{len(guild.bots)}"\
                             f"\n__**Owner:**__ {guild.owner} (ID: {guild.owner_id})"\
                             f"\n__**Added*:**__ {ts_now('F')} ({ts_now('R')})"
@@ -475,7 +490,7 @@ async def on_guild_remove(guild: discord.Guild):
 
     embed = discord.Embed(color=discord.Colour.red())
     embed.title = "Left Guild"
-    embed.description = f"\n__**Name:**__ {guild.name}"\
+    embed.description = f"\n__**Name:**__ {guild.name} (ID: {guild.id})"\
                             f"\n__**Human/Bots:**__ {len(guild.humans)}/{len(guild.bots)}"\
                             f"\n__**Owner:**__ {guild.owner} (ID: {guild.owner_id})"
     count = discord.Embed(color=discord.Colour.purple(), description="Guilds count: **%s**" % len(bot.guilds))
@@ -484,11 +499,13 @@ async def on_guild_remove(guild: discord.Guild):
 if __name__ == "__main__":
     # When running this file, if it is the 'main' file
     # I.E its not being imported from another python file run this
-
+    folders = ['customcommand']
 
     for file in os.listdir(cwd + "/cogs"):
         if file.endswith(".py") and not file.startswith("_"):
             bot.load_extension(f"cogs.{file[:-3]}")
+        if file in folders:
+            bot.load_extension(f"cogs.{file}")
 
     bot.load_extension('jishaku')
     bot.loop.create_task(load_blacklist())
