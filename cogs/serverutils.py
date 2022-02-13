@@ -15,7 +15,7 @@ from discord.ext import commands
 
 from bot import MetroBot
 from utils.checks import can_execute_action, check_dev
-from utils.constants import DISBOARD_ID
+from utils.constants import DISBOARD_ID, SLASH_GUILDS
 from utils.converters import ActionReason, ImageConverter, RoleConverter
 from utils.custom_context import MyContext
 from utils.remind_utils import FutureTime, UserFriendlyTime, human_timedelta
@@ -1887,6 +1887,36 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             if data:
                 await message.reply(f"Seems like **{mention}** is currently afk since {discord.utils.format_dt(pytz.utc.localize(data[1]), 'R')}\n> {data[0]}")
 
+    @commands.command(name='scan', slash_command=True, slash_command_guilds=SLASH_GUILDS)
+    @commands.has_guild_permissions(manage_guild=True)
+    @commands.bot_has_guild_permissions(manage_guild=True)
+    async def scan(self, ctx: MyContext, *, text: str):
+        """
+        Scan the presences of the guild members and searches for a substring.
+        
+        You can use this tool to check for invite links, certain words or more.
+        """
+        if not ctx.guild.chunked:
+            await ctx.guild.chunk()
+
+        to_paginate = []
+        for member in ctx.guild.members:
+            if not member.activities:
+                continue
+            if isinstance(member.activities[0], (discord.CustomActivity, discord.Game, discord.Activity, discord.Streaming)):
+                if text in str(member.activities[0].name):
+                    to_paginate.append(member)
+                continue
+            try:
+                if text in member.activities[0]:
+                    to_paginate.append(f"{member}: {member.activity}")
+            except:
+                continue
+        if to_paginate:
+            await ctx.paginate(to_paginate, compact=True)
+        else:
+            await ctx.send("No members in this guild have the string in their status.")
+                
 
 
 
