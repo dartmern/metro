@@ -1887,7 +1887,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             if data:
                 await message.reply(f"Seems like **{mention}** is currently afk since {discord.utils.format_dt(pytz.utc.localize(data[1]), 'R')}\n> {data[0]}")
 
-    @commands.command(name='scan', slash_command=True, slash_command_guilds=SLASH_GUILDS)
+    @commands.command(name='scan')
     @commands.has_guild_permissions(manage_guild=True)
     @commands.bot_has_guild_permissions(manage_guild=True)
     async def scan(self, ctx: MyContext, *, text: str):

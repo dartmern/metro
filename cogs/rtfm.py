@@ -217,7 +217,7 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         await ctx.send(embed=e, hide=True)
 
 
-    @commands.group(name="rtfm",invoke_without_command=True, case_insensitive=True, slash_command=True, aliases=['rtfd'])
+    @commands.group(name="rtfm",invoke_without_command=True, case_insensitive=True, aliases=['rtfd'])
     @commands.bot_has_permissions(send_messages=True)
     async def rtfm(self, ctx, *, obj : str = None):
         """Gives you a documentation link for a enhanced-discord.py entity.
@@ -227,14 +227,14 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
 
         await self.do_rtfm(ctx, 'enhanced-discord.py', obj)
 
-    @rtfm.command(name="python",aliases=["py"],slash_command=True)
+    @rtfm.command(name="python",aliases=["py"])
     @commands.bot_has_permissions(send_messages=True)
     async def rtfm_py(self, ctx, *, object : str = commands.Option(default=None,description='Object to search for')):
         """Gives you a documentation link for a Python entity."""
 
         await self.do_rtfm(ctx, "python", object)
 
-    @rtfm.command(name="master",aliases=["2.0"],slash_command=True)
+    @rtfm.command(name="master",aliases=["2.0"])
     @commands.bot_has_permissions(send_messages=True)
     async def rtfm_master(self, ctx, *, object : str = commands.Option(default=None,description='Object to search for')):
         """Gives you a documentation link for a discord.py entity. (master branch)"""
@@ -242,7 +242,7 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         await self.do_rtfm(ctx, "discord.py-2.0", object)
 
 
-    @rtfm.command(name='dpy',aliases=['discordpy', 'discord.py'],slash_command=True)
+    @rtfm.command(name='dpy',aliases=['discordpy', 'discord.py'])
     @commands.bot_has_permissions(send_messages=True)
     async def rtfm_dpy(self, ctx, *, object : str = commands.Option(default=None,description='Object to search for')):
         """Gives you a documentation link for a discord.py entity."""
@@ -250,7 +250,7 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         await self.do_rtfm(ctx, "discord.py", object)
 
 
-    @rtfm.command(name='edpy',slash_command=True)
+    @rtfm.command(name='edpy')
     @commands.bot_has_permissions(send_messages=True)
     async def rtfm_edpy(self, ctx, *, object : str = commands.Option(default=None,description='Object to search for')):
         """Gives you a documentation link for a ed-py entity."""

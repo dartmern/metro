@@ -542,21 +542,13 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
 
 
-    @commands.group(
-        case_insensitive=True,
-        invoke_without_command=True,
-        slash_command=True,
-        message_command=True
-    )
+    @commands.group(case_insensitive=True, invoke_without_command=True)
     async def todo(self, ctx : MyContext):
         """Manage your todo lists."""
 
         await ctx.send_help('todo')
 
-    @todo.command(
-        name='add',
-        slash_command=True
-    )
+    @todo.command(name='add')
     async def add(self, ctx : MyContext, *, item : commands.clean_content):
         """Add an item to your todo list"""
 
@@ -580,10 +572,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             await ctx.send(embed=embed)
 
 
-    @todo.command(
-        name='remove',
-        slash_command=True
-    )
+    @todo.command(name='remove')
     async def todo_remove(self, ctx : MyContext, index : int):
         """Remove one of your todo list entries."""
 
@@ -605,10 +594,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         return await ctx.send(embed=embed)
         
 
-    @todo.command(
-        name='clear',
-        slash_command=True
-    )
+    @todo.command(name='clear')
     async def todo_clear(self, ctx : MyContext):
         """Clear all your todo entries."""
 
@@ -627,7 +613,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         embed.description = f"__**Cleared {count} entries from your todo list.**__"
         return await ctx.send(embed=embed)
     
-    @todo.command(name='edit', slash_command=True)
+    @todo.command(name='edit')
     async def todo_edit(self, ctx: MyContext, index: int, *, text: commands.clean_content) -> discord.Message:
         """Edit an exisiting todo list entry."""
 
@@ -650,7 +636,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             "> %s" % text[0:200]
         return await ctx.send(embed=embed)
 
-    @todo.command(name='list', slash_command=True)
+    @todo.command(name='list')
     async def todo_list(self, ctx : MyContext):
         """Show your todo list."""
 
@@ -844,7 +830,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
         return timer
 
-    @commands.group(aliases=['remind','rm'], usage="<when>", invoke_without_command=True, slash_command=True)
+    @commands.group(aliases=['remind','rm'], usage="<when>", invoke_without_command=True)
     @commands.bot_has_permissions(send_messages=True)
     async def reminder(self, ctx, *, when : UserFriendlyTime(commands.clean_content, default='\u2026')):
         """Reminds you of something after a certain amount of time.
@@ -880,8 +866,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
     @reminder.command(
         name='create',
-        aliases=['make'],
-        slash_command=True
+        aliases=['make']
     )
     async def reminder_create(self, ctx: MyContext, *, when: UserFriendlyTime(commands.clean_content, default='\u2026')):
         """Reminds you of something after a certain amount of time.
@@ -919,8 +904,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
     @reminder.command(
         name='list',
-        aliases=['show'],
-        slash_command=True
+        aliases=['show']
     )
     async def reminders_list(self, ctx: MyContext):
         """
@@ -947,8 +931,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
     
     @reminder.command(
         name='delete',
-        aliases=['cancel','remove'],
-        slash_command=True
+        aliases=['cancel','remove']
     )
     async def reminder_remove(self, ctx, *, id : int):
         """
@@ -977,8 +960,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
     @reminder.command(
         name='clear',
-        aliases=['wipe'],
-        slash_command=True
+        aliases=['wipe']
     )
     async def reminder_clear(self, ctx):
         """
