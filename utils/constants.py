@@ -18,7 +18,8 @@ EMOTES = {
             'discord': '<:mdiscord:904157585266049104>',
             'inviteme': '<:inviteme:924868244525940807>',
             'github': '<:github:940086675957235742>',
-            'docs': '<:docs:940086882069540915>'
+            'docs': '<:docs:940086882069540915>',
+            'hypixel': '<:hypixel:912575998380355626>'
         }
 
 BOOST_BADGES = {

@@ -25,6 +25,8 @@ class tracking(commands.Cog, description='Module for user and server stats.'):
         self.no_tracking = {}
         self.message_inserter.start()
 
+        self.command_batch = []
+
     def cog_unload(self):
         self.message_inserter.stop()
 
@@ -178,3 +180,27 @@ class tracking(commands.Cog, description='Module for user and server stats.'):
         embed.description = f"I have seen **{count:,}** message{'' if count == 1 else 's'}"\
                             f"\n*Message tracking started <t:1639287704:R>*"
         await ctx.send(embed=embed)
+
+    async def register_command(self, ctx: MyContext):
+        if ctx.command is None:
+            return
+
+        command = ctx.command.qualified_name
+        self.bot.command_stats[command] += 1
+        message = ctx.message
+
+        if ctx.guild is None:
+            guild_id = None
+        else:
+            guild_id = ctx.guild.id
+
+        async with self.batch_lock:
+            self._data_batch.append({
+                'guild': guild_id,
+                'channel': ctx.channel.id,
+                'author': ctx.author.id,
+                'used': message.created_at.isoformat(),
+                'prefix': ctx.prefix,
+                'command': command,
+                'failed': ctx.command_failed,
+            })

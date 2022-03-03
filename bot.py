@@ -3,6 +3,7 @@ import datetime
 import re
 from typing import List, Optional, Union
 import typing
+import asyncpixel
 import discord
 from discord.ext import commands
 
@@ -15,6 +16,7 @@ import traceback
 import mystbin
 import aiohttp
 import logging
+
 from utils.checks import check_dev
 from utils.constants import BOT_LOGGER_CHANNEL, DEFAULT_INVITE, DEVELOPER_IDS, DOCUMENTATION, EMOTES, GITHUB_URL, PATREON_URL, SLASH_GUILDS, SUPPORT_GUILD, SUPPORT_STAFF, SUPPORT_URL, TEST_BOT_ID
 from utils.remind_utils import human_timedelta
@@ -25,6 +27,7 @@ from utils.errors import UserBlacklisted
 from utils.custom_context import MyContext
 
 os.environ["JISHAKU_NO_UNDERSCORE"] = "True"
+os.environ["JISHAKU_NO_DM_TRACEBACK"] = "True"
 
 info_file = read_json('info')
 
@@ -168,6 +171,7 @@ class MetroBot(commands.AutoShardedBot):
         self.session = aiohttp.ClientSession(trust_env=True)
         self.mystbin_client = mystbin.Client()
         self.google_client = async_cse.Search(google_token)
+        self.hypixel = asyncpixel.Hypixel(info_file['hypixel_api_key'])
 
         self.add_check(self.user_blacklisted)
 
@@ -314,27 +318,6 @@ class MetroBot(commands.AutoShardedBot):
 
     async def on_ready(self):
         await self.wait_until_ready()
-
-        for command in self.walk_commands():
-            if command.checks:
-                try:
-                    check = command.checks[0]
-                    check(0)
-                except Exception as e:
-                    *frames, last_frame = traceback.walk_tb(e.__traceback__)
-                    frame = last_frame[0]
-                    try:
-                        perms : typing.Dict= frame.f_locals['perms']
-                        try:
-                            perms.pop("send_messages")
-                        except KeyError:
-                            pass #No send_messages i guess
-                        if perms:
-                            command.extras['perms'] = perms
-                    except KeyError:
-                        pass #Skip adding it to extras
-            else:
-                continue
 
         print(
             f"-----\nLogged in as: {self.user.name} : {self.user.id}\n-----\nMy default prefix{'es are' if len(self.PRE) >= 2 else ' is'}: {', '.join(self.PRE) if len(self.PRE) >= 2 else self.PRE[0]}\n-----")
@@ -499,7 +482,7 @@ async def on_guild_remove(guild: discord.Guild):
 if __name__ == "__main__":
     # When running this file, if it is the 'main' file
     # I.E its not being imported from another python file run this
-    folders = ['customcommand']
+    folders = ['customcommand', 'hypixel']
 
     for file in os.listdir(cwd + "/cogs"):
         if file.endswith(".py") and not file.startswith("_"):
