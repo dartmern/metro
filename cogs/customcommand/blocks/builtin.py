@@ -1,5 +1,6 @@
 import TagScriptEngine as tse
 from .delete import DeleteBlock
+from .silent import SilentBlock
 
 blocks = [
             tse.MathBlock(),
@@ -27,4 +28,5 @@ blocks = [
             tse.RedirectBlock(),
             tse.CooldownBlock(),
             DeleteBlock(),
+            SilentBlock()
 ]

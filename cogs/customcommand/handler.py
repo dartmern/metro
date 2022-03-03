@@ -13,8 +13,13 @@ from .context import SilentContext
 
 
 async def process(ctx: MyContext, message: str):
+    adapters = {
+        "member": tse.MemberAdapter(ctx.author), 
+        "guild": tse.GuildAdapter(ctx.guild), 
+        "server": tse.GuildAdapter(ctx.guild), # same thing
+    }
     engine = tse.Interpreter(blocks)
-    output = engine.process(message, dot_parameter=True)
+    output = engine.process(message, dot_parameter=False, seed_variables=adapters)
 
     actions = output.actions
     content = output.body[0:1999] if output.body else None
@@ -26,6 +31,9 @@ async def send_output(ctx: MyContext, actions: dict, content: str = None):
 
     command_messages = []
     to_gather = []
+
+    if delete := actions.get("delete", False):
+        to_gather.append(delete_quietly(ctx))
     
     if actions.get("commands"):
         for command in actions["commands"]:
@@ -68,5 +76,6 @@ async def process_command(message: discord.Message, silent: bool, overrides: dic
         pass
     await context.bot.invoke(ctx)
 
-
-
+async def delete_quietly(ctx: MyContext):
+    if ctx.channel.permissions_for(ctx.me).manage_messages:
+        await ctx.message.delete(silent=True)
