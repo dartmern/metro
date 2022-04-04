@@ -406,7 +406,7 @@ class developer(commands.Cog, description="Developer commands."):
             )
             # noinspection PyBroadException
             try:
-                method(extension)
+                await method(extension)
                 pages.add_line(f"{icon} `{extension}`")
             except Exception:
                 first_reload_failed_extensions.append(extension)
@@ -425,7 +425,7 @@ class developer(commands.Cog, description="Developer commands."):
                 (self.bot.load_extension, "\N{INBOX TRAY}")
             )
             try:
-                method(extension)
+                await method(extension)
                 pages.add_line(f"{icon} `{extension}`")
 
             except tuple(error_keys.keys()) as exc:
@@ -522,7 +522,7 @@ class developer(commands.Cog, description="Developer commands."):
              
         self.do_restart(message)
 
-def setup(bot):
-    bot.add_cog(developer(bot))
+async def setup(bot):
+    await bot.add_cog(developer(bot))
 
 

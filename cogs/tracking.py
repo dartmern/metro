@@ -13,8 +13,8 @@ from bot import MetroBot
 from utils.custom_context import MyContext
 from utils.useful import Cooldown, Embed, traceback_maker
 
-def setup(bot : MetroBot):
-    bot.add_cog(tracking(bot))
+async def setup(bot : MetroBot):
+    await bot.add_cog(tracking(bot))
 
 class tracking(commands.Cog, description='Module for user and server stats.'):
     def __init__(self, bot : MetroBot):
@@ -129,7 +129,7 @@ class tracking(commands.Cog, description='Module for user and server stats.'):
         """
         Show total amount of messages sent in this guild.
         """
-        await ctx.defer()
+        await ctx.trigger_typing()
         query = """
                 SELECT COUNT(*) AS c
                 FROM messages
@@ -141,16 +141,19 @@ class tracking(commands.Cog, description='Module for user and server stats.'):
         embed.colour = discord.Colour.green()
         embed.description = f'I have seen **{count:,}** message{"" if count == 1 else "s"} in this guild.'\
                             f"\n*Message tracking started {discord.utils.format_dt(ctx.guild.me.joined_at, 'R')}*"
-        await ctx.send(embed=embed)
+        other_embed = Embed(color=discord.Color.red(), title='Warning')
+        other_embed.description = "\U000026a0 **WARNING** This command may get deleted soon as storing message data is expensive \U000026a0"\
+            f"\nIf you use this command often **__please__** join my [support server]({self.bot.support}) and visit the #message-tracking channel for reasons why and how to keep this command for your server.\n\ntl;dr **Join the [support server]({self.bot.support}) for all details if you use this command a lot**"
+        await ctx.send(embeds=[embed, other_embed])
 
     @commands.command(aliases=['msgs'])
     @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.member))
-    async def messages(self, ctx : MyContext, *, member : Optional[discord.Member] = commands.Option(description='Member\'s messages you want to check')):
+    async def messages(self, ctx : MyContext, *, member : Optional[discord.Member]):
         """
         Show total amount of messages a member has sent.
         """
         member = member or ctx.author
-        await ctx.defer()
+        await ctx.trigger_typing()
         query = """
                 SELECT COUNT(*) as c
                 FROM messages
@@ -162,13 +165,17 @@ class tracking(commands.Cog, description='Module for user and server stats.'):
         embed = Embed()
         embed.description = f'**{member}** has sent **{count:,}** message{"" if count == 1 else "s"}'\
                             f"\n*Message tracking started {discord.utils.format_dt(ctx.guild.me.joined_at, 'R')}*"
-        await ctx.send(embed=embed)
+
+        other_embed = Embed(color=discord.Color.red(), title='Warning')
+        other_embed.description = "\U000026a0 **WARNING** This command may get deleted soon as storing message data is expensive \U000026a0"\
+            f"\nIf you use this command often **__please__** join my [support server]({self.bot.support}) and visit the #message-tracking channel for reasons why and how to keep this command for your server.\n\ntl;dr **Join the [support server]({self.bot.support}) for all details if you use this command a lot**"
+        await ctx.send(embeds=[embed, other_embed])
 
 
     @commands.command(aliases=['mt'])
     async def messages_total(self, ctx : MyContext):
         """Get the total amount of messages sent."""
-        await ctx.defer()
+        await ctx.trigger_typing()
         query = """
                 SELECT COUNT(*) as c
                 FROM messages
@@ -179,7 +186,10 @@ class tracking(commands.Cog, description='Module for user and server stats.'):
         embed.colour = discord.Colour.green()
         embed.description = f"I have seen **{count:,}** message{'' if count == 1 else 's'}"\
                             f"\n*Message tracking started <t:1639287704:R>*"
-        await ctx.send(embed=embed)
+        other_embed = Embed(color=discord.Color.red(), title='Warning')
+        other_embed.description = "\U000026a0 **WARNING** This command may get deleted soon as storing message data is expensive \U000026a0"\
+            f"\nIf you use this command often **__please__** join my [support server]({self.bot.support}) and visit the #message-tracking channel for reasons why and how to keep this command for your server.\n\ntl;dr **Join the [support server]({self.bot.support}) for all details if you use this command a lot**"
+        await ctx.send(embeds=[embed, other_embed])
 
     async def register_command(self, ctx: MyContext):
         if ctx.command is None:

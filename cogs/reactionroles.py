@@ -6,8 +6,8 @@ from bot import MetroBot
 from utils.custom_context import MyContext
 from utils.converters import RoleConverter
 
-def setup(bot: MetroBot):
-    bot.add_cog(reactionroles(bot))
+async def setup(bot: MetroBot):
+    await bot.add_cog(reactionroles(bot))
 
 class reactionroles(commands.Cog, description='Manage the reaction role system.'):
     def __init__(self, bot: MetroBot):

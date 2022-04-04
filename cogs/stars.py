@@ -57,8 +57,8 @@ class StarboardConfig:
         guild = self.bot.get_guild(self.id)
         return guild and guild.get_channel(self.channel_id)
 
-def setup(bot: MetroBot):
-    bot.add_cog(stars(bot))
+async def setup(bot: MetroBot):
+    await bot.add_cog(stars(bot))
 
 class stars(commands.Cog, description='Manage and create starboard commands. \nThis cog is 100% \of [R. Danny\'s](https://github.com/Rapptz/RoboDanny/blob/1fb95d76d1b7685e2e2ff950e11cddfc96efbfec/cogs/) starboard cog.'):
     def __init__(self, bot: MetroBot):

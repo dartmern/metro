@@ -166,5 +166,5 @@ class support(commands.Cog, description='Support only commands.'):
         except:
             await ctx.cross()      
     
-def setup(bot):
-    bot.add_cog(support(bot))
+async def setup(bot):
+    await bot.add_cog(support(bot))

@@ -49,7 +49,7 @@ class StressView(discord.ui.View):
         self.message: Optional[discord.Message] = None
         self.score: int = 0
 
-    async def interaction_check(self, item: discord.ui.Item, interaction: discord.Interaction):
+    async def interaction_check(self, interaction: discord.Interaction):
         if interaction.user != self.ctx.author:
             await interaction.response.send_message(f"This is not your interaction!", ephemeral=True)
         else:
@@ -114,28 +114,6 @@ class fun(commands.Cog, description="Fun commands!"):
         await ctx.send(embed=em)
 
 
-def setup(bot):
-    bot.add_cog(fun(bot))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+async def setup(bot):
+    await bot.add_cog(fun(bot))
+    

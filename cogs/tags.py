@@ -10,8 +10,8 @@ from utils.custom_context import MyContext
 from utils.new_pages import SimplePages
 from utils.useful import Embed
 
-def setup(bot: MetroBot):
-    bot.add_cog(tags(bot))
+async def setup(bot: MetroBot):
+    await bot.add_cog(tags(bot))
 
 
 class TagSource(menus.ListPageSource):

@@ -30,7 +30,7 @@ class ErrorView(discord.ui.View):
 
 
     @discord.ui.button(label='View Traceback', style=discord.ButtonStyle.blurple)
-    async def view_traceback(self, _, interaction : discord.Interaction):
+    async def view_traceback(self, interaction : discord.Interaction, button: discord.ui.Button):
 
         embed = Embed(color=discord.Colour.red(), title='Full Trackback')
         embed.description = f'```py\n{self.traceback_string}\n```'
@@ -339,5 +339,5 @@ class core(commands.Cog, description="Core events."):
                     await self.bot.error_logger.send(content=f'{channel.guild.get_role(DEVELOPER_ROLE).mention} ID: {ctx.message.id} | Traceback string was too long to output.', embed=embed, file=discord.File(io.StringIO(traceback_string), filename='traceback.py'))
                 return 
 
-def setup(bot):
-    bot.add_cog(core(bot))
+async def setup(bot):
+    await bot.add_cog(core(bot))

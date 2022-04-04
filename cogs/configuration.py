@@ -642,5 +642,5 @@ class configuration(commands.Cog, description='Configure the bot/server.'):
         else:
             await ctx.send('No commands are toggled.')
             
-def setup(bot):
-    bot.add_cog(configuration(bot))
+async def setup(bot):
+    await bot.add_cog(configuration(bot))

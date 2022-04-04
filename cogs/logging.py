@@ -61,8 +61,8 @@ class CasesSource(menus.ListPageSource):
 
         
 
-def setup(bot: MetroBot):
-    bot.add_cog(_logging(bot))
+async def setup(bot: MetroBot):
+    await bot.add_cog(_logging(bot))
 
 class _logging(commands.Cog, description='Manage logging related commands.', name='logging'):
     def __init__(self, bot: MetroBot):

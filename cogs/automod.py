@@ -4,8 +4,8 @@ from discord.ext import commands
 from bot import MetroBot
 from utils.custom_context import MyContext
 
-def setup(bot: MetroBot):
-    bot.add_cog(automod(bot))
+async def setup(bot: MetroBot):
+    await bot.add_cog(automod(bot))
 
 class automod(commands.Cog, description='Manage auto-moderation settings such as filters..'):
     def __init__(self, bot: MetroBot):

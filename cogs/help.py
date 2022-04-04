@@ -41,7 +41,7 @@ class SupportView(discord.ui.View):
         super().__init__(timeout=300)
         self.ctx = ctx
         
-    async def interaction_check(self, item: discord.ui.Item, interaction: discord.Interaction) -> bool:
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id == self.ctx.author.id:
             return True
         await interaction.response.send_message('This pagination menu cannot be controlled by you, sorry!', ephemeral=True)
@@ -54,7 +54,8 @@ class SupportView(discord.ui.View):
         embed.colour = discord.Colour.orange()
         embed.description = '__**Are you sure you want to join my support server?**__'\
             f'\n Joining is completely at your own will. \nThis message is here to protect people from accidentally joining.'\
-            f'\n You can kindly dismiss this message if you clicked by accident.'
+            f'\n You can kindly dismiss this message if you clicked by accident.'\
+            f'\n\n If you have an issue with joining you can always send the bot owner an email. (`metrobot.receiving@gmail.com`)'
         if interaction:
             await interaction.response.send_message(embed=embed, ephemeral=True, view=self)
         else:
@@ -72,7 +73,7 @@ class VoteView(discord.ui.View):
 
         self.bot_instance = bot_instance
 
-    async def interaction_check(self, item: discord.ui.Item, interaction: discord.Interaction) -> bool:
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id == self.ctx.author.id:
             return True
         await interaction.response.send_message('This pagination menu cannot be controlled by you, sorry!', ephemeral=True)
@@ -103,7 +104,7 @@ class VoteView(discord.ui.View):
         await self.ctx.send(embed=embed, view=self)
 
     @discord.ui.button(label='Reminder', style=discord.ButtonStyle.green)
-    async def foo(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def foo(self, interaction: discord.Interaction, button: discord.ui.Button):
         button.disabled = True
         await interaction.message.edit(view=self)
         await interaction.response.defer()
@@ -121,7 +122,7 @@ class InviteView(discord.ui.View):
         self.client = None
         self.message: Optional[discord.Message] = None
 
-    async def interaction_check(self, item: discord.ui.Item, interaction: discord.Interaction) -> bool:
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id == self.ctx.author.id:
             return True
         await interaction.response.send_message('This pagination menu cannot be controlled by you, sorry!', ephemeral=True)
@@ -150,7 +151,7 @@ class InviteView(discord.ui.View):
         self.message = await _send(embed=embed, view=self)
 
     @discord.ui.button(row=1, label='Create custom permissions', style=discord.ButtonStyle.green)
-    async def custom_perms(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def custom_perms(self, interaction: discord.Interaction, button: discord.ui.Button):
         button.disabled = True
         try:
             await self.message.edit(view=self)
@@ -182,7 +183,7 @@ class InviteView(discord.ui.View):
         await interaction.followup.send(embed=em)
 
     @discord.ui.button(emoji='🗑️', style=discord.ButtonStyle.red, row=1)
-    async def stop_pages(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def stop_pages(self, interaction: discord.Interaction, button: discord.ui.Button):
         """
         Stop the pagination session. 
         Unless this pagination menu was invoked with a slash command
@@ -196,12 +197,12 @@ class InviteView(discord.ui.View):
 
 class NeedHelp(discord.ui.View):
     def __init__(self, ctx: MyContext, old_view: discord.ui.View):
-        super().__init__(timeout=5)
+        super().__init__(timeout=None)
         self.ctx = ctx
         self.old_embed = None
         self.old_view = old_view # For the go home button
 
-    async def interaction_check(self, item: discord.ui.Item, interaction: discord.Interaction) -> bool:
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id == self.ctx.author.id:
             return True
         await interaction.response.send_message('This pagination menu cannot be controlled by you, sorry!', ephemeral=True)
@@ -232,12 +233,12 @@ class NeedHelp(discord.ui.View):
         await interaction.response.edit_message(embed=embed, view=self)
 
     @discord.ui.button(label='Go Back', emoji='🏘️', style=discord.ButtonStyle.blurple)
-    async def go_home_button(self, _, interaction: discord.Interaction):
+    async def go_home_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.edit_message(embed=self.old_embed, view=self.old_view)
         self.stop()
 
     @discord.ui.button(emoji='🗑️', style=discord.ButtonStyle.red)
-    async def stop_pages(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def stop_pages(self, interaction: discord.Interaction, button: discord.ui.Button):
         """
         Stop the pagination session. 
         """
@@ -390,7 +391,7 @@ class NewHelpView(discord.ui.View):
         return embed
 
     @discord.ui.select(placeholder='Please select a category...', row=0)
-    async def select_category(self, select : discord.ui.Select, interaction : discord.Interaction):
+    async def select_category(self, interaction : discord.Interaction, select : discord.ui.Select):
 
         if select.values[0] == 'home_page': 
             await interaction.response.edit_message(embed=self.home_page_embed(), view=self)
@@ -405,23 +406,23 @@ class NewHelpView(discord.ui.View):
             await interaction.response.edit_message(embed=self.category_embed(cog))
 
     @discord.ui.button(label='Need help', emoji='❓', style=discord.ButtonStyle.green)
-    async def help_button(self, button : discord.ui.Button, interaction : discord.Interaction):
+    async def help_button(self, interaction : discord.Interaction, button : discord.ui.Button):
         await NeedHelp(self.ctx, self).start(interaction) 
 
     @discord.ui.button(label='Support Server', style=discord.ButtonStyle.blurple)
-    async def support_url(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def support_url(self, interaction: discord.Interaction, button: discord.ui.Button):
 
         view = SupportView(self.ctx)
         await view.start(interaction)
         
     @discord.ui.button(label='Invite Me')
-    async def invite_url(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def invite_url(self, interaction: discord.Interaction, button: discord.ui.Button):
         
         view = InviteView(self.ctx)
         await view.start(interaction)
 
     @discord.ui.button(emoji='🗑️', style=discord.ButtonStyle.red)
-    async def stop_pages(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def stop_pages(self, interaction: discord.Interaction, button: discord.ui.Button):
         """
         Stop the pagination session. 
         """
@@ -436,7 +437,8 @@ class NewHelpView(discord.ui.View):
         self.start_select()
         self.message = await self.ctx.send(embed=self.home_page_embed(), view=self)
 
-    async def interaction_check(self, item: discord.ui.Item, interaction: discord.Interaction) -> bool:
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        print(interaction.data)
         if interaction.user.id == self.ctx.author.id:
             return True
         await interaction.response.send_message('This pagination menu cannot be controlled by you, sorry!', ephemeral=True)
@@ -449,7 +451,7 @@ class View(discord.ui.View):
         self.ctx = ctx
         self.command = command
 
-    async def interaction_check(self, item: discord.ui.Item, interaction: discord.Interaction) -> bool:
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if self.ctx.author == interaction.user:
             return True
         await interaction.response.send_message(f"Only {self.ctx.author} can use this menu. Run the command yourself to use it.",
@@ -457,12 +459,12 @@ class View(discord.ui.View):
         return False
 
     @discord.ui.button(emoji='\U0001f5d1', style=discord.ButtonStyle.red)
-    async def foo(self, _, interaction: discord.Interaction) -> None:
+    async def foo(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         await self.ctx.message.add_reaction(self.ctx.bot.emotes['check'])
         await interaction.message.delete()
 
     @discord.ui.button(emoji='\U0001f4ce', label='Source', style=discord.ButtonStyle.blurple)
-    async def bar(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def bar(self, interaction: discord.Interaction, button: discord.ui.Button):
         button.disabled = True
         button.style = discord.ButtonStyle.gray
         await self.message.edit(view=self)
@@ -1072,7 +1074,7 @@ class meta(commands.Cog, description='Get bot stats and information.'):
     async def _linecount(self, ctx: MyContext):
         """Get the linecount for Metro."""
 
-        await ctx.defer()
+        await ctx.trigger_typing()
 
         embed = discord.Embed(color=ctx.color)
 
@@ -1103,5 +1105,5 @@ class meta(commands.Cog, description='Get bot stats and information.'):
         await ctx.send(embed=embed, reply=False)
 
 
-def setup(bot):
-    bot.add_cog(meta(bot))
+async def setup(bot):
+    await bot.add_cog(meta(bot))

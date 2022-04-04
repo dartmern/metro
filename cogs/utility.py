@@ -40,7 +40,7 @@ class StopView(discord.ui.View):
         super().__init__(timeout=120)
         self.ctx = ctx
 
-    async def interaction_check(self, item: discord.ui.Item, interaction: discord.Interaction):
+    async def interaction_check(self, interaction: discord.Interaction):
         if self.ctx.author.id == interaction.user.id:
             return True
         else:
@@ -49,7 +49,7 @@ class StopView(discord.ui.View):
             )
 
     @discord.ui.button(emoji='\U0001f5d1', style=discord.ButtonStyle.red)
-    async def stop_view(self, button : discord.ui.Button, interaction : discord.Interaction):
+    async def stop_view(self, interaction : discord.Interaction, button : discord.ui.Button):
         """
         Stop the pagination session. 
         Unless this pagination menu was invoked with a slash command
@@ -66,7 +66,7 @@ class SourceView(discord.ui.View):
         self.ctx = ctx
         self.code = code
 
-    async def interaction_check(self, item: discord.ui.Item, interaction: discord.Interaction):
+    async def interaction_check(self, interaction: discord.Interaction):
         if self.ctx.author.id == interaction.user.id:
             return True
         else:
@@ -75,7 +75,7 @@ class SourceView(discord.ui.View):
             )
 
     @discord.ui.button(label='Source File', emoji='\U0001f4c1', style=discord.ButtonStyle.blurple)
-    async def foo(self, button : discord.ui.Button, interaction : discord.Interaction):
+    async def foo(self, interaction : discord.Interaction, button : discord.ui.Button):
         
         if len(self.code) >= 1500:
             file = discord.File(io.StringIO(self.code), filename='code.py')
@@ -89,7 +89,7 @@ class SourceView(discord.ui.View):
         await interaction.message.edit(view=self)
 
     @discord.ui.button(label='Post Source', emoji='\U0001f587', style=discord.ButtonStyle.blurple)
-    async def bar(self, button : discord.ui.Button, interaction : discord.Interaction):
+    async def bar(self, interaction : discord.Interaction, button : discord.ui.Button):
 
         async with self.ctx.bot.session.post(f"https://mystb.in/documents", data=self.code) as s:
             res = await s.json()
@@ -102,7 +102,7 @@ class SourceView(discord.ui.View):
         await interaction.message.edit(view=self)
 
     @discord.ui.button(emoji='\U0001f5d1', style=discord.ButtonStyle.red)
-    async def stop_view(self, button : discord.ui.Button, interaction : discord.Interaction):
+    async def stop_view(self, interaction : discord.Interaction, button : discord.ui.Button):
         """
         Stop the pagination session. 
         Unless this pagination menu was invoked with a slash command
@@ -1225,7 +1225,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
                 argument,
             )
         if x:
-            await ctx.defer()
+            await ctx.trigger_typing()
             argument = str(await self.bot.mystbin_client.get(x[0]))
 
         try:
@@ -1235,5 +1235,5 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         except Exception as e:
             return await ctx.send(str(e))
 
-def setup(bot):
-    bot.add_cog(utility(bot))
+async def setup(bot):
+    await bot.add_cog(utility(bot))

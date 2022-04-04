@@ -1,3 +1,4 @@
+import asyncio
 import collections
 import datetime
 import re
@@ -134,23 +135,7 @@ class MetroBot(commands.AutoShardedBot):
             raise UserBlacklisted
 
     def __init__(self):
-        intents = discord.Intents(
-            guild_reactions=True,  # reaction add/remove/clear
-            guild_messages=True,  # message create/update/delete
-            guilds=True,  # guild/channel join/remove/update
-            integrations=True,  # integrations update
-            voice_states=True,  # voice state update
-            dm_reactions=True,  # reaction add/remove/clear
-            guild_typing=True,  # on typing
-            dm_messages=True,  # message create/update/delete
-            presences=True,  # member/user update for games/activities
-            dm_typing=True,  # on typing
-            webhooks=True,  # webhook update
-            members=True,  # member join/remove/update
-            invites=True,  # invite create/delete
-            emojis=True,  # emoji update
-            bans=True  # member ban/unban
-        )
+        intents = discord.Intents.all()
         allowed_mentions = discord.AllowedMentions(
             roles=False, users=True, everyone=False, replied_user=False)
 
@@ -160,15 +145,12 @@ class MetroBot(commands.AutoShardedBot):
             case_insensitive=True,
             allowed_mentions=allowed_mentions,
             owner_ids=DEVELOPER_IDS,
-            #chunk_guilds_at_startup=False,
             help_command=None,
-            #slash_commands=True,
-            #slash_command_guilds=SLASH_GUILDS,
             strip_after_prefix=True,
             #shard_count=10,
             max_messages=5000
         )
-        self.session = aiohttp.ClientSession(trust_env=True)
+        
         self.mystbin_client = mystbin.Client()
         self.google_client = async_cse.Search(google_token)
         self.hypixel = asyncpixel.Hypixel(info_file['hypixel_api_key'])
@@ -183,7 +165,6 @@ class MetroBot(commands.AutoShardedBot):
         self.noprefix = False
         self.started = False
 
-        self.db = asyncpg.Pool = self.loop.run_until_complete(create_db_pool(user, password, database, host, port))
         self.uptime = discord.utils.utcnow()
 
         #Cache
@@ -201,10 +182,6 @@ class MetroBot(commands.AutoShardedBot):
         #Emojis
         self.emotes = EMOTES
         self.TEST_BOT_ID = TEST_BOT_ID
-
-        #Loggers
-        self.error_logger = discord.Webhook.from_url(webhooks['error_handler'], session=self.session)
-        self.status_logger = discord.Webhook.from_url(webhooks['status_logger'], session=self.session)
 
     @property
     def donate(self) -> str:
@@ -479,20 +456,34 @@ async def on_guild_remove(guild: discord.Guild):
     count = discord.Embed(color=discord.Colour.purple(), description="Guilds count: **%s**" % len(bot.guilds))
     await channel.send(embeds=[embed, count])
 
+
+async def main():
+    async with aiohttp.ClientSession() as session:
+        async with bot:
+            bot.session = session
+            bot.db = await create_db_pool(user, password, database, host, port)
+            bot.loop.create_task(load_blacklist())
+            bot.loop.create_task(load_guildblacklist())
+            bot.loop.create_task(load_premiumguilds())
+            bot.loop.create_task(execute_scripts())
+
+            bot.error_logger = discord.Webhook.from_url(webhooks['error_handler'], session=bot.session)
+            bot.status_logger = discord.Webhook.from_url(webhooks['status_logger'], session=bot.session)
+
+            folders = ['hypixel']
+
+            for file in os.listdir(cwd + "/cogs"):
+                if file.endswith(".py") and not file.startswith("_"):
+                    await bot.load_extension(f"cogs.{file[:-3]}")
+                if file in folders:
+                    await bot.load_extension(f"cogs.{file}")
+
+            await bot.load_extension('jishaku') # jishaku
+
+            await bot.start(token)
+
+
 if __name__ == "__main__":
     # When running this file, if it is the 'main' file
     # I.E its not being imported from another python file run this
-    folders = ['customcommand', 'hypixel']
-
-    for file in os.listdir(cwd + "/cogs"):
-        if file.endswith(".py") and not file.startswith("_"):
-            bot.load_extension(f"cogs.{file[:-3]}")
-        if file in folders:
-            bot.load_extension(f"cogs.{file}")
-
-    bot.load_extension('jishaku')
-    bot.loop.create_task(load_blacklist())
-    bot.loop.create_task(load_guildblacklist())
-    bot.loop.create_task(load_premiumguilds())
-    bot.loop.create_task(execute_scripts())
-    bot.run(token)
+    asyncio.run(main())

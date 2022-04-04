@@ -89,7 +89,7 @@ class MyContext(commands.Context):
 
         if reply:
             reference = self.message
-        message = await super().send(content=content, reference=reference, embed=embed, ephemeral=hide, **kwargs)
+        message = await super().send(content=content, reference=reference, embed=embed, **kwargs)
 
 
         return message
@@ -200,7 +200,7 @@ class MyContext(commands.Context):
     
     @property
     def color(self):
-        return self.me.color if self.me.color not in (discord.Color.default(), discord.Embed.Empty, None)\
+        return self.me.color if self.me.color not in (discord.Color.default(), None)\
             else discord.Color.blue()
 
     @property

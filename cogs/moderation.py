@@ -70,7 +70,7 @@ class MuteRoleView(discord.ui.View):
         self.ctx = ctx
         self.role_id = role_id
 
-    async def interaction_check(self, item: discord.ui.Item, interaction: discord.Interaction):
+    async def interaction_check(self, interaction: discord.Interaction):
         if self.ctx.author.id == interaction.user.id:
             return True
         else:
@@ -79,7 +79,7 @@ class MuteRoleView(discord.ui.View):
             )
 
     @discord.ui.button(label='Create new mute role', style=discord.ButtonStyle.blurple, row=0)
-    async def _(self, button : discord.ui.Button, interaction : discord.Interaction):
+    async def _(self, interaction : discord.Interaction, button : discord.ui.Button):
         
         await interaction.response.defer()
         await interaction.delete_original_message()
@@ -102,7 +102,7 @@ class MuteRoleView(discord.ui.View):
 
 
     @discord.ui.button(label='Set existing mute role', style=discord.ButtonStyle.green, row=0)
-    async def __(self, button : discord.ui.Button, interaction : discord.Interaction):
+    async def __(self, interaction : discord.Interaction, button : discord.ui.Button):
 
         await interaction.response.defer()
         await interaction.delete_original_message()
@@ -135,7 +135,7 @@ class MuteRoleView(discord.ui.View):
 
 
     @discord.ui.button(label='Remove existing muted role', style=discord.ButtonStyle.danger, row=0, custom_id='remove_muterole')
-    async def ___(self, button : discord.ui.Button, interaction : discord.Interaction):
+    async def ___(self, interaction : discord.Interaction, button : discord.ui.Button):
 
         await interaction.response.defer()
 
@@ -158,7 +158,7 @@ class MuteRoleView(discord.ui.View):
 
 
     @discord.ui.button(emoji='\U00002753', style=discord.ButtonStyle.gray, row=1)
-    async def ____(self, button : discord.ui.Button, interaction : discord.Interaction):
+    async def ____(self, interaction : discord.Interaction, button : discord.ui.Button):
         
         await interaction.response.send_message(
             f"\nNeed help with which option to choose?"
@@ -169,7 +169,7 @@ class MuteRoleView(discord.ui.View):
         )
 
     @discord.ui.button(emoji='\U0001f5d1', style=discord.ButtonStyle.gray, row=1)
-    async def stop_view(self, button : discord.ui.Button, interaction : discord.Interaction):
+    async def stop_view(self, interaction : discord.Interaction, button : discord.ui.Button):
         """
         Stop the pagination session. 
         Unless this pagination menu was invoked with a slash command
@@ -202,11 +202,8 @@ class moderation(commands.Cog, description="Moderation commands."):
     @commands.command(name="kick", brief="Kick a member from the server.")
     @commands.has_guild_permissions(kick_members=True)
     @commands.bot_has_permissions(send_messages=True, kick_members=True)
-    async def kick_cmd(self,
-                       ctx : MyContext,
-                       member : discord.Member = commands.Option(description='Member to kick.'),
-                       *,
-                       reason : Optional[str] = commands.Option(description='Reason for kicking this member.')  
+    async def kick_cmd(self, ctx : MyContext, 
+                        member : discord.Member, *, reason : Optional[str]
                        ):
         """
         Kicks a member from the server.\n
@@ -263,10 +260,10 @@ class moderation(commands.Cog, description="Moderation commands."):
     async def ban_cmd(
             self,
             ctx : MyContext,
-            member : discord.User = commands.Option(description='Member to ban.'),
-            delete_days : Optional[int] = commands.Option(default=0, description='Amount of days worth of messages to delete.'),
+            member : discord.User,
+            delete_days : Optional[int],
             *,
-            reason : str = commands.Option(default=None, description='Reason to ban this member/user.')
+            reason : str 
     ):
         """
         Ban a member from the server.\n
@@ -329,9 +326,9 @@ class moderation(commands.Cog, description="Moderation commands."):
     async def unban_cmd(
             self,
             ctx : MyContext,
-            member : discord.User = commands.Option(description='User to be unbanned.'),
+            member : discord.User ,
             *,
-            reason : Optional[str] = commands.Option(description='Reason for this user to be unbanned.')
+            reason : Optional[str]
     ):
         """
         Unbans an user from the server.
@@ -359,7 +356,7 @@ class moderation(commands.Cog, description="Moderation commands."):
     async def list_bans(self, ctx : MyContext):
         """List all the banned users for this guild."""
 
-        await ctx.defer()
+        await ctx.trigger_typing()
         bans = await ctx.guild.bans()
         if not bans:
             return await ctx.send(f"No users are banned in this guild.")
@@ -859,7 +856,7 @@ class moderation(commands.Cog, description="Moderation commands."):
     @commands.command(name='block')
     @commands.bot_has_permissions(manage_channels=True, send_messages=True)
     @commands.has_permissions(manage_channels=True, send_messages=True)
-    async def block(self, ctx, member : discord.Member = commands.Option(description='member to block')):
+    async def block(self, ctx, member : discord.Member):
         """
         Block a member from your channel.
         """
@@ -880,7 +877,7 @@ class moderation(commands.Cog, description="Moderation commands."):
     @commands.command(name='unblock')
     @commands.bot_has_permissions(manage_channels=True, send_messages=True)
     @commands.has_permissions(manage_channels=True, send_messages=True)
-    async def unblock(self, ctx, member : discord.Member = commands.Option(description='member to unblock')):
+    async def unblock(self, ctx, member : discord.Member):
         """
         Unblock a member from your channel.
         """
@@ -1039,7 +1036,7 @@ class moderation(commands.Cog, description="Moderation commands."):
         if not muterole:
             return await ctx.send(f"You do not have a mute role setup yet. Please run `{ctx.prefix}muterole`")
 
-        await ctx.defer()
+        await ctx.trigger_typing()
 
         if muterole.position > ctx.guild.me.top_role.position:
             to_send = ""
@@ -1175,7 +1172,7 @@ class moderation(commands.Cog, description="Moderation commands."):
         if not muterole:
             return await ctx.send(f"You do not have a mute role setup yet. Please run `{ctx.prefix}muterole`")
 
-        await ctx.defer()
+        await ctx.trigger_typing()
 
         if muterole.position > ctx.guild.me.top_role.position:
             to_send = ""
@@ -1275,7 +1272,7 @@ class moderation(commands.Cog, description="Moderation commands."):
         if not muterole:
             return await ctx.send(f"This server's moderators have not setup a mute role yet...Therefore no one is muted.")
 
-        await ctx.defer()
+        await ctx.trigger_typing()
 
         embed = Embed()
         embed.colour = discord.Colour.yellow()
@@ -1537,5 +1534,5 @@ class moderation(commands.Cog, description="Moderation commands."):
 
 
 
-def setup(bot):
-    bot.add_cog(moderation(bot))
+async def setup(bot):
+    await bot.add_cog(moderation(bot))

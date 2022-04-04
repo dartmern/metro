@@ -4,7 +4,6 @@ import queue
 from typing import Optional, Union
 import discord
 import re
-from discord.embeds import EmptyEmbed
 import pytz
 import unicodedata
 import asyncpg
@@ -37,8 +36,8 @@ EMOJI_RE = re.compile(r"(<(a)?:[a-zA-Z0-9_]+:([0-9]+)>)")
 # https://github.com/LeoCx1000/discord-bots/blob/master/DuckBot/cogs/utility.py#L707-L716
 
 
-def setup(bot: MetroBot):
-    bot.add_cog(serverutils(bot))
+async def setup(bot: MetroBot):
+    await bot.add_cog(serverutils(bot))
 
 class serverutils(commands.Cog, description='Server utilities like role, lockdown, nicknames.'):
     def __init__(self, bot: MetroBot):

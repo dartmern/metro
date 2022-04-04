@@ -66,8 +66,8 @@ class CodeBlock:
 info = read_json('info')
 bitly_token = info['bitly_token']
 
-def setup(bot: MetroBot):
-    bot.add_cog(extras(bot))
+async def setup(bot: MetroBot):
+    await bot.add_cog(extras(bot))
 
 class extras(commands.Cog, description='Extra commands for your use.'):
     def __init__(self, bot: MetroBot):
@@ -162,7 +162,7 @@ class extras(commands.Cog, description='Extra commands for your use.'):
         if not re.fullmatch(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', url):
             raise commands.BadArgument("That is not a vaild url.")
 
-        await ctx.defer()
+        await ctx.trigger_typing()
 
         params = {"access_token" : bitly_token, "longUrl" : url}
         async with self.bot.session.get("https://api-ssl.bitly.com/v3/shorten", params=params) as response:

@@ -18,8 +18,8 @@ from utils.remind_utils import FutureTime, UserFriendlyTime
 from utils.useful import Cooldown, Embed, ts_now
 
 
-def setup(bot: MetroBot):
-    bot.add_cog(giveaways(bot))
+async def setup(bot: MetroBot):
+    await bot.add_cog(giveaways(bot))
 
 class WinnerConverter(commands.Converter):
     async def convert(self, ctx : MyContext, argument : str):

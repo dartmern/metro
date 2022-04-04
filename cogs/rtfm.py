@@ -180,13 +180,13 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         }
 
         if obj is None:
-            await ctx.defer(ephemeral=True)
+            await ctx.trigger_typing()
             await ctx.send(page_types[key], hide=True)
             return
 
 
         if not hasattr(self, '_rtfm_cache'):
-            await ctx.defer(ephemeral=True)
+            await ctx.trigger_typing()
             await self.build_rtfm_lookup_table(page_types)
 
         obj = re.sub(r'^(?:discord\.(?:ext\.)?)?(?:commands\.)?(.+)', r'\1', obj)
@@ -229,14 +229,14 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
 
     @rtfm.command(name="python",aliases=["py"])
     @commands.bot_has_permissions(send_messages=True)
-    async def rtfm_py(self, ctx, *, object : str = commands.Option(default=None,description='Object to search for')):
+    async def rtfm_py(self, ctx, *, object : str):
         """Gives you a documentation link for a Python entity."""
 
         await self.do_rtfm(ctx, "python", object)
 
     @rtfm.command(name="master",aliases=["2.0"])
     @commands.bot_has_permissions(send_messages=True)
-    async def rtfm_master(self, ctx, *, object : str = commands.Option(default=None,description='Object to search for')):
+    async def rtfm_master(self, ctx, *, object : str):
         """Gives you a documentation link for a discord.py entity. (master branch)"""
 
         await self.do_rtfm(ctx, "discord.py-2.0", object)
@@ -244,7 +244,7 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
 
     @rtfm.command(name='dpy',aliases=['discordpy', 'discord.py'])
     @commands.bot_has_permissions(send_messages=True)
-    async def rtfm_dpy(self, ctx, *, object : str = commands.Option(default=None,description='Object to search for')):
+    async def rtfm_dpy(self, ctx, *, object : str):
         """Gives you a documentation link for a discord.py entity."""
 
         await self.do_rtfm(ctx, "discord.py", object)
@@ -252,7 +252,7 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
 
     @rtfm.command(name='edpy')
     @commands.bot_has_permissions(send_messages=True)
-    async def rtfm_edpy(self, ctx, *, object : str = commands.Option(default=None,description='Object to search for')):
+    async def rtfm_edpy(self, ctx, *, object : str):
         """Gives you a documentation link for a ed-py entity."""
 
         await self.do_rtfm(ctx, 'enhanced-discord.py', object)
@@ -274,7 +274,7 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
 
         This command is powered by [IDevision API](https://idevision.net/static/redoc.html)
         """
-        await ctx.defer()
+        await ctx.trigger_typing()
 
         if library is None:
             library = "enhanced-discord.py"
@@ -309,6 +309,6 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         await ctx.send(embed=e)
 
 
-def setup(bot):
-    bot.add_cog(docs(bot))
+async def setup(bot):
+    await bot.add_cog(docs(bot))
 
