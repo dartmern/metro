@@ -1,4 +1,4 @@
 from .customcommand import *
 
-def setup(bot):
-    bot.add_cog(customcommands(bot))
+async def setup(bot):
+    await bot.add_cog(customcommands(bot))

@@ -1,12 +1,14 @@
 import asyncio
 import discord
 from discord.ext import commands
+from discord import app_commands
 
 from typing import Optional, Union
 
 import traceback
 import time
 import os
+from numpy import place
 import pytz
 import asyncpg
 import io
@@ -23,6 +25,7 @@ from jishaku.paginators import WrappedPaginator
 from jishaku.codeblocks import codeblock_converter
 from bot import MetroBot
 from cogs.serverutils import serverutils
+from utils.constants import TESTING_GUILD_ID
 
 from utils.decos import is_dev, is_support
 from utils.custom_context import MyContext
@@ -84,6 +87,11 @@ class TabularData:
         to_draw.append(sep)
         return '\n'.join(to_draw)
 
+
+# Moved this up because of some testing
+async def setup(bot: MetroBot):
+    await bot.add_cog(developer(bot))
+
 class plural:
     def __init__(self, value):
         self.value = value
@@ -125,6 +133,15 @@ class developer(commands.Cog, description="Developer commands."):
     async def moderator(self, ctx: MyContext):
         """Base command for bot moderator actions."""
         await ctx.help()
+
+    @moderator.command(name='sync')
+    @is_support()
+    async def moderator_sync(self, ctx: MyContext, *, guild_id: Optional[int]):
+        """Sync the slash commands in that guild."""
+        guild_id = guild_id or TESTING_GUILD_ID
+        guild = discord.Object(guild_id)
+        await self.bot.tree.sync(guild=guild)
+        await ctx.send('\U0001f44d')
 
     @moderator.command(name='whatown')
     @is_support()
@@ -521,8 +538,4 @@ class developer(commands.Cog, description="Developer commands."):
             return await ctx.send("Updated!")
              
         self.do_restart(message)
-
-async def setup(bot):
-    await bot.add_cog(developer(bot))
-
 
