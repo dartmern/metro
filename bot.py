@@ -470,7 +470,7 @@ async def main():
             bot.error_logger = discord.Webhook.from_url(webhooks['error_handler'], session=bot.session)
             bot.status_logger = discord.Webhook.from_url(webhooks['status_logger'], session=bot.session)
 
-            folders = ['hypixel']
+            folders = ['hypixel', 'context_menu']
 
             for file in os.listdir(cwd + "/cogs"):
                 if file.endswith(".py") and not file.startswith("_"):
