@@ -1,23 +1,28 @@
+from asyncore import write
 import json
 import random
-from typing import Optional
+from typing import Dict, Optional
+import aiohttp
 import discord
 from discord.ext import commands
+from discord import app_commands
 
 import time
 import re
-import async_cse # google
+import async_cse
+import yarl # google
 
 from bot import MetroBot
 from utils.custom_context import MyContext
 from utils.converters import DiscordCommand, ImageConverter
 from utils.useful import Cooldown, Embed, chunkIt
 from utils.calc_tils import NumericStringParser
-from utils.json_loader import get_path, read_json
+from utils.json_loader import get_path, read_json, write_json
 
 data = read_json("info")
 or_api_token = data['openrobot_api_key']
 google_token = data['google_token']
+hypixel_api_key = data['hypixel_api_key']
 
 class WebhookConverter(commands.Converter):
   async def convert(self, ctx: commands.Context, argument: str) -> discord.Webhook:
@@ -66,7 +71,25 @@ class CodeBlock:
 info = read_json('info')
 bitly_token = info['bitly_token']
 
+@app_commands.context_menu(name='Calculator')
+async def calculator_context_menu(interaction: discord.Interaction, message: discord.Message):
+    formula = message.content
+    if not formula:
+        return await interaction.response.send_message("No content to calculate!", ephemeral=True)
+
+    await interaction.response.defer()
+
+    formula = formula.replace('*','x')
+    try:
+        answer = NumericStringParser().eval(formula)
+    except Exception as e:
+        return await interaction.followup.send(f"Could not turn [that message's content]({message.jump_url}) into an equation.")
+
+    content = f"Calculated [{formula}]({message.jump_url}) = {answer}"
+    await interaction.followup.send(content=content, ephemeral=False)
+
 async def setup(bot: MetroBot):
+    bot.tree.add_command(calculator_context_menu, guild=discord.Object(812143286457729055))
     await bot.add_cog(extras(bot))
 
 class extras(commands.Cog, description='Extra commands for your use.'):
@@ -247,4 +270,4 @@ class extras(commands.Cog, description='Extra commands for your use.'):
                 embed.add_field(name=result.title, value=f'{result.url}\n{result.description}', inline=False)
             embed.set_footer(text=f'Queried in {round(ping, 2)} milliseconds. | Safe Search: Disabled')
             return await ctx.send(embed=embed)
-            
+
