@@ -1,7 +1,9 @@
-from typing import Dict, Literal, Optional
+from typing import Dict, List, Literal, Optional
 import discord
 from discord.ext import commands
+from discord import app_commands
 from bot import MetroBot
+from utils.constants import TESTING_GUILD, TESTING_GUILD_ID
 
 from utils.useful import Cooldown, Embed, fuzzy
 
@@ -95,6 +97,13 @@ class SphinxObjectFileReader:
 class docs(commands.Cog, description="Fuzzy search through documentations."):
     def __init__(self, bot : MetroBot):
         self.bot = bot
+        self.page_types = {
+            'discord.py': 'https://discordpy.readthedocs.io/en/latest',
+            'python': 'https://docs.python.org/3',
+            'discord.py-2.0': 'https://discordpy.readthedocs.io/en/master',
+            'enhanced-discord.py' : 'https://enhanced-dpy.readthedocs.io/en/latest',
+            'aiohttp' : 'https://docs.aiohttp.org/en/stable/'  
+        }
 
     @property
     def emoji(self) -> str:
@@ -169,15 +178,17 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
 
         self._rtfm_cache = cache
 
+    async def do_slash_rtfm(
+        self, 
+        interaction: discord.Interaction, 
+        key: str, 
+        object: str
+    ):
+        pass #wip
 
-    async def do_rtfm(self, ctx : MyContext, key, obj):
-        page_types = {
-            'discord.py': 'https://discordpy.readthedocs.io/en/latest',
-            'python': 'https://docs.python.org/3',
-            'discord.py-2.0': 'https://discordpy.readthedocs.io/en/master',
-            'enhanced-discord.py' : 'https://enhanced-dpy.readthedocs.io/en/latest',
-            'aiohttp' : 'https://docs.aiohttp.org/en/stable/'  
-        }
+
+    async def do_rtfm(self, ctx : MyContext, key: str, obj: str):
+        page_types = self.page_types
 
         if obj is None:
             await ctx.trigger_typing()
@@ -216,6 +227,41 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         e.description = '\n'.join(f'[`{key}`]({url})' for key, url in matches)
         await ctx.send(embed=e, hide=True)
 
+    @app_commands.command(name='rtfm')
+    @app_commands.describe(library='The library you would like to search in.')
+    @app_commands.guilds(discord.Object(TESTING_GUILD_ID))
+    async def rtfm_slash(
+        self, 
+        interaction: discord.Interaction,
+        library: str,
+        object: str
+    ):
+        """Search through documentation."""
+
+        if library not in list(self.page_types):
+            return await interaction.response.send_message(f'That is not a valid library.', ephemeral=True)
+
+    @rtfm_slash.autocomplete('library')
+    async def rtfm_slash_library_autocomplete(
+        self, 
+        interaction: discord.Interaction,
+        current: str
+    ) -> List[app_commands.Choice[str]]:
+        return [
+            app_commands.Choice(name=item, value=item)
+            for item in self.page_types if current.lower() in item.lower()
+        ]
+
+    @rtfm_slash.autocomplete('object')
+    async def rtfm_slash_object_autocomplete(
+        self,
+        interaction: discord.Interaction,
+        current: str
+    ) -> List[app_commands.Choice[str]]:
+        return [
+            app_commands.Choice(name=item, value=item)
+            for item in self.do_rtfm()
+        ]
 
     @commands.group(name="rtfm",invoke_without_command=True, case_insensitive=True, aliases=['rtfd'])
     @commands.bot_has_permissions(send_messages=True)
