@@ -260,7 +260,7 @@ class NewHelpView(discord.ui.View):
         self.select_category.options = []
 
         self.select_category.add_option(emoji='🏘️', label='Home Page', value='home_page')
-        self.select_category.add_option(emoji='<:bot:925107948789837844>', label='Bot Information', value='bot_information')
+        self.select_category.add_option(emoji=self.bot.emotes['bot'], label='Bot Information', value='bot_information')
         self.select_category.add_option(emoji='📙', label='All commands', value='all_commands')
 
         for category, command in self.data:
@@ -370,7 +370,7 @@ class NewHelpView(discord.ui.View):
         )
         embed.add_field(
             name='Getting Help',
-            value=f'\n • Use `{self.ctx.clean_prefix}help <command | category>` for some help and examples on any command'\
+            value=f'\n • Use `{self.ctx.clean_prefix}help :command | category>` for some help and examples on any command'\
                 f'\n • Join my [support server]({self.ctx.bot.support}) for additional help'\
                 f'\n • Use the select menu below to view the categories\' commands'\
                 f'\n • Use `{self.ctx.clean_prefix}search <query>` to search for a particular command',

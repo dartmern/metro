@@ -19,7 +19,7 @@ class reactionroles(commands.Cog, description='Manage the reaction role system.'
 
     @property
     def emoji(self) -> str:
-        return '<:role:923611835066908712>'
+        return self.bot.emotes['role']
 
     async def load_reactionroles(self):
         await self.bot.wait_until_ready()
