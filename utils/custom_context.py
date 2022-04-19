@@ -87,8 +87,8 @@ class MyContext(commands.Context):
         except KeyError:
             pass
 
-        if reply:
-            reference = self.message
+        #if reply:
+            #reference = self.message
         message = await super().send(content=content, reference=reference, embed=embed, **kwargs)
 
 
