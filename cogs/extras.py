@@ -77,13 +77,13 @@ async def calculator_context_menu(interaction: discord.Interaction, message: dis
     if not formula:
         return await interaction.response.send_message("No content to calculate!", ephemeral=True)
 
-    await interaction.response.defer()
+    await interaction.response.defer(ephemeral=True)
 
     formula = formula.replace('*','x')
     try:
         answer = NumericStringParser().eval(formula)
     except Exception as e:
-        return await interaction.followup.send(f"Could not turn [that message's content]({message.jump_url}) into an equation.")
+        return await interaction.followup.send(f"Could not turn [that message's content]({message.jump_url}) into an equation.", ephemeral=True)
 
     content = f"Calculated [{formula}]({message.jump_url}) = {answer}"
     await interaction.followup.send(content=content, ephemeral=False)
