@@ -1611,14 +1611,12 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
     @commands.bot_has_guild_permissions(manage_emojis=True)
     async def emoji_add(self, ctx: MyContext, name: str, *, url: Optional[str]):
         """Add a custom emoji."""
-        if ctx.message.attachments:
-            async with ctx.typing():
-                    
-                image = await ctx.message.attachments[0].read()
-                try:
-                    discord.utils._get_mime_type_for_image(image)
-                except discord.errors.InvalidArgument:
-                    raise commands.BadArgument("Not a vaild image or had trouble reading it.")
+        if ctx.message.attachments:        
+            image = await ctx.message.attachments[0].read()
+            try:
+                discord.utils._get_mime_type_for_image(image)
+            except discord.errors.InvalidArgument:
+                raise commands.BadArgument("Not a vaild image or had trouble reading it.")
         else:
             if not url:
                 raise commands.BadArgument("Please attach a image or a url...")
