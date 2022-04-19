@@ -2,6 +2,7 @@ from code import InteractiveConsole
 import contextlib
 from typing import Any, Optional
 from urllib.parse import quote_plus
+from aiohttp import ClientConnectorError
 import discord
 import pomice
 import asyncio
@@ -306,7 +307,9 @@ class music(commands.Cog, description='Play high quality music in a voice channe
                     spotify_client_secret=spotify_secret
             )
         except Exception as e:
-            if str(e) == "A node with identifier 'MAIN' already exists.":
+            if isinstance(e, ClientConnectorError):
+                pass
+            elif str(e) == "A node with identifier 'MAIN' already exists.":
                 pass
             else:
                 print(traceback_maker(e))
