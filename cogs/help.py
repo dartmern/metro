@@ -438,7 +438,6 @@ class NewHelpView(discord.ui.View):
         self.message = await self.ctx.send(embed=self.home_page_embed(), view=self)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        print(interaction.data)
         if interaction.user.id == self.ctx.author.id:
             return True
         await interaction.response.send_message('This pagination menu cannot be controlled by you, sorry!', ephemeral=True)
