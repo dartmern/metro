@@ -1533,12 +1533,12 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         messages = await ctx.bot.db.fetchval("SELECT COUNT(*) as c FROM messages WHERE server_id = $1", guild.id)
 
         embed = discord.Embed(color=ctx.color)
-        embed.set_author(name=guild.name, icon_url=guild.icon.url if guild.icon else EmptyEmbed)
+        embed.set_author(name=guild.name, icon_url=guild.icon.url if guild.icon else None)
 
         embed.add_field(name='\U00002139 General', value=f"__**ID:**__ {guild.id} \n__**Owner:**__ {guild.owner if guild.owner else 'Not Found'}\n__**Verification Level:**__ {str(guild.verification_level).title()}\n__**Filesize Limit:**__ {humanize.naturalsize(guild.filesize_limit)}\n__**Role count:**__ {len(guild.roles)}")
 
         embed.add_field(name='<:channels:928388464892842024> Channels', value=f'<:text:928390522182193232> Text: {len([x for x in guild.channels if isinstance(x, discord.TextChannel)])}\n<:voice:928389079266127972> Voice: {len([x for x in guild.channels if isinstance(x, discord.VoiceChannel)])}\n<:category:928391020859772968> Category: {len([x for x in guild.channels if isinstance(x, discord.CategoryChannel)])} \n<:stage:928391073091432458> Stage: {len([x for x in guild.channels if isinstance(x, discord.StageChannel)])}')
-        embed.add_field(name='<:members:908483589157576714> Members', value=f"\U0001f465 Humans: {len(guild.humans)}\n<:bot:925107948789837844> Bots: {len(guild.bots)}\n\U0000267e Total: {len(guild.members)}\n\U0001f4c1 Limit: {guild.max_members}", inline=True)
+        embed.add_field(name='<:members:908483589157576714> Members', value=f"\U0001f465 Humans: {len([x for x in guild.members if not x.bot])}\n<:bot:925107948789837844> Bots: {len([x for x in guild.members if x.bot])}\n\U0000267e Total: {len(guild.members)}\n\U0001f4c1 Limit: {guild.max_members}", inline=True)
 
         embed.add_field(name='<:joined_at:928188524006608936> Created at', value=f"{discord.utils.format_dt(guild.created_at, 'F')} ({discord.utils.format_dt(guild.created_at, 'R')})")
         
@@ -1784,7 +1784,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             raise commands.BadArgument("This server does not have bump reminder set up yet.")
 
         em = discord.Embed(color=ctx.color, title='Bump Reminder Settings')
-        em.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon if ctx.guild.icon else EmptyEmbed)
+        em.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon if ctx.guild.icon else None)
         em.description = f"**Channel:** {f'<#{js[0]}>' if js[0] else 'No bump reminder channel set...'}"\
                         f"\n**Ping role:** {f'<@&{js[4]}>' if js[4] else 'No ping role set...'}"\
                         f"\n**Auto-lock channel:** {await ctx.emojify(js[3])}"
