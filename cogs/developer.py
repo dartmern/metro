@@ -8,7 +8,6 @@ from typing import Optional, Union
 import traceback
 import time
 import os
-from numpy import place
 import pytz
 import asyncpg
 import io
@@ -27,7 +26,7 @@ from bot import MetroBot
 from cogs.serverutils import serverutils
 from utils.constants import TESTING_GUILD_ID
 
-from utils.decos import is_dev, is_support
+from utils.decos import in_support, is_dev, is_support
 from utils.custom_context import MyContext
 from utils.useful import Embed, fuzzy, pages, get_bot_uptime
 from utils.json_loader import write_json
@@ -127,6 +126,13 @@ class developer(commands.Cog, description="Developer commands."):
         if before.author.id != 525843819850104842:
             return
         await self.bot.process_commands(after)
+
+    @commands.command(name='issue')
+    @in_support()
+    async def issue(self, ctx: MyContext, issue: int):
+        """Sends the github issue link."""
+
+        await ctx.send(f'<https://github.com/dartmern/metro/issues/{issue}>')
 
     @commands.group(name='moderator', aliases=['mod'], invoke_without_command=True, case_insensitive=True)
     @is_support()
