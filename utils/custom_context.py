@@ -20,7 +20,7 @@ class ConfirmationView(discord.ui.View):
         self.ctx = ctx
         self.message: Optional[discord.Message] = None
 
-    async def interaction_check(self, item: discord.ui.Item, interaction: discord.Interaction) -> bool:
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user and interaction.user.id == self.author_id:
             return True
         else:
@@ -35,7 +35,7 @@ class ConfirmationView(discord.ui.View):
             await self.message.edit(view=self)
 
     @discord.ui.button(label='Confirm', style=discord.ButtonStyle.green)
-    async def confirm(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.value = True
         await interaction.response.defer()
         if self.delete_after:
@@ -43,7 +43,7 @@ class ConfirmationView(discord.ui.View):
         self.stop()
 
     @discord.ui.button(label='Cancel', style=discord.ButtonStyle.red)
-    async def cancel(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.value = False
         await interaction.response.defer()
         if self.delete_after:

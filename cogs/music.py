@@ -55,7 +55,7 @@ class PlayerView(discord.ui.View):
         embed = discord.Embed(
             title='Now Playing', 
             description=f"{'🔴 **LIVE**' if self.track.is_stream else ''} [{self.track.title}]({self.track.uri}) [{self.track.requester.mention}]",
-            color=self.ctx.color
+            color=self.ctx.color if self.ctx else discord.Colour.yellow()
         )
         self.controller = await self.ctx.send(embed=embed, view=self, reply=False)
         return self.controller
