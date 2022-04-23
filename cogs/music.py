@@ -177,7 +177,7 @@ class PlayerView(discord.ui.View):
         if self.is_privileged(interaction) or interaction.user == self.player.current.requester:
             await self.player.stop()
             self.player.skip_votes.clear()
-            await self.controller.delete(silent=True)
+            await self.controller.delete()
             await interaction.response.defer()
             return await self.controller.channel.send(f"\U000023ed Skipped the current song.")
 
@@ -188,7 +188,7 @@ class PlayerView(discord.ui.View):
             await interaction.response.send_message(f"\U000023ed Voted to skip the song.")
             self.player.skip_votes.clear()
             await self.player.stop()
-            await self.controller.delete(silent=True)
+            await self.controller.delete()
         else:
             await interaction.response.send(f"{interaction.user} has voted to skip this song. Votes: {len(self.player.skip_votes)}/{required}")
 
@@ -251,7 +251,7 @@ class Player(pomice.Player):
 
         await self.play(track)
         if self.controller:
-            await self.controller.delete(silent=True)
+            await self.controller.delete()
             
         view = PlayerView(self.context, track=track, player=self)
         self.controller = await view.start()
