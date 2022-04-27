@@ -3,8 +3,8 @@ from discord.ext import commands
 
 from bot import MetroBot
 
-def setup(bot: MetroBot):
-    bot.add_cog(basic_cog(bot))
+async def setup(bot: MetroBot):
+    await bot.add_cog(basic_cog(bot))
 
 class basic_cog(commands.Cog, description=' '):
     def __init__(self, bot: MetroBot):
