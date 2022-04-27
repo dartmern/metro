@@ -19,7 +19,7 @@ import aiohttp
 import logging
 
 from utils.checks import check_dev
-from utils.constants import BOT_LOGGER_CHANNEL, DEFAULT_INVITE, DEVELOPER_IDS, DOCUMENTATION, EMOTES, GITHUB_URL, PATREON_URL, SLASH_GUILDS, SUPPORT_GUILD, SUPPORT_STAFF, SUPPORT_URL, TEST_BOT_ID
+from utils.constants import BOT_LOGGER_CHANNEL, BOT_OWNER_ID, DEFAULT_INVITE, DEVELOPER_IDS, DOCUMENTATION, EMOTES, GITHUB_URL, PATREON_URL, SLASH_GUILDS, SUPPORT_GUILD, SUPPORT_STAFF, SUPPORT_URL, TEST_BOT_ID
 from utils.remind_utils import human_timedelta
 
 from utils.useful import Cooldown, ts_now
@@ -471,6 +471,8 @@ async def main():
             bot.status_logger = discord.Webhook.from_url(webhooks['status_logger'], session=bot.session)
 
             folders = ['hypixel', 'context_menu']
+
+            bot.owner = bot.get_user(BOT_OWNER_ID)
 
             for file in os.listdir(cwd + "/cogs"):
                 if file.endswith(".py") and not file.startswith("_"):
