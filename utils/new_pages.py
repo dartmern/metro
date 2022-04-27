@@ -117,7 +117,7 @@ class RoboPages(discord.ui.View):
             # An error happened that can be handled, so ignore it.
             pass
 
-    async def interaction_check(self, item: discord.ui.item, interaction: discord.Interaction) -> bool:
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id == self.ctx.author.id:
             return True
         await interaction.response.send_message('This pagination menu cannot be controlled by you, sorry!', ephemeral=True)
@@ -151,33 +151,33 @@ class RoboPages(discord.ui.View):
             self.message = await self.interaction.followup.send(view=self, **kwargs)
 
     @discord.ui.button(label='≪', style=discord.ButtonStyle.grey)
-    async def go_to_first_page(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def go_to_first_page(self, interaction: discord.Interaction, button: discord.ui.Button):
         """go to the first page"""
         await self.show_page(interaction, 0)
 
     @discord.ui.button(label='Back', style=discord.ButtonStyle.blurple)
-    async def go_to_previous_page(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def go_to_previous_page(self, interaction: discord.Interaction, button: discord.ui.Button):
         """go to the previous page"""
         await self.show_checked_page(interaction, self.current_page - 1)
 
     @discord.ui.button(label='Current', style=discord.ButtonStyle.grey, disabled=True)
-    async def go_to_current_page(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def go_to_current_page(self, interaction: discord.Interaction, button: discord.ui.Button):
         pass
 
     @discord.ui.button(label='Next', style=discord.ButtonStyle.blurple)
-    async def go_to_next_page(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def go_to_next_page(self, interaction: discord.Interaction, button: discord.ui.Button):
         """go to the next page"""
         await self.show_checked_page(interaction, self.current_page + 1)
 
     @discord.ui.button(label='≫', style=discord.ButtonStyle.grey)
-    async def go_to_last_page(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def go_to_last_page(self, interaction: discord.Interaction, button: discord.ui.Button):
         """go to the last page"""
         # The call here is safe because it's guarded by skip_if
         await self.show_page(interaction, self.source.get_max_pages() - 1)
 
 
     @discord.ui.button(label='Skip to page...', style=discord.ButtonStyle.grey)
-    async def numbered_page(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def numbered_page(self, interaction: discord.Interaction, button: discord.ui.Button):
         """lets you type a page number to go to"""
         if self.input_lock.locked():
             await interaction.response.send_message('Already waiting for your response...', ephemeral=True)
@@ -207,14 +207,12 @@ class RoboPages(discord.ui.View):
                 await self.show_checked_page(interaction, page - 1)
 
     @discord.ui.button(emoji='🗑️', style=discord.ButtonStyle.red)
-    async def stop_pages(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def stop_pages(self, interaction: discord.Interaction, button: discord.ui.Button):
         """
         Stop the pagination session. 
         Unless this pagination menu was invoked with a slash command
         """
-        if self.ctx.interaction:
-            return await interaction.response.send_message(f"This pagination menu was invoked with a slash command. \nPlease click *dismiss message* to quit.", ephemeral=True)
-
+        
         await interaction.response.defer()
         await interaction.delete_original_message()
         self.stop()
