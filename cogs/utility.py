@@ -285,6 +285,18 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         
         return f"https://mystb.in/{url_key}"
 
+    @commands.command(name='pingonline')
+    @commands.has_guild_permissions(mention_everyone=True)
+    async def pingonline(self, ctx: MyContext, *, role: RoleConverter):
+        """Ping the online members of a role."""
+
+        members = []
+        for member in role.members:
+            if member.status == 'offline':
+                continue
+            members.append(member)
+        await ctx.send(''.join(map(lambda x: x.mention, members)))
+
     @commands.command(name='mystbin')
     @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.user))
     async def mystbin(self, ctx: MyContext, *, content : str):
