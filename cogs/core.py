@@ -115,7 +115,7 @@ class core(commands.Cog, description="Core events."):
                 embeds = []
                 embed = Embed()
                 embed.title = 'Command Error'
-                embed.set_footer(text=f'ID: {ctx.message.id}')
+                embed.set_footer(text=f'ID: {ctx.channel.id}-{ctx.message.id}')
                 if ctx.guild:
                     embed.description = f'\n```prolog\nAuthor: {ctx.author} ({ctx.author.id})'\
                                         f'\nGuild ID: {ctx.guild.id}'\
@@ -314,7 +314,7 @@ class core(commands.Cog, description="Core events."):
                 embeds = []
                 embed = Embed()
                 embed.title = 'Command Error'
-                embed.set_footer(text=f'ID: {ctx.message.id}')
+                embed.set_footer(text=f'ID: {ctx.channel.id}-{ctx.message.id}')
                 if ctx.guild:
                     embed.description = f'\n```prolog\nAuthor: {ctx.author} ({ctx.author.id})'\
                                         f'\nGuild ID: {ctx.guild.id}'\

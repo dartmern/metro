@@ -24,7 +24,7 @@ from jishaku.paginators import WrappedPaginator
 from jishaku.codeblocks import codeblock_converter
 from bot import MetroBot
 from cogs.serverutils import serverutils
-from utils.constants import TESTING_GUILD_ID
+from utils.constants import TESTING_GUILD, TESTING_GUILD_ID
 
 from utils.decos import in_support, is_dev, is_support
 from utils.custom_context import MyContext
@@ -126,6 +126,34 @@ class developer(commands.Cog, description="Developer commands."):
         if before.author.id != 525843819850104842:
             return
         await self.bot.process_commands(after)
+
+    @commands.hybrid_command(name='fix')
+    @app_commands.guilds(TESTING_GUILD)
+    @is_support()
+    async def fix_command(
+        self, 
+        ctx: MyContext, 
+        error_id: str, 
+        *, 
+        comment: Optional[str] #= commands.Parameter(default=None, displayed_default='L', name='Comment to leave.')
+    ):
+        """Fix an error by sending the channel an "error fixed" message."""
+        try:
+            message = await commands.MessageConverter().convert(ctx, error_id)
+        except Exception:
+            return await ctx.send(f"Could not find a message with that error id.")
+
+        if comment:
+            if_comment = f'\nAdditional comments from my developers: {comment}'
+        else:
+            if_comment = None
+
+        try:
+            await message.reply(f'This error has been fixed by my developers. {if_comment}')
+        except Exception as e:
+            await ctx.send(f"Had an issue replying to the message: {e}", ephemeral=True)
+
+        await ctx.send('\U0001f44d', ephemeral=True)
 
     @commands.command(name='issue')
     @in_support()
