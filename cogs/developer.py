@@ -144,14 +144,14 @@ class developer(commands.Cog, description="Developer commands."):
             return await ctx.send(f"Could not find a message with that error id.")
 
         if comment:
-            if_comment = f'\nAdditional comments from my developers: {comment}'
+            if_comment = f'\n__Additional comments:__ {comment}'
         else:
-            if_comment = None
+            if_comment = ''
 
         try:
-            await message.reply(f'This error has been fixed by my developers. {if_comment}')
+            await message.reply(f'This error has been fixed by my developers. \U0001f44d {if_comment}')
         except Exception as e:
-            await ctx.send(f"Had an issue replying to the message: {e}", ephemeral=True)
+            return await ctx.send(f"Had an issue replying to the message: {e}", ephemeral=True)
 
         await ctx.send('\U0001f44d', ephemeral=True)
 
