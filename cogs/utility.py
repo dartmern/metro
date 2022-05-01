@@ -4,15 +4,17 @@ import re
 import discord
 from discord.enums import try_enum
 from discord.ext import commands, menus
+from discord import app_commands
 
-from typing import Dict, Optional
+from typing import Dict, Literal, Optional
 
 from bot import MetroBot
+from utils.constants import TESTING_GUILD
 
 from utils.json_loader import read_json
 from utils.custom_context import MyContext
 from utils.remind_utils import FutureTime, human_timedelta
-from utils.useful import Cooldown, Embed
+from utils.useful import Cooldown, Embed, delete_silent
 from utils.useful import Embed
 from utils.new_pages import SimplePages
 from utils.remind_utils import UserFriendlyTime
@@ -296,6 +298,21 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
                 continue
             members.append(member)
         await ctx.send(''.join(map(lambda x: x.mention, members)))
+
+    @commands.hybrid_command(name='timestamp')
+    @app_commands.guilds(TESTING_GUILD)
+    async def create_timestamp(
+        self, 
+        ctx: MyContext, 
+        time: FutureTime,
+        type: Optional[Literal['t', 'T', 'd', 'D', 'f', 'F', 'R']] = 'R'
+    ):
+        """Get a timestamp for a data in the future."""
+        timestamp = discord.utils.format_dt(time.dt, style=type)
+        to_send = discord.utils.escape_markdown(timestamp)
+        
+        await ctx.send(to_send.replace('<', '\\<'), hide=True)
+
 
     @commands.command(name='mystbin')
     @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.user))
@@ -1123,7 +1140,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         self.highlight[word] = (ctx.guild.id, ctx.author.id)
 
         await ctx.send(f"{self.bot.emotes['check']} Added to your highlights.\n> It is recommended to delete your message so your highlights are private.")
-        await ctx.message.delete(delay=8, silent=True)
+        await delete_silent(ctx.message, delay=8)
 
     @highlight.command(name='remove', aliases=['-'])
     @commands.guild_only()

@@ -145,8 +145,9 @@ class extras(commands.Cog, description='Extra commands for your use.'):
         ids, tags = [], []
         
         guild = ctx.bot.get_guild(336642139381301249)
+        humans = [hum for hum in guild.members if not hum.bot]
 
-        for member in guild.humans:
+        for member in humans:
             ids.append(member.id)
         
         cwd = get_path()

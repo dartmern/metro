@@ -26,7 +26,7 @@ import asyncpg
 from humanize.time import precisedelta
 
 from utils import remind_utils
-from utils.useful import Cooldown, Embed, ts_now
+from utils.useful import Cooldown, Embed, delete_silent, ts_now
 
 SUPPORT_ROLE = 814018291353124895
 
@@ -97,7 +97,7 @@ class MuteRoleView(discord.ui.View):
         except asyncpg.exceptions.UniqueViolationError:
             await self.ctx.bot.db.execute("UPDATE servers SET muterole = $1 WHERE server_id = $2", muterole.id, self.ctx.guild.id)
 
-        await message.delete(silent=True)
+        await delete_silent(message)
         await self.ctx.reply(content=f"{self.ctx.bot.check} Created muterole `@{muterole.name}` and set to this guild's muterole.")
 
 
@@ -117,13 +117,14 @@ class MuteRoleView(discord.ui.View):
         try:
             role_string : discord.Message = await self.ctx.bot.wait_for('message', check=check, timeout=30.0)
         except asyncio.TimeoutError:
-            await wait_for_message.delete(silent=True)
+            await delete_silent(wait_for_message)
             return await self.ctx.reply('Timed out.')
+        
+        await delete_silent(wait_for_message)
+
         try:
             role = await commands.RoleConverter().convert(self.ctx, role_string.content)
-            await wait_for_message.delete(silent=True)
         except commands.RoleNotFound:
-            await wait_for_message.delete(silent=True)
             return await self.ctx.reply(content='Could not convert that into a role.', embeds=[])
         
         try:
@@ -405,7 +406,7 @@ class moderation(commands.Cog, description="Moderation commands."):
             except:
                 fails += 1
 
-        await d.delete(silent=True)
+        await delete_silent(d)
         await ctx.send(f'Banned {total_members-fails}/{total_members} members.')
 
     @commands.command()

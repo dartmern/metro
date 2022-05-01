@@ -11,6 +11,8 @@ from discord.ext import commands, menus
 from typing import Optional, Union, Dict, Any
 import asyncio
 
+from utils.useful import delete_silent
+
 class RoboPages(discord.ui.View):
     def __init__(
         self,
@@ -203,7 +205,7 @@ class RoboPages(discord.ui.View):
                 except:
                     return await interaction.followup.send('Please enter a page number.')
                 
-                await msg.delete(silent=True)
+                await delete_silent(msg)
                 await self.show_checked_page(interaction, page - 1)
 
     @discord.ui.button(emoji='🗑️', style=discord.ButtonStyle.red)

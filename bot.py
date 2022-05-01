@@ -433,12 +433,15 @@ async def on_guild_join(guild: discord.Guild):
                     break
             return await guild.leave()
     else:
+        humans = [hum for hum in guild.members if not hum.bot]
+        bots = [bot for bot in guild.members if bot.bot]
+
         channel = bot.get_channel(BOT_LOGGER_CHANNEL)
 
         embed = discord.Embed(color=discord.Colour.green())
         embed.title = "New Guild"
         embed.description = f"\n__**Name:**__ {guild.name} (ID: {guild.id})"\
-                            f"\n__**Human/Bots:**__ {len(guild.humans)}/{len(guild.bots)}"\
+                            f"\n__**Human/Bots:**__ {len(humans)}/{len(bots)}"\
                             f"\n__**Owner:**__ {guild.owner} (ID: {guild.owner_id})"\
                             f"\n__**Added*:**__ {ts_now('F')} ({ts_now('R')})"
         count = discord.Embed(color=discord.Colour.purple(), description="Guilds count: **%s**" % len(bot.guilds))
@@ -446,12 +449,15 @@ async def on_guild_join(guild: discord.Guild):
 
 @bot.event
 async def on_guild_remove(guild: discord.Guild):
+    humans = [hum for hum in guild.members if not hum.bot]
+    bots = [bot for bot in guild.members if bot.bot]
+
     channel = bot.get_channel(BOT_LOGGER_CHANNEL)
 
     embed = discord.Embed(color=discord.Colour.red())
     embed.title = "Left Guild"
     embed.description = f"\n__**Name:**__ {guild.name} (ID: {guild.id})"\
-                            f"\n__**Human/Bots:**__ {len(guild.humans)}/{len(guild.bots)}"\
+                            f"\n__**Human/Bots:**__ {len(humans)}/{len(bots)}"\
                             f"\n__**Owner:**__ {guild.owner} (ID: {guild.owner_id})"
     count = discord.Embed(color=discord.Colour.purple(), description="Guilds count: **%s**" % len(bot.guilds))
     await channel.send(embeds=[embed, count])

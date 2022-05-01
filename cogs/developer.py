@@ -202,7 +202,9 @@ class developer(commands.Cog, description="Developer commands."):
         if not search:
             to_paginate = []
             for guild in sorted(self.bot.guilds, key=lambda guild: len(guild.members), reverse=True):
-                summary = f"__**Guild:**__ {guild.name} [{guild.id}]\n__**Owner:**__ {guild.owner} [{guild.owner_id}]\n__**Members:**__ {len(guild.members)} <:members:908483589157576714> total | {len(guild.humans)} \U0001f465 humans | {len(guild.bots)} <:bot:925107948789837844> bots\n"
+                humans = [hum for hum in guild.members if not hum.bot]
+                bots = [bot for bot in guild.members if bot.bot]
+                summary = f"__**Guild:**__ {guild.name} [{guild.id}]\n__**Owner:**__ {guild.owner} [{guild.owner_id}]\n__**Members:**__ {len(guild.members)} <:members:908483589157576714> total | {len(humans)} \U0001f465 humans | {len(bots)} <:bot:925107948789837844> bots\n"
                 to_paginate.append(summary)
 
             await ctx.paginate(to_paginate, per_page=4, compact=True)

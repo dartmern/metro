@@ -15,7 +15,7 @@ from bot import MetroBot
 from utils.converters import RoleConverter
 from utils.custom_context import MyContext
 from utils.remind_utils import FutureTime, UserFriendlyTime
-from utils.useful import Cooldown, Embed, ts_now
+from utils.useful import Cooldown, Embed, delete_silent, ts_now
 
 
 async def setup(bot: MetroBot):
@@ -162,7 +162,7 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
 
         required_role = guild.get_role(requirements)
 
-        reactions = await _message.reactions[0].users().flatten()
+        reactions = [r async for r in _message.reactions[0].users()]
         reactions.remove(guild.me)
 
         for member in reactions:
@@ -243,9 +243,9 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
 
         try:
             m = await self.bot.wait_for('message', timeout=30, check=lambda x: x.author == ctx.author and x.channel == ctx.channel)
-            await first_message.delete(silent=True)
+            await delete_silent(first_message)
         except asyncio.TimeoutError:
-            await first_message.delete(silent=True)
+            await delete_silent(first_message)
             return await ctx.send("Timed out.")
 
         if m.content == ctx.prefix + 'abort':
@@ -263,9 +263,9 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
 
         try:
             m = await self.bot.wait_for('message', timeout=30, check=lambda x: x.author == ctx.author and x.channel == ctx.channel)
-            await second_message.delete(silent=True)
+            await delete_silent(second_message)
         except asyncio.TimeoutError:
-            await second_message.delete(silent=True)
+            await delete_silent(second_message)
             return await ctx.send("Timed out.")
 
         if m.content == ctx.prefix + 'abort':
@@ -279,9 +279,9 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
 
         try:
             m = await self.bot.wait_for('message', timeout=60, check=lambda x: x.author == ctx.author and x.channel == ctx.channel)
-            await third_message.delete(silent=True)
+            await delete_silent(third_message)
         except asyncio.TimeoutError:
-            await third_message.delete(silent=True)
+            await delete_silent(third_message)
             return await ctx.send("Timed out.")
 
         if m.content == ctx.prefix + 'abort':
@@ -295,9 +295,9 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
 
         try:
             m = await self.bot.wait_for('message', timeout=60, check=lambda x: x.author == ctx.author and x.channel == ctx.channel)            
-            await fourth_message.delete(silent=True)
+            await delete_silent(fourth_message)
         except asyncio.TimeoutError:
-            await fourth_message.delete(silent=True)
+            await delete_silent(fourth_message)
             return await ctx.send("Timed out.")
 
         if m.content == ctx.prefix + 'abort':
@@ -549,14 +549,6 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
         role = extra['kwargs'].get("role")
         requirements = extra['kwargs'].get('requirements')
 
-        query = """
-                DELETE FROM reminders
-                WHERE id=$1
-                AND event = 'giveaway'
-                AND extra #>> '{args,1}' = $2;
-                """
-        await self.bot.db.execute(query, id, str(ctx.author.id))
-
         reminder_cog = self.bot.get_cog("utility")
         if reminder_cog is None:
             raise commands.BadArgument("This feature is currently unavailable.")
@@ -577,6 +569,13 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
                         requirements=requirements
                     )
         if status is False:
+            query = """
+                DELETE FROM reminders
+                WHERE id=$1
+                AND event = 'giveaway'
+                AND extra #>> '{args,1}' = $2;
+                """
+            await self.bot.db.execute(query, id, str(ctx.author.id))
             return await ctx.send("Failed to end that giveaway. The giveaway has been deleted from my database.")
         else:
             await ctx.check()

@@ -17,6 +17,12 @@ from utils.remind_utils import human_timedelta
 
 PAGE_REGEX = r'(Page)?(\s)?((\[)?((?P<current>\d+)/(?P<last>\d+))(\])?)'
 
+async def delete_silent(message: discord.Message, *, delay: Optional[float] = None):
+    """Replaces the `silent` kwarg in edpy."""
+    try:
+        await message.delete(delay=delay)
+    except discord.HTTPException:
+        pass
 
 class OldRoboPages(menus.MenuPages):
     def __init__(self, source):

@@ -242,6 +242,7 @@ class NegativeTime(PastHumanTime):
 class FutureTime(Time):
     def __init__(self, argument, *, now=None):
         super().__init__(argument, now=now)
+        self.argument = argument
 
         if self._past:
             raise commands.BadArgument("this time is in the past")

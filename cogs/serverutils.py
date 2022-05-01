@@ -680,7 +680,9 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             )
             raise commands.BadArgument(to_send)
 
-        confirm = await ctx.confirm(f"Are you sure you want to add **{role.name}** to **{len(ctx.guild.bots)}** bots.")
+        bots = [bot for bot in ctx.guild.members if bot.bot]
+
+        confirm = await ctx.confirm(f"Are you sure you want to add **{role.name}** to **{len(bots)}** bots.")
         if confirm is False:
             raise commands.BadArgument("Canceled.")
         if confirm is None:
@@ -689,12 +691,12 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         if ctx.guild.chunked is False:
             await ctx.guild.chunk()
 
-        await ctx.send(f"Beginning to add **{role.name}** to **{len(ctx.guild.bots)}** bots.")
+        await ctx.send(f"Beginning to add **{role.name}** to **{len(bots)}** bots.")
         
         success, failed, already_has = 0, 0, 0
 
         async with ctx.typing():
-            for bot in ctx.guild.bots:
+            for bot in bots:
                 if not can_execute_action(ctx, ctx.author, bot):
                     failed += 1
                     continue
@@ -711,7 +713,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
 
         to_send = ""
         if success:
-            to_send += f"Successfully added **{role.name}** to {success}/{len(ctx.guild.bots)} bots."
+            to_send += f"Successfully added **{role.name}** to {success}/{len(bots)} bots."
         if already_has:
             to_send += f"{already_has} bots already had **{role.name}**"
         if failed:
@@ -736,7 +738,9 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             )
             raise commands.BadArgument(to_send)
 
-        confirm = await ctx.confirm(f"Are you sure you want to remove **{role.name}** from **{len(ctx.guild.bots)}** bots.")
+        bots = [bot for bot in ctx.guild.members if bot.bot]
+
+        confirm = await ctx.confirm(f"Are you sure you want to remove **{role.name}** from **{len(bots)}** bots.")
         if confirm is False:
             raise commands.BadArgument("Canceled.")
         if confirm is None:
@@ -745,12 +749,12 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         if ctx.guild.chunked is False:
             await ctx.guild.chunk()
 
-        await ctx.send(f"Beginning to remove **{role.name}** from **{len(ctx.guild.bots)}** bots.")
+        await ctx.send(f"Beginning to remove **{role.name}** from **{len(bots)}** bots.")
         
         success, failed, already_has = 0, 0, 0
 
         async with ctx.typing():
-            for bot in ctx.guild.bots:
+            for bot in bots:
                 if not can_execute_action(ctx, ctx.author, bot):
                     failed += 1
                     continue
@@ -767,7 +771,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
 
         to_send = ""
         if success:
-            to_send += f"Successfully removed **{role.name}** from {success}/{len(ctx.guild.bots)} bots."
+            to_send += f"Successfully removed **{role.name}** from {success}/{len(bots)} bots."
         if already_has:
             to_send += f"{already_has} bots didn't even have **{role.name}**"
         if failed:
@@ -792,7 +796,9 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             )
             raise commands.BadArgument(to_send)
 
-        confirm = await ctx.confirm(f"Are you sure you want to add **{role.name}** to **{len(ctx.guild.humans)}** humans.")
+        humans = [hum for hum in ctx.guild.members if not hum.bot]
+
+        confirm = await ctx.confirm(f"Are you sure you want to add **{role.name}** to **{len(humans)}** humans.")
         if confirm is False:
             raise commands.BadArgument("Canceled.")
         if confirm is None:
@@ -801,12 +807,12 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         if ctx.guild.chunked is False:
             await ctx.guild.chunk()
 
-        await ctx.send(f"Beginning to add **{role.name}** to **{len(ctx.guild.humans)}** humans.")
+        await ctx.send(f"Beginning to add **{role.name}** to **{len(humans)}** humans.")
         
         success, failed, already_has = 0, 0, 0
 
         async with ctx.typing():
-            for human in ctx.guild.humans:
+            for human in humans:
                 if not can_execute_action(ctx, ctx.author, human):
                     failed += 1
                     continue
@@ -823,7 +829,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
 
         to_send = ""
         if success:
-            to_send += f"Successfully added **{role.name}** to {success}/{len(ctx.guild.humans)} humans."
+            to_send += f"Successfully added **{role.name}** to {success}/{len(humans)} humans."
         if already_has:
             to_send += f"{already_has} humans already had **{role.name}**"
         if failed:
@@ -848,7 +854,9 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             )
             raise commands.BadArgument(to_send)
 
-        confirm = await ctx.confirm(f"Are you sure you want to remove **{role.name}** from **{len(ctx.guild.humans)}** humans.")
+        humans = [hum for hum in ctx.guild.members if not hum.bot]
+
+        confirm = await ctx.confirm(f"Are you sure you want to remove **{role.name}** from **{len(humans)}** humans.")
         if confirm is False:
             raise commands.BadArgument("Canceled.")
         if confirm is None:
@@ -857,12 +865,12 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         if ctx.guild.chunked is False:
             await ctx.guild.chunk()
 
-        await ctx.send(f"Beginning to remove **{role.name}** from **{len(ctx.guild.humans)}** humans.")
+        await ctx.send(f"Beginning to remove **{role.name}** from **{len(humans)}** humans.")
         
         success, failed, already_has = 0, 0, 0
 
         async with ctx.typing():
-            for human in ctx.guild.humans:
+            for human in humans:
                 if not can_execute_action(ctx, ctx.author, human):
                     failed += 1
                     continue
@@ -879,7 +887,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
 
         to_send = ""
         if success:
-            to_send += f"Successfully removed **{role.name}** from {success}/{len(ctx.guild.humans)} humans."
+            to_send += f"Successfully removed **{role.name}** from {success}/{len(humans)} humans."
         if already_has:
             to_send += f"{already_has} humans didn't even have **{role.name}**"
         if failed:

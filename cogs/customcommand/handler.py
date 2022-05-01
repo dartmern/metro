@@ -78,4 +78,7 @@ async def process_command(message: discord.Message, silent: bool, overrides: dic
 
 async def delete_quietly(ctx: MyContext):
     if ctx.channel.permissions_for(ctx.me).manage_messages:
-        await ctx.message.delete(silent=True)
+        try:
+            await ctx.message.delete()
+        except discord.HTTPException:
+            pass
