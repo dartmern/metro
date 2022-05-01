@@ -92,6 +92,9 @@ class giveaways(commands.Cog, description='Create and manage giveaways.'):
                 AND extra #>> '{args,3}' = $2
                 """
         data = await self.bot.db.fetchrow(query, str(payload.guild_id), str(payload.message_id))
+        if not data:
+            return 
+            
         requirements = json.loads(data['extra'])['kwargs']['requirements']
         if requirements:
             guild = self.bot.get_guild(payload.guild_id)
