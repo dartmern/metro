@@ -13,6 +13,7 @@ import async_cse
 import yarl # google
 
 from bot import MetroBot
+from utils.constants import TESTING_GUILD
 from utils.custom_context import MyContext
 from utils.converters import DiscordCommand, ImageConverter
 from utils.useful import Cooldown, Embed, chunkIt
@@ -89,7 +90,7 @@ async def calculator_context_menu(interaction: discord.Interaction, message: dis
     await interaction.followup.send(content=content, ephemeral=False)
 
 async def setup(bot: MetroBot):
-    bot.tree.add_command(calculator_context_menu, guild=discord.Object(812143286457729055))
+    bot.tree.add_command(calculator_context_menu, guild=TESTING_GUILD)
     await bot.add_cog(extras(bot))
 
 class extras(commands.Cog, description='Extra commands for your use.'):

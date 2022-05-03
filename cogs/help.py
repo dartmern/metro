@@ -4,8 +4,11 @@ import os
 from typing import Dict, List, Optional
 
 from discord.ext.commands.help import HelpCommand
+from numpy import place
 from bot import MetroBot
 from cogs.utility import StopView
+from utils.constants import TESTING_GUILD
+from utils.embeds import create_embed
 from utils.new_pages import SimplePages
 import discord
 import pathlib
@@ -114,6 +117,57 @@ class VoteView(discord.ui.View):
             return await interaction.response.send_message("This feature is currently not available.")
         await self.ctx.invoke(cmd, when=await UserFriendlyTime().convert(self.ctx, f'12 hours Vote for {self.bot.name}\n**top.gg**: <{self.top_gg}>\n**discordbotlist.com**: <{self.discordbotlist}>'))
         
+class Modal(discord.ui.Modal, title='Create custom permissions.'):
+    def __init__(
+        self, 
+        application: discord.Member,
+        *, 
+        title: Optional[str] = None, 
+        timeout: Optional[float] = None, 
+        custom_id: Optional[str] = discord.utils.MISSING
+    ):
+        super().__init__(title=title, timeout=timeout, custom_id=custom_id)
+        self.application = application
+
+    permissions_int = discord.ui.TextInput(
+            label='Permissions integer.',
+            placeholder='Enter a valid permissions integer.', 
+            style=discord.TextStyle.short
+        )
+    application_commands = discord.ui.TextInput(
+        label='Invite with the applications.commands scope?',
+        placeholder='Respond with yes/no. This defaults to True.',
+        style=discord.TextStyle.short,
+        required=False
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        try:
+            permissions_int = int(self.permissions_int.value)
+        except:
+            return await interaction.response.send_message('Invaild permissions integer.', ephemeral=True)
+
+        app_commands_resp = str(self.application_commands.value).lower()
+
+        if not app_commands_resp in ('yes', 'no', ''):
+            return await interaction.response.send_message('Respond with `yes`/`no` for application.commands scope.', ephemeral=True)
+
+        scopes = ('bot', )
+
+        if app_commands_resp == 'no':
+            pass
+        else:
+            scopes = ('bot', 'applications.commands')
+
+        embed = create_embed(
+            discord.utils.oauth_url(self.application.id, permissions=discord.Permissions(permissions_int), scopes=scopes)
+        )
+        embed.set_footer(text=f'This is inviting {self.application} to your server and not Metro. \nI am not responsible for any damages.')
+        embed.set_author(name=f'Invite {self.application} to your server', icon_url=self.application.display_avatar.url)
+        return await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+
 
 class InviteView(discord.ui.View):
     def __init__(self, ctx : MyContext):
@@ -158,29 +212,7 @@ class InviteView(discord.ui.View):
         except:
             await interaction.message.edit(view=self)
 
-        embed = Embed(color=self.ctx.color, description="Please enter a permissions integer.\nUse [this calculator](https://discordapi.com/permissions.html) to find the permission value if you are unsure what to put.")
-        await interaction.response.send_message(embed=embed)
-        
-        def check(message : discord.Message) -> bool:
-            return message.channel == self.ctx.channel and message.author == self.ctx.author
-
-        try:
-            message = await self.ctx.bot.wait_for("message", check=check, timeout=30)
-        except asyncio.TimeoutError:
-            return await interaction.followup.send("Timed out.")
-        await interaction.delete_original_message()
-        try:
-            int(message.content)
-        except ValueError:
-            embed = Embed(color=discord.Colour.red())
-            embed.set_author(name='Invaild permission value.')
-            embed.description = "Use [this calculator](https://discordapi.com/permissions.html) to find the permission value if you are unsure what to put."
-            return await interaction.followup.send(embed=embed)
-        
-        em = Embed(color=self.ctx.color)
-        em.description = f"Permission Integer: {message.content}"\
-            f"\n Invite URL: {discord.utils.oauth_url(self.client.id, scopes=('bot', 'applications.commands'), permissions=discord.Permissions(int(message.content)))}"
-        await interaction.followup.send(embed=em)
+        await interaction.response.send_modal(Modal())
 
     @discord.ui.button(emoji='🗑️', style=discord.ButtonStyle.red, row=1)
     async def stop_pages(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -926,7 +958,20 @@ class MetroHelp(commands.HelpCommand):
         if error is None:
             return
         return await ctx.send(error, hide=True)
+
+from discord import app_commands
+
+@app_commands.context_menu(name='Invite Bot')
+@app_commands.guilds(TESTING_GUILD)
+async def invite_bot_context_menu(interaction: discord.Interaction, member: discord.Member):
+    if not member.bot:
+        return await interaction.response.send_message('This is not a bot.', ephemeral=True)
+
+    await interaction.response.send_modal(Modal(title='Custom permissions.', application=member))
        
+async def setup(bot: MetroBot):
+    bot.tree.add_command(invite_bot_context_menu)
+    await bot.add_cog(meta(bot))
 
 class meta(commands.Cog, description='Get bot stats and information.'):
     def __init__(self, bot):
@@ -1102,7 +1147,3 @@ class meta(commands.Cog, description='Get bot stats and information.'):
             f"\nCoroutines: {cr:,}"\
             f"\nComments: {cm:,}"
         await ctx.send(embed=embed, reply=False)
-
-
-async def setup(bot):
-    await bot.add_cog(meta(bot))

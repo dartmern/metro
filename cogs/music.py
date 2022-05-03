@@ -381,7 +381,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
         await ctx.send(f"Joined the voice channel {channel.mention}", reply=False)
 
 
-    @commands.command(name='play')
+    @commands.command(name='play', aliases=['p'])
     async def play(self, ctx: MyContext, *, query: str) -> None:
         """Play a song from the query."""
         if not ctx.author.voice:
