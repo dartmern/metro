@@ -98,9 +98,9 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
     def __init__(self, bot : MetroBot):
         self.bot = bot
         self.page_types = {
-            'discord.py': 'https://discordpy.readthedocs.io/en/latest',
+            'discord.py': 'https://discordpy.readthedocs.io/en/stable',
             'python': 'https://docs.python.org/3',
-            'discord.py-2.0': 'https://discordpy.readthedocs.io/en/master',
+            'discord.py-2.0': 'https://discordpy.readthedocs.io/en/latest',
             'enhanced-discord.py' : 'https://enhanced-dpy.readthedocs.io/en/latest',
             'aiohttp' : 'https://docs.aiohttp.org/en/stable/'  
         }
