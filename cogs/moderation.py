@@ -355,10 +355,14 @@ class moderation(commands.Cog, description="Moderation commands."):
     @commands.has_guild_permissions(ban_members=True)
     @commands.check(Cooldown(2, 8, 2, 4, commands.BucketType.member))
     async def list_bans(self, ctx : MyContext):
-        """List all the banned users for this guild."""
+        """
+        List all the banned users for this guild.
+        
+        This only lists up to 1000 bans.
+        """
 
         await ctx.trigger_typing()
-        bans = await ctx.guild.bans()
+        bans = [ban async for ban in ctx.guild.bans()]
         if not bans:
             return await ctx.send(f"No users are banned in this guild.")
 
