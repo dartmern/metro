@@ -4,7 +4,6 @@ import os
 from typing import Dict, List, Optional
 
 from discord.ext.commands.help import HelpCommand
-from numpy import place
 from bot import MetroBot
 from cogs.utility import StopView
 from utils.constants import TESTING_GUILD
