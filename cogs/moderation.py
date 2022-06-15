@@ -361,7 +361,6 @@ class moderation(commands.Cog, description="Moderation commands."):
         This only lists up to 1000 bans.
         """
 
-        await ctx.trigger_typing()
         bans = [ban async for ban in ctx.guild.bans()]
         if not bans:
             return await ctx.send(f"No users are banned in this guild.")
