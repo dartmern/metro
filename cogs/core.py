@@ -98,7 +98,7 @@ class core(commands.Cog, description="Core events."):
             else:
                 
                 traceback_string = "".join(traceback.format_exception(
-                    etype=None, value=error, tb=error.__traceback__))
+                    error, value=error, tb=error.__traceback__))
 
                 view = ErrorView(ctx, traceback_string)
 

@@ -225,8 +225,8 @@ class CustomPermissions:
 class utility(commands.Cog, description="Get utilities like prefixes, serverinfo, source, etc."):
     def __init__(self, bot : MetroBot):
         self.bot = bot
-        self._req_lock = asyncio.Lock(loop=self.bot.loop)
-        self._have_data = asyncio.Event(loop=bot.loop)
+        self._req_lock = asyncio.Lock()
+        self._have_data = asyncio.Event()
         self._current_timer = None
         self._task = bot.loop.create_task(self.dispatch_timers())
 
@@ -1089,7 +1089,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         """Get the first message in a channel."""
         channel = channel or ctx.channel
 
-        first_message : discord.Message = (await channel.history(limit=1, oldest_first=True).flatten())[0]
+        first_message = [message async for message in channel.history(oldest_first=True, limit=1)][0]
 
         embed = Embed(color=discord.Color.blue())
         embed.title = f"First message in #{channel.name[0:40]}"
