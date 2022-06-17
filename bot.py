@@ -150,6 +150,8 @@ class MetroBot(commands.AutoShardedBot):
             #shard_count=10,
             max_messages=5000
         )
+
+        self.db: asyncpg.Pool = discord.utils.MISSING
         
         self.mystbin_client = mystbin.Client()
         self.google_client = async_cse.Search(google_token)
@@ -320,7 +322,7 @@ class MetroBot(commands.AutoShardedBot):
         super().add_command(command)
         command.cooldown_after_parsing = True
 
-        command.checks.append(Cooldown(2, 10, 2, 6, commands.BucketType.user))
+        #command.checks.append(Cooldown(2, 10, 2, 6, commands.BucketType.user))
 
     async def get_context(self, message, *, cls=MyContext):
         """Making our custom context"""
@@ -476,7 +478,7 @@ async def main():
             bot.error_logger = discord.Webhook.from_url(webhooks['error_handler'], session=bot.session)
             bot.status_logger = discord.Webhook.from_url(webhooks['status_logger'], session=bot.session)
 
-            folders = ['hypixel', 'context_menu']
+            folders = ['hypixel', 'context_menu', 'giveaway_rewrite']
 
             bot.owner = bot.get_user(BOT_OWNER_ID)
 
