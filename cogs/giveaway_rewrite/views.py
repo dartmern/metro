@@ -1,6 +1,8 @@
-import ast
+"""These are all the views associated with the giveaway rewrite."""
+
+import datetime
 from typing import Any, Optional
-from venv import create
+
 import discord
 from bot import MetroBot
 
@@ -62,11 +64,12 @@ class ConfirmationEmojisView(discord.ui.View):
         self.stop()
 
 class UnenterGiveawayView(discord.ui.View):
-    def __init__(self, bot: MetroBot, message_id, org_message):
+    def __init__(self, bot: MetroBot, message_id, org_message, ending: datetime.datetime):
         super().__init__(timeout=None)
         self.bot = bot
         self.message_id: int = message_id
         self.org_message: discord.Message = org_message # original message
+        self.ending = ending
 
     @discord.ui.button(
         label='Unenter this giveaway.', 
@@ -78,10 +81,14 @@ class UnenterGiveawayView(discord.ui.View):
 
         await interaction.response.defer()
 
+        if discord.utils.utcnow().replace(tzinfo=None) > self.ending:
+            embed = create_embed('It seems like it\'s too late to unenter this giveaway.', color=discord.Color.yellow())
+            return await interaction.edit_original_message(embed=embed, view=None)
+
         data = await get_entry(self.bot, self.message_id, interaction.user.id)
         if not data:
             return await interaction.followup.send(f"It seems like you aren't entered in this giveaway afterall.", ephemeral=True)
-
+    
         await delete_entry(self.bot, self.message_id, interaction.user.id)
 
         button.style = discord.ButtonStyle.green

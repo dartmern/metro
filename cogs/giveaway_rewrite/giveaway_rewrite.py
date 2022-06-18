@@ -1,5 +1,6 @@
 import ast
 from ctypes import util
+import datetime
 import json
 import random
 import discord
@@ -19,6 +20,8 @@ from .helpers.get_entry import get_entry
 from .helpers.insert_entry import insert_entry
 from .helpers.insert_giveaway import insert_giveaway
 from .helpers.get_entries import get_entires
+from .helpers.delete_entries import delete_entires
+from .helpers.delete_giveaway import delete_giveaway
 
 async def setup(bot: MetroBot):
     await bot.add_cog(giveaways2(bot))
@@ -59,7 +62,7 @@ class giveaways2(commands.Cog, description='The giveaways rewrite including butt
                 else:
                     embed = create_embed(f"{EMOTES['cross']} You have already joined this giveaway.", color=discord.Color.red())
 
-                    view = UnenterGiveawayView(self.bot, interaction.message.id, interaction.message)
+                    view = UnenterGiveawayView(self.bot, interaction.message.id, interaction.message, data[2])
                     return await interaction.response.send_message(embed=embed, ephemeral=True, view=view)
 
     @commands.Cog.listener()
@@ -89,17 +92,26 @@ class giveaways2(commands.Cog, description='The giveaways rewrite including butt
             return 
 
         entires = await get_entires(self.bot, message_id)
-        amount_of_winners = data[1]
-        raw_embed = data[0]
 
-        winners = random.sample(entires, amount_of_winners)
-        winners_fmt = ", ".join([f"<@{record['author_id']}>" for record in winners])
+        raw_embed = data[0]
+        amount_of_winners = data[1]
 
         raw = ast.literal_eval(raw_embed)
         embed = discord.Embed.from_dict(raw)
-        embed.color = discord.Color.red()
+
+        if len(entires) == 0:
+            alert_message = 'Not enough entrants to determine a winner!'
+            embed.color = discord.Color(3553599)
+
+        else:
+            winners = random.sample(entires, amount_of_winners)
+            winners_fmt = ", ".join([f"<@{record['author_id']}>" for record in winners])
+
+            alert_message = f'Winners: {winners_fmt}'
+            embed.color = discord.Color.red()
+
         old = embed.description 
-        old = old.replace('Click the button below to enter!', f'Winners: {winners_fmt}') # bad way of doing this but i'm testing
+        old = old.replace('Click the button below to enter!', alert_message) # bad way of doing this but i'm testing
         old = old.replace('Ends', 'Ended')
 
         embed.description = old
@@ -116,19 +128,16 @@ class giveaways2(commands.Cog, description='The giveaways rewrite including butt
         
         await message.edit(embed=embed, view=view)
 
+        term = 'has' if amount_of_winners < 2 else 'have'
         new_embed = create_embed(
-            f'{winners_fmt} has won the giveaway for {embed.author.name}!',
+            alert_message if len(entires) == 0 else f'{winners_fmt} {term} won the giveaway for **{message.embeds[0].author.name}**',
             color=discord.Color.yellow()
         )
         await message.reply(embed=new_embed)
 
-
+        await delete_giveaway(self.bot, message_id) # delete the giveaway itself
+        await delete_entires(self.bot, message_id) # delete the giveaway's entries
         
-        
-
-        
-        
-
     @commands.hybrid_command(name='gstart')
     @app_commands.guilds(TESTING_GUILD)
     @app_commands.describe(duration='Duration of this giveaway.')
@@ -143,21 +152,24 @@ class giveaways2(commands.Cog, description='The giveaways rewrite including butt
         prize: str):
         """Testing giveaway command."""
 
+        start = discord.utils.utcnow()
+
         utility_cog: utility = self.bot.get_cog('utility')
         if not utility_cog:
             return await ctx.send('This feature is currently unavailable.')
 
         embed = discord.Embed(title='Is this information correct?', color=discord.Colour.yellow())
-        embed.description = f"""
-                            **Prize:** {prize}
-                            **Winners:** {winners}
-                            **Duration:** {human_timedelta(duration.dt, brief=True)}
-                            """
+        embed.description = f"**Prize:** {prize} \n"\
+                            f"**Winners:** {winners} \n"\
+                            f"**Duration:** {human_timedelta(duration.dt)} \n"\
         
         view = ConfirmationEmojisView(
             timeout=60, author_id=ctx.author.id, ctx=ctx)
         view.message = await ctx.send(embed=embed, view=view)
         await view.wait()
+
+        difference = discord.utils.utcnow() - start 
+        duration.dt = duration.dt + difference
 
         if view.value is False:
             return await view.message.edit(content='Confirmation canceled.', embeds=[], view=None)

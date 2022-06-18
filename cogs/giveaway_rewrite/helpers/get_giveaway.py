@@ -10,7 +10,7 @@ async def get_giveaway(
     """Get a giveaway from database."""
     
     query = """
-            SELECT (raw, winners) FROM giveaway
+            SELECT (raw, winners, ends_at) FROM giveaway
             WHERE guild_id = $1
             AND channel_id = $2
             AND message_id = $3
