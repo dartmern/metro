@@ -244,10 +244,6 @@ class moderation(commands.Cog, description="Moderation commands."):
 
         await ctx.guild.kick(member, reason=converted_action)
 
-        modlog = await self.get_modlog(ctx.guild)
-        if modlog:
-            await self.create_modlog_case(ctx.guild, modlog, action='kick', moderator=ctx.author, reason=reason, target=member, duration=None)
-
         embed = Embed()
         embed.description = f'**{ctx.author.mention}** has kicked **{member}**'
         embed.set_footer(text=f'ID: {member.id} | DM successful: {success}')
@@ -314,10 +310,6 @@ class moderation(commands.Cog, description="Moderation commands."):
 
         await ctx.guild.ban(member, reason=converted_action, delete_message_days=delete_days)
 
-        modlog = await self.get_modlog(ctx.guild)
-        if modlog:
-            await self.create_modlog_case(ctx.guild, modlog, action='ban', moderator=ctx.author, reason=reason, target=member, duration=None)
-
         await ctx.send(embed=embed)
 
     @commands.command(name="unban", brief="Unban a previously banned member.", usage="<member>")
@@ -339,10 +331,6 @@ class moderation(commands.Cog, description="Moderation commands."):
         for ban in bans:
             user = ban.user
             if user.id == member.id:
-                modlog = await self.get_modlog(ctx.guild)
-                if modlog:
-                    await self.create_modlog_case(ctx.guild, modlog, action='unban', moderator=ctx.author, reason=reason, target=user, duration=None)
-
                 await ctx.guild.unban(user, reason=reason)
                 await ctx.send(f"Unbaned **{user}**")
                 
@@ -398,13 +386,9 @@ class moderation(commands.Cog, description="Moderation commands."):
         
         d = await ctx.send("Banning...")
 
-        modlog = await self.get_modlog(ctx.guild)
-
         fails = 0
         for member in members:
             try:
-                if modlog:
-                    await self.create_modlog_case(ctx.guild, modlog, action='ban', moderator=ctx.author, reason=reason, target=member, duration=None)
                 await ctx.guild.ban(member, reason=reason)
             except:
                 fails += 1
@@ -526,9 +510,6 @@ class moderation(commands.Cog, description="Moderation commands."):
                                                                     connection=self.bot.db,
                                                                     created=ctx.message.created_at
         )
-        modlog = await self.get_modlog(ctx.guild)
-        if modlog:
-            await self.create_modlog_case(ctx.guild, modlog, action='ban', moderator=ctx.author, reason=reason, target=member, duration=human_timedelta(duration.dt))
 
         embed = Embed()
         embed.description = f'**{ctx.author.mention}** has tempbanned **{member}**\nExpires: {delta}\n{real_reason}'
@@ -1090,12 +1071,6 @@ class moderation(commands.Cog, description="Moderation commands."):
 
             await self.bot.db.fetchval("DELETE FROM reminders WHERE event = 'mute' AND extra->'kwargs'->>'user_id' = $1", str(user.id))
             try:
-                modlog = await self.get_modlog(ctx.guild)
-                if modlog:
-                    if endtime:
-                        await self.create_modlog_case(ctx.guild, modlog, action="mute", moderator=ctx.author, reason=real_reason, target=user, duration=ftime)
-                    else:
-                        await self.create_modlog_case(ctx.guild, modlog, action="mute", moderator=ctx.author, reason=real_reason, target=user, duration=None)
                 if endtime:
                     await reminder_cog.create_timer(
                         duration.dt,
@@ -1197,10 +1172,6 @@ class moderation(commands.Cog, description="Moderation commands."):
             if not muterole in user.roles:
                 failed.append(f"• `{user}` is not even muted.")
                 continue
-
-            modlog = await self.get_modlog(ctx.guild)
-            if modlog:
-                await self.create_modlog_case(ctx.guild, modlog, action="unmute", moderator=ctx.author, reason=reason, target=user, duration=None)
 
             query = """
                     select (id, extra)
@@ -1370,9 +1341,6 @@ class moderation(commands.Cog, description="Moderation commands."):
 
         await self.bot.db.fetchval("DELETE FROM reminders WHERE event = 'mute' AND extra->'kwargs'->>'user_id' = $1", str(ctx.author.id))
         try:
-            modlog = await self.get_modlog(ctx.guild)
-            if modlog:
-                await self.create_modlog_case(ctx.guild, modlog, action="selfmute", moderator=ctx.author, reason="No reason provided... (Selfmute)", target=ctx.author, duration=ftime)
             await reminder_cog.create_timer(
                         duration.dt.replace(tzinfo=None),
                         "mute",
@@ -1413,16 +1381,9 @@ class moderation(commands.Cog, description="Moderation commands."):
 
             reason = f"Automatic unmute from timer made on {timer.created_at} by {moderator}."
 
-            modlog = await self.get_modlog(guild)
-            if modlog:
-                await self.create_modlog_case(guild, modlog, action="unmute", moderator=mod_id, reason=reason, target=member, duration=None)
         else:
             reason = f"Automatic unmute from timer made on {timer.created_at} by {moderator_object}."
             
-            modlog = await self.get_modlog(guild)
-            if modlog:
-                await self.create_modlog_case(guild, modlog, action="unmute", moderator=moderator_object, reason=reason, target=member, duration=None)
-
             moderator = f"{moderator_object} ({mod_id})"
 
         muterole = await self.bot.db.fetchval("SELECT muterole FROM servers WHERE server_id = $1", guild.id)
@@ -1443,99 +1404,6 @@ class moderation(commands.Cog, description="Moderation commands."):
             await member.send(embed=e)
         except discord.HTTPException:
             pass # DMs off or somehow cannot dm them
-
-    async def get_modlog(self, guild: discord.Guild) -> discord.TextChannel:
-        modlog = await self.bot.db.fetchval('SELECT modlog FROM servers WHERE server_id = $1', guild.id)
-        if not modlog:
-            return None
-        channel = guild.get_channel(modlog)
-        return channel if channel else None
-
-    async def get_next_case(self, guild: discord.Guild):
-        row = await self.bot.db.fetchval("SELECT max(case_number) FROM modlogs WHERE guild_id = $1", guild.id)
-        return row+1 if row is not None else 1
-
-    async def create_modlog_case(
-        self, 
-        guild: discord.Guild, 
-        modlog: discord.TextChannel,
-        *, 
-        action: str, 
-        moderator: Union[discord.Member, discord.User, int],
-        reason: str,
-        target: Union[discord.Member, discord.User],
-        duration: Optional[str] = None
-        ):
-        case = await self.get_next_case(guild)
-
-        description = ""
-        description += (
-            f"\n**Offender:** {target} ({target.mention})"\
-            f"\n**Reason:** {reason}"\
-        )
-        if duration:
-            description += f"\n**Duration:** {duration}"
-        description += (
-            f"\n**Responsible moderator:** {moderator}"\
-            f"\n**Occurred:** {ts_now('F')} ({ts_now('R')})"
-        )
-
-        embed = discord.Embed(title=f"{action} | case {case}", color=self.actions[action], description=description)          
-        embed.set_footer(text=f'ID: {target.id}')
-        
-        message = await modlog.send(embed=embed)
-        
-        query = """
-                INSERT INTO modlogs (guild_id, added_time, moderator, action, target, reason, case_number, message_id, duration)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-                """
-        await self.bot.db.execute(query, guild.id, discord.utils.utcnow().replace(tzinfo=None), moderator.id, action, target, reason, case, message.id, duration)
-
-    @commands.Cog.listener()
-    async def on_member_ban(self, guild: discord.Guild, user: Union[discord.Member, discord.User]):
-        modlog = await self.get_modlog(guild)
-        if not modlog:
-            return # No modlog what do you expect
-
-        if not guild.me.guild_permissions.view_audit_log:
-            return # Not even the simpliest perms
-
-        entries = await guild.audit_logs(action=discord.AuditLogAction.ban, limit=5).flatten()
-        moderator = entries[0].user
-        reason = entries[0].reason 
-
-        await self.create_modlog_case(guild, modlog, action="ban", moderator=moderator, reason=reason, target=user, duration=None)
-
-    @commands.Cog.listener()
-    async def on_member_kick(self, guild: discord.Guild, user: Union[discord.Member, discord.User]):
-        modlog = await self.get_modlog(guild)
-        if not modlog:
-            return # No modlog what do you expect
-
-        if not guild.me.guild_permissions.view_audit_log:
-            return # Not even the simpliest perms
-
-        entries = await guild.audit_logs(action=discord.AuditLogAction.kick, limit=5).flatten()
-        moderator = entries[0].user
-        reason = entries[0].reason 
-
-        await self.create_modlog_case(guild, modlog, action="kick", moderator=moderator, reason=reason, target=user, duration=None)
-
-    @commands.Cog.listener()
-    async def on_member_unban(self, guild: discord.Guild, user: discord.User):
-        modlog = await self.get_modlog(guild)
-        if not modlog:
-            return # No modlog what do you expect
-
-        if not guild.me.guild_permissions.view_audit_log:
-            return # Not even the simpliest perms
-
-        entries = await guild.audit_logs(action=discord.AuditLogAction.unban, limit=5).flatten()
-        moderator = entries[0].user
-        reason = entries[0].reason 
-
-        await self.create_modlog_case(guild, modlog, action="unban", moderator=moderator, reason=reason, target=user, duration=None)
-
 
 
 async def setup(bot):

@@ -147,9 +147,9 @@ class giveaways2(commands.Cog, description='The giveaways rewrite including butt
         self, 
         ctx: MyContext, 
         duration: FutureTime, 
-        winners: int , 
+        winners: int, 
         *, 
-        prize: str):
+        prize: str,):
         """Testing giveaway command."""
 
         start = discord.utils.utcnow()
