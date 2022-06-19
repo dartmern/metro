@@ -486,7 +486,7 @@ class developer(commands.Cog, description="Developer commands."):
 
             except discord.ext.commands.ExtensionFailed as e:
                 traceback_string = f"```py" \
-                                   f"\n{''.join(traceback.format_exception(etype=None, value=e, tb=e.__traceback__))}" \
+                                   f"\n{''.join(traceback.format_exception(e, value=e, tb=e.__traceback__))}" \
                                    f"\n```"
                 pages.add_line(f"{icon}❌ `{extension}` - Execution error")
                 to_dm = f"❌ {extension} - Execution error - Traceback:"
