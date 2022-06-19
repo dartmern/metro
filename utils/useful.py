@@ -571,3 +571,9 @@ def human_join(seq, delim=', ', final='or'):
         return f'{seq[0]} {final} {seq[1]}'
 
     return delim.join(seq[:-1]) + f' {final} {seq[-1]}'
+
+def MessageID(argument: str) -> int:
+    try:
+        return int(argument, base=10)
+    except ValueError:
+        raise commands.BadArgument(f'"{argument}" is not a valid message ID. Use Developer Mode to get the Copy ID option.')

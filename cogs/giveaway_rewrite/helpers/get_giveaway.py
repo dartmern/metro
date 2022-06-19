@@ -3,18 +3,14 @@ from bot import MetroBot
 
 async def get_giveaway(
     bot: MetroBot, 
-    guild_id: int,
-    channel_id: int, 
     message_id: int
     ):
     """Get a giveaway from database."""
     
     query = """
-            SELECT (raw, winners, ends_at) FROM giveaway
-            WHERE guild_id = $1
-            AND channel_id = $2
-            AND message_id = $3
+            SELECT (raw, winners, ends_at, channel_id) FROM giveaway
+            WHERE message_id = $1
             """
-    return await bot.db.fetchval(query, guild_id, channel_id, message_id)
+    return await bot.db.fetchval(query, message_id)
 
 

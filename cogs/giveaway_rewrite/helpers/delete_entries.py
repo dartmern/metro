@@ -1,6 +1,6 @@
 from bot import MetroBot
 
-async def delete_entires(
+async def delete_entries(
     bot: MetroBot,
     message_id: int
     ):

@@ -11,7 +11,6 @@ from utils.embeds import create_embed
 
 from .helpers.get_entry import get_entry
 from .helpers.delete_entry import delete_entry
-from .helpers.get_giveaway import get_giveaway
 
 class GiveawayEntryButton(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction) -> Any:
@@ -100,7 +99,7 @@ class UnenterGiveawayView(discord.ui.View):
         footer = self.org_message.embeds[0].footer
 
         x = footer.text.split("|")[1].rstrip("entries")
-        final = footer.text.split("|")[0] + "| " + str(int(x) - 1) + " entires"
+        final = footer.text.split("|")[0] + "| " + str(int(x) - 1) + " entries"
 
         embed.set_footer(text=final)
         await self.org_message.edit(embed=embed)

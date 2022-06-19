@@ -13,15 +13,14 @@ from utils.custom_context import MyContext
 from utils.embeds import create_embed
 from utils.remind_utils import FutureTime, human_timedelta
 from utils.constants import EMOTES, TESTING_GUILD
+from utils.useful import MessageID
 from .views import ConfirmationEmojisView, GiveawayEntryView, UnenterGiveawayView
 
 from .helpers.get_giveaway import get_giveaway
 from .helpers.get_entry import get_entry
 from .helpers.insert_entry import insert_entry
 from .helpers.insert_giveaway import insert_giveaway
-from .helpers.get_entries import get_entires
-from .helpers.delete_entries import delete_entires
-from .helpers.delete_giveaway import delete_giveaway
+from .helpers.end_giveaway import end_giveaway
 
 async def setup(bot: MetroBot):
     await bot.add_cog(giveaways2(bot))
@@ -37,7 +36,7 @@ class giveaways2(commands.Cog, description='The giveaways rewrite including butt
             message_id = interaction.message.id
 
             data = await get_giveaway(
-                self.bot, interaction.guild_id, interaction.channel_id, message_id)
+                self.bot, message_id)
             
             if data:
                 entry = await get_entry(self.bot, message_id, interaction.user.id)
@@ -54,7 +53,7 @@ class giveaways2(commands.Cog, description='The giveaways rewrite including butt
                     footer = interaction.message.embeds[0].footer
 
                     x = footer.text.split("|")[1].rstrip("entries")
-                    final = footer.text.split("|")[0] + "| " + str(int(x) + 1) + " entires"
+                    final = footer.text.split("|")[0] + "| " + str(int(x) + 1) + " entries"
 
                     embed.set_footer(text=final)
                     await interaction.message.edit(embed=embed)
@@ -70,12 +69,7 @@ class giveaways2(commands.Cog, description='The giveaways rewrite including butt
         """Fires when a giveaway ends."""
         guild_id, channel_id, message_id = timer.args
 
-        data = await get_giveaway(
-            self.bot, 
-            guild_id,
-            channel_id,
-            message_id
-        )
+        data = await get_giveaway(self.bot, message_id)
         if not data:
             return # rip?
 
@@ -85,60 +79,48 @@ class giveaways2(commands.Cog, description='The giveaways rewrite including butt
 
         channel = guild.get_channel(channel_id)
         if not channel:
+            return
+
+        try:
+            message = await channel.fetch_message(message_id)
+        except discord.HTTPException:
             return 
 
-        message = await channel.fetch_message(message_id)
-        if not message:
-            return 
-
-        entires = await get_entires(self.bot, message_id)
-
-        raw_embed = data[0]
-        amount_of_winners = data[1]
-
-        raw = ast.literal_eval(raw_embed)
-        embed = discord.Embed.from_dict(raw)
-
-        if len(entires) == 0:
-            alert_message = 'Not enough entrants to determine a winner!'
-            embed.color = discord.Color(3553599)
-
-        else:
-            winners = random.sample(entires, amount_of_winners)
-            winners_fmt = ", ".join([f"<@{record['author_id']}>" for record in winners])
-
-            alert_message = f'Winners: {winners_fmt}'
-            embed.color = discord.Color.red()
-
-        old = embed.description 
-        old = old.replace('Click the button below to enter!', alert_message) # bad way of doing this but i'm testing
-        old = old.replace('Ends', 'Ended')
-
-        embed.description = old
-        embed.set_footer(text=message.embeds[0].footer.text)
-
+        await end_giveaway(self.bot, message_id, data, message)
         
-        button = discord.ui.Button()
-        button.disabled = True
-        button.style = discord.ButtonStyle.red
-        button.label = 'Giveaway Ended'
 
-        view = discord.ui.View()
-        view.add_item(button)
+    @commands.hybrid_command(name='gend')
+    @app_commands.guilds(TESTING_GUILD)
+    @app_commands.describe(message_id='The message id of the giveaway.')
+    @app_commands.default_permissions(manage_guild=True)
+    @commands.has_guild_permissions(manage_guild=True)
+    async def gend(
+        self, 
+        ctx: MyContext,
+        *,
+        message_id: MessageID):
+        """End a giveaway."""
         
-        await message.edit(embed=embed, view=view)
 
-        term = 'has' if amount_of_winners < 2 else 'have'
-        new_embed = create_embed(
-            alert_message if len(entires) == 0 else f'{winners_fmt} {term} won the giveaway for **{message.embeds[0].author.name}**',
-            color=discord.Color.yellow()
-        )
-        await message.reply(embed=new_embed)
+        data = await get_giveaway(self.bot, message_id)
+        if not data:
+            return await ctx.send("That doesn't seem like a giveaway id.")
 
-        await delete_giveaway(self.bot, message_id) # delete the giveaway itself
-        await delete_entires(self.bot, message_id) # delete the giveaway's entries
+        channel = self.bot.get_channel(data[3]) # data[3] is the channel id
+        if not channel:
+            return await ctx.send("It seems liske the giveaway's channel was deleted.")
+
+        try:
+            message = await channel.fetch_message(message_id)
+        except discord.HTTPException:
+            return await ctx.send("It seems like the giveaway's message was deleted.")
+
+        await end_giveaway(self.bot, message_id, data, message)
+        await ctx.send(EMOTES['check'], hide=True)
         
     @commands.hybrid_command(name='gstart')
+    @app_commands.default_permissions(manage_guild=True)
+    @commands.has_guild_permissions(manage_guild=True)
     @app_commands.guilds(TESTING_GUILD)
     @app_commands.describe(duration='Duration of this giveaway.')
     @app_commands.describe(winners='Amount of winners.')
@@ -149,8 +131,8 @@ class giveaways2(commands.Cog, description='The giveaways rewrite including butt
         duration: FutureTime, 
         winners: int, 
         *, 
-        prize: str,):
-        """Testing giveaway command."""
+        prize: str):
+        """Start a giveaway in the current channel."""
 
         start = discord.utils.utcnow()
 

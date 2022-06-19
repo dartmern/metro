@@ -1,6 +1,6 @@
 from bot import MetroBot
 
-async def get_entires(
+async def get_entries(
     bot: MetroBot,
     message_id: int
     ):
