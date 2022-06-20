@@ -25,7 +25,7 @@ class Requirements(commands.Converter):
         argument = pattern.split(argument)
 
         for arg in argument:
-            split = arg.split(':')
+            split = arg.lower().split(':')
 
             if len(split) == 1:
                 role = await RoleConverter().convert(ctx, arg)

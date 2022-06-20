@@ -9,8 +9,8 @@ from bot import MetroBot
 from utils.constants import EMOTES
 from utils.embeds import create_embed
 
-from .helpers.get_entry import get_entry
-from .helpers.delete_entry import delete_entry
+from .core.get_entry import get_entry
+from .core.delete_entry import delete_entry
 
 class GiveawayEntryButton(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction) -> Any:
