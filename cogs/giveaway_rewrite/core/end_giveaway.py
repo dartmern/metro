@@ -66,5 +66,5 @@ async def end_giveaway(
         )
         await message.reply(embed=new_embed)
 
-    await delete_giveaway(bot, message_id) # delete the giveaway itself
-    await delete_entries(bot, message_id) # delete the giveaway's entries
+    #await delete_giveaway(bot, message_id) # delete the giveaway itself
+    #await delete_entries(bot, message_id) # delete the giveaway's entries
