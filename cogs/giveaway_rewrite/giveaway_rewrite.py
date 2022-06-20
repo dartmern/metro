@@ -1,10 +1,7 @@
 import ast
-from ctypes import util
-import datetime
-import json
-import random
+
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 from discord import app_commands
 
 from bot import MetroBot
@@ -21,6 +18,8 @@ from .helpers.get_entry import get_entry
 from .helpers.insert_entry import insert_entry
 from .helpers.insert_giveaway import insert_giveaway
 from .helpers.end_giveaway import end_giveaway
+from .converters.winners import Winners
+from .converters.requirements import Requirements            
 
 async def setup(bot: MetroBot):
     await bot.add_cog(giveaways2(bot))
@@ -124,12 +123,14 @@ class giveaways2(commands.Cog, description='The giveaways rewrite including butt
     @app_commands.guilds(TESTING_GUILD)
     @app_commands.describe(duration='Duration of this giveaway.')
     @app_commands.describe(winners='Amount of winners.')
+    @app_commands.describe(requirements='Requirements to join this giveaway.')
     @app_commands.describe(prize='Prize you are giving away.')
     async def gstart(
         self, 
         ctx: MyContext, 
         duration: FutureTime, 
-        winners: int, 
+        winners: Winners,
+        requirements: Requirements,
         *, 
         prize: str):
         """Start a giveaway in the current channel."""
@@ -143,7 +144,17 @@ class giveaways2(commands.Cog, description='The giveaways rewrite including butt
         embed = discord.Embed(title='Is this information correct?', color=discord.Colour.yellow())
         embed.description = f"**Prize:** {prize} \n"\
                             f"**Winners:** {winners} \n"\
-                            f"**Duration:** {human_timedelta(duration.dt)} \n"\
+                            f"**Duration:** {human_timedelta(duration.dt)} \n"
+
+        if not all(x is False for x in requirements.values()):
+            role_fmt = ', '.join(r.mention for r in requirements['role'])
+            bypass_fmt = ', '.join(r.mention for r in requirements['bypass'])
+            blacklist_fmt = ', '.join(r.mention for r in requirements['blacklist'])
+            value = f"Role{'s' if len(requirements['role']) > 1 else ''}: {role_fmt if role_fmt != '' else 'No requirements.'}\n"\
+                    f"Bypass: {bypass_fmt if bypass_fmt != '' else 'No bypass role'} \n"\
+                    f"Blacklist: {blacklist_fmt if blacklist_fmt != '' else 'No blacklist role'}" 
+            embed.add_field(name='Requirements', value=value)
+                            
         
         view = ConfirmationEmojisView(
             timeout=60, author_id=ctx.author.id, ctx=ctx)
@@ -196,15 +207,6 @@ class giveaways2(commands.Cog, description='The giveaways rewrite including butt
                 )
             except Exception:
                 pass # for now idk what to do at the moment
-
-            
-
-
-
-
-
-
-
 
     @property
     def emoji(self) -> str:
