@@ -13,16 +13,14 @@ from utils.constants import EMOTES, TESTING_GUILD
 from utils.useful import MessageID
 from .views import ConfirmationEmojisView, GiveawayEntryView, UnenterGiveawayView
 
-from .helpers.get_giveaway import get_giveaway
-from .helpers.get_entry import get_entry
-from .helpers.insert_entry import insert_entry
-from .helpers.insert_giveaway import insert_giveaway
-from .helpers.end_giveaway import end_giveaway
+from .core.get_giveaway import get_giveaway
+from .core.get_entry import get_entry
+from .core.insert_entry import insert_entry
+from .core.insert_giveaway import insert_giveaway
+from .core.end_giveaway import end_giveaway
 from .converters.winners import Winners
-from .converters.requirements import Requirements            
-
-async def setup(bot: MetroBot):
-    await bot.add_cog(giveaways2(bot))
+from .converters.requirements import Requirements 
+from .settings.show_settings import show_settings   
 
 class giveaways2(commands.Cog, description='The giveaways rewrite including buttons.'):
     def __init__(self, bot: MetroBot):
@@ -116,7 +114,26 @@ class giveaways2(commands.Cog, description='The giveaways rewrite including butt
 
         await end_giveaway(self.bot, message_id, data, message)
         await ctx.send(EMOTES['check'], hide=True)
-        
+
+    @commands.hybrid_group(name='giveaway-settings', fallback='info')
+    @app_commands.guilds(TESTING_GUILD)
+    @app_commands.default_permissions(manage_guild=True)
+    @commands.has_guild_permissions(manage_guild=True)
+    async def giveaway_settings(
+        self, 
+        ctx: MyContext):
+        """Manage giveaway settings."""
+
+        data = await show_settings(self.bot, ctx.guild.id)
+        if not data:
+            return await ctx.send('This server has default giveaway settings or has not changed anything yet.')
+
+        embed = discord.Embed()
+        embed.set_author(name='Giveaway Settings')
+        embed.description = f'Giveaway Manager: <@&{data[0]}>'
+
+        await ctx.send(embed=embed)
+
     @commands.hybrid_command(name='gstart')
     @app_commands.default_permissions(manage_guild=True)
     @commands.has_guild_permissions(manage_guild=True)
