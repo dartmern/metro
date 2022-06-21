@@ -822,7 +822,9 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
         timer = Timer.temporary(event=event, args=args, kwargs=kwargs, expires=when, created=now)
         delta = (when - now).total_seconds()
-        if event != 'giveaway':
+
+        blacklist = ['giveaway', 'new_giveaway']
+        if event not in blacklist:
             if delta <= 30:
                 # a shortcut for small timers
                 self.bot.loop.create_task(self.short_timer_optimisation(delta, timer))

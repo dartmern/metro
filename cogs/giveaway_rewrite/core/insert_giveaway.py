@@ -13,7 +13,7 @@ async def insert_giveaway(
     ):
     """Insert a giveaway."""
     query = """
-            INSERT INTO giveaway (guild_id, channel_id, message_id, ends_at, raw, winners)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO giveaway (guild_id, channel_id, message_id, ends_at, raw, winners, ended)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             """
-    await bot.db.execute(query, guild_id, channel_id, message_id, ends_at, str(embed_raw), winners)
+    await bot.db.execute(query, guild_id, channel_id, message_id, ends_at, str(embed_raw), winners, False)

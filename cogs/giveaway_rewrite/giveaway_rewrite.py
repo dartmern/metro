@@ -101,16 +101,16 @@ class giveaways2(commands.Cog, description='The giveaways rewrite including butt
 
         data = await get_giveaway(self.bot, message_id)
         if not data:
-            return await ctx.send("That doesn't seem like a giveaway id.")
+            return await ctx.send("That doesn't seem like a giveaway id.", hide=True)
 
         channel = self.bot.get_channel(data[3]) # data[3] is the channel id
         if not channel:
-            return await ctx.send("It seems liske the giveaway's channel was deleted.")
+            return await ctx.send("It seems liske the giveaway's channel was deleted.", hide=True)
 
         try:
             message = await channel.fetch_message(message_id)
         except discord.HTTPException:
-            return await ctx.send("It seems like the giveaway's message was deleted.")
+            return await ctx.send("It seems like the giveaway's message was deleted.", hide=True)
 
         await end_giveaway(self.bot, message_id, data, message)
         await ctx.send(EMOTES['check'], hide=True)

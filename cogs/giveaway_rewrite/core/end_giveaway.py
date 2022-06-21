@@ -3,8 +3,6 @@ from bot import MetroBot
 
 from utils.embeds import create_embed
 from .get_entries import get_entries
-from .delete_giveaway import delete_giveaway
-from .delete_entries import delete_entries
 
 import discord
 import random
@@ -66,5 +64,9 @@ async def end_giveaway(
         )
         await message.reply(embed=new_embed)
 
-    #await delete_giveaway(bot, message_id) # delete the giveaway itself
-    #await delete_entries(bot, message_id) # delete the giveaway's entries
+    query = """
+            UPDATE giveaway
+            SET ended = $1
+            WHERE message_id = $2
+            """
+    await bot.db.execute(query, True, message_id)
