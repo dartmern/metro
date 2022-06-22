@@ -287,33 +287,6 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         
         return f"https://mystb.in/{url_key}"
 
-    @commands.command(name='pingonline')
-    @commands.has_guild_permissions(mention_everyone=True)
-    async def pingonline(self, ctx: MyContext, *, role: RoleConverter):
-        """Ping the online members of a role."""
-
-        members = []
-        for member in role.members:
-            if member.status == 'offline':
-                continue
-            members.append(member)
-        await ctx.send(''.join(map(lambda x: x.mention, members)))
-
-    @commands.hybrid_command(name='timestamp')
-    @app_commands.guilds(TESTING_GUILD)
-    async def create_timestamp(
-        self, 
-        ctx: MyContext, 
-        time: FutureTime,
-        type: Optional[Literal['t', 'T', 'd', 'D', 'f', 'F', 'R']] = 'R'
-    ):
-        """Get a timestamp for a data in the future."""
-        timestamp = discord.utils.format_dt(time.dt, style=type)
-        to_send = discord.utils.escape_markdown(timestamp)
-        
-        await ctx.send(to_send.replace('<', '\\<'), hide=True)
-
-
     @commands.command(name='mystbin')
     @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.user))
     async def mystbin(self, ctx: MyContext, *, content : str):
@@ -559,16 +532,6 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
         js = await self.github_request('POST', 'gists', data=data, headers=headers)
         return js['html_url']
-
-
-    @commands.command()
-    @commands.check(Cooldown(1, 30, 1, 15, commands.cooldowns.BucketType.user))
-    async def gist(self, ctx : MyContext, filename : str, *, content : str):
-        """Create and post a gist online."""
-
-        link = await self.create_gist(content, filename=filename)
-        await ctx.send(f"Created new gist.\n<{link}>")
-
 
 
     @commands.group(case_insensitive=True, invoke_without_command=True)
@@ -1236,35 +1199,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
                                 continue
                             await user.send(f"In {message.channel.mention}, you were mentioned with the highlighted word \"{key}\"", embed=e)
             except RuntimeError:
-                pass # Can't do shit really
-
-    @commands.command(name='embed')
-    @commands.has_permissions(manage_messages=True)
-    @commands.bot_has_guild_permissions(embed_links=True)
-    async def _embed(self, ctx: MyContext, *, argument: str):
-        """
-        Post an embed from json.
-        
-        [Click here](https://embedbuilder.nadekobot.me/) to build your embed,
-        then click copy and paste that as an argument for this command.
-
-        If the message is too long please post it in a [mystbin](https://mystb.in/)
-        and post the mystbin link as your argument.
-        """
-        x = re.findall(
-                r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+",
-                argument,
-            )
-        if x:
-            await ctx.typing()
-            argument = str(await self.bot.mystbin_client.get(x[0]))
-
-        try:
-            embed = discord.Embed.from_dict(json.loads(argument))
-            await ctx.send(embed=embed, reply=False)
-            return await ctx.check()
-        except Exception as e:
-            return await ctx.send(str(e))
-
+                pass # Can't do shit really 
+  
 async def setup(bot):
     await bot.add_cog(utility(bot))
