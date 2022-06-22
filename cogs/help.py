@@ -1117,7 +1117,7 @@ class meta(commands.Cog, description='Get bot stats and information.'):
     async def _linecount(self, ctx: MyContext):
         """Get the linecount for Metro."""
 
-        await ctx.trigger_typing()
+        await ctx.typing()
 
         embed = discord.Embed(color=ctx.color)
 

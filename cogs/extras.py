@@ -187,7 +187,7 @@ class extras(commands.Cog, description='Extra commands for your use.'):
         if not re.fullmatch(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', url):
             raise commands.BadArgument("That is not a vaild url.")
 
-        await ctx.trigger_typing()
+        await ctx.typing()
 
         params = {"access_token" : bitly_token, "longUrl" : url}
         async with self.bot.session.get("https://api-ssl.bitly.com/v3/shorten", params=params) as response:

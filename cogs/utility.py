@@ -1256,7 +1256,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
                 argument,
             )
         if x:
-            await ctx.trigger_typing()
+            await ctx.typing()
             argument = str(await self.bot.mystbin_client.get(x[0]))
 
         try:

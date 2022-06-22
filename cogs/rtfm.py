@@ -191,13 +191,13 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         page_types = self.page_types
 
         if obj is None:
-            await ctx.trigger_typing()
+            await ctx.typing()
             await ctx.send(page_types[key], hide=True)
             return
 
 
         if not hasattr(self, '_rtfm_cache'):
-            await ctx.trigger_typing()
+            await ctx.typing()
             await self.build_rtfm_lookup_table(page_types)
 
         obj = re.sub(r'^(?:discord\.(?:ext\.)?)?(?:commands\.)?(.+)', r'\1', obj)
@@ -320,7 +320,7 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
 
         This command is powered by [IDevision API](https://idevision.net/static/redoc.html)
         """
-        await ctx.trigger_typing()
+        await ctx.typing()
 
         if library is None:
             library = "enhanced-discord.py"

@@ -71,9 +71,6 @@ class MyContext(commands.Context):
         except discord.HTTPException:
             pass
 
-    #async def defer(self, hide : bool = True, trigger_typing : bool = True):
-        #await super().defer(ephemeral=hide, trigger_typing=trigger_typing)
-
     async def send(self, content : str = None, embed : discord.Embed = None, hide : bool = False, reply: bool = True, reference: Any = None, **kwargs):
 
         if content: 

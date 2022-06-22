@@ -131,7 +131,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         This will not work if your server is set up improperly.
         """
         channel = channel or ctx.channel
-        await ctx.trigger_typing()
+        await ctx.typing()
 
         if not channel.permissions_for(ctx.guild.me).read_messages:
             raise commands.BadArgument(
@@ -265,7 +265,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
 
         channel = channel or ctx.channel
 
-        await ctx.trigger_typing()
+        await ctx.typing()
         if not channel.permissions_for(ctx.guild.me).read_messages:
             raise commands.BadArgument(
                 f"I need to be able to read messages in {channel.mention}"
@@ -1535,7 +1535,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         """This function returns a embed for a discord.Guild instance."""
 
         if not guild.chunked:
-            await ctx.trigger_typing()
+            await ctx.typing()
             await guild.chunk()
 
         messages = await ctx.bot.db.fetchval("SELECT COUNT(*) as c FROM messages WHERE server_id = $1", guild.id)

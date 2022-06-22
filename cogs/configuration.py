@@ -250,7 +250,7 @@ class configuration(commands.Cog, description='Configure the bot/server.'):
         if not commands:
             return await ctx.send_help('config disable')
         entity = entity or ctx.guild
-        await ctx.trigger_typing()
+        await ctx.typing()
         await self.disable_command(ctx, entity, [str(n.name) for n in commands])
 
 
@@ -264,7 +264,7 @@ class configuration(commands.Cog, description='Configure the bot/server.'):
     ):
         """Show disabled commands"""
 
-        await ctx.trigger_typing()
+        await ctx.typing()
         query = """
                 SELECT entity_id,
                 ARRAY_AGG(command) as commands
@@ -405,7 +405,7 @@ class configuration(commands.Cog, description='Configure the bot/server.'):
         if confirm is False:
             return await ctx.send('Canceled.')
 
-        await ctx.trigger_typing()
+        await ctx.typing()
         query = "DELETE FROM command_config WHERE server_id = $1;"
         await self.bot.db.execute(query, ctx.guild.id)
         self.command_config[ctx.guild.id].clear()
@@ -433,7 +433,7 @@ class configuration(commands.Cog, description='Configure the bot/server.'):
         if not commands:
             return await ctx.send_help('config enable')
 
-        await ctx.trigger_typing()
+        await ctx.typing()
         entity = entity or ctx.guild
         await self.enable_command(ctx, entity, [str(c) for c in commands])
 
@@ -464,7 +464,7 @@ class configuration(commands.Cog, description='Configure the bot/server.'):
         if not entities:
             return await ctx.send_help('config ignore')
 
-        await ctx.trigger_typing()
+        await ctx.typing()
         await self.ignore_entities(ctx, entities)
 
     
@@ -475,7 +475,7 @@ class configuration(commands.Cog, description='Configure the bot/server.'):
     async def config_ignore_list(self, ctx : MyContext):
         """Show all ignored entities."""
 
-        await ctx.trigger_typing()
+        await ctx.typing()
         query = """
                 SELECT entity_id
                 FROM plonks
@@ -538,7 +538,7 @@ class configuration(commands.Cog, description='Configure the bot/server.'):
     async def config_ignore_clear(self, ctx : MyContext):
         """Clear the ignored list."""
 
-        await ctx.trigger_typing()
+        await ctx.typing()
 
         confirm = await ctx.confirm('Are you sure you want to clear your ignored list?',timeout=30)
 
@@ -568,7 +568,7 @@ class configuration(commands.Cog, description='Configure the bot/server.'):
         if not entities:
             return await ctx.send_help('config unignore')
 
-        await ctx.trigger_typing()
+        await ctx.typing()
         query = """
                 DELETE FROM plonks
                 WHERE server_id = $1
