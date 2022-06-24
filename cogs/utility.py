@@ -1007,7 +1007,6 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         except (discord.HTTPException, discord.NotFound):
             return
 
-        author = await self.bot.try_user(author_id)
         msg = f"<@{author_id}>, {discord.utils.format_dt(timer.created_at.replace(tzinfo=datetime.timezone.utc), 'R')}, you wanted me to remind you about: \n> {message}"
 
         guild_id = channel.guild.id if isinstance(channel, (discord.TextChannel, discord.Thread)) else '@me'
