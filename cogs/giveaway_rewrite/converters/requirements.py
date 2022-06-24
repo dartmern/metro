@@ -14,41 +14,41 @@ class Requirements(commands.Converter):
     async def convert(self, ctx: MyContext, argument: str) -> typing.Dict:
 
         requirements = {
-            'role': [],
-            'bypass': [],
-            'blacklist': []            
+            "role": [],
+            "bypass": [],
+            "blacklist": []            
         }
-        if argument.lower() == 'none': # no requirement
+        if argument.lower() == "none": # no requirement
             return requirements
 
-        pattern = re.compile(r'\||;;')
+        pattern = re.compile(r"\||;;")
         argument = pattern.split(argument)
 
         for arg in argument:
-            split = arg.lower().split(':')
+            split = arg.lower().split(":")
 
             if len(split) == 1:
                 role = await RoleConverter().convert(ctx, arg)
-                requirements['role'] += [role]
+                requirements["role"] += [role]
                 continue
                 
-            if split[0] == 'role':
+            if split[0] == "role":
                 role = await RoleConverter().convert(ctx, split[1])
-                requirements['role'] += [role]
+                requirements["role"] += [role]
                 continue
 
-            if split[0] == 'bypass':
+            if split[0] == "bypass":
                 role = await RoleConverter().convert(ctx, split[1])
-                requirements['bypass'] += [role]
+                requirements["bypass"] += [role]
                 continue
 
-            if split[0] == 'blacklist':
+            if split[0] == "blacklist":
                 role = await RoleConverter().convert(ctx, split[1])
-                requirements['blacklist'] += [role]
+                requirements["blacklist"] += [role]
 
-        requirements['role'] = list(set(requirements['role']))
-        requirements['bypass'] = list(set(requirements['bypass']))
-        requirements['blacklist'] = list(set(requirements['blacklist']))
+        requirements["role"] = list(set(requirements["role"]))
+        requirements["bypass"] = list(set(requirements["bypass"]))
+        requirements["blacklist"] = list(set(requirements["blacklist"]))
 
         return requirements
         

@@ -22,7 +22,7 @@ from .converters.winners import Winners
 from .converters.requirements import Requirements 
 from .settings.show_settings import show_settings   
 
-class giveaways2(commands.Cog, description='The giveaways rewrite including buttons.'):
+class giveaways(commands.Cog, description='The giveaways rewrite including buttons.'):
     def __init__(self, bot: MetroBot):
         self.bot = bot
 
@@ -70,6 +70,9 @@ class giveaways2(commands.Cog, description='The giveaways rewrite including butt
         if not data:
             return # rip?
 
+        if data[4] is True:
+            return # already ended
+
         guild = self.bot.get_guild(guild_id)
         if not guild:
             return 
@@ -84,14 +87,43 @@ class giveaways2(commands.Cog, description='The giveaways rewrite including butt
             return 
 
         await end_giveaway(self.bot, message_id, data, message)
-        
 
-    @commands.hybrid_command(name='gend')
+    @commands.hybrid_group(name='giveaway-settings', fallback='info')
+    @app_commands.guilds(TESTING_GUILD)
+    @app_commands.default_permissions(manage_guild=True)
+    @commands.has_guild_permissions(manage_guild=True)
+    async def giveaway_settings(
+        self, 
+        ctx: MyContext):
+        """Manage giveaway settings."""
+
+        data = await show_settings(self.bot, ctx.guild.id)
+        if not data:
+            return await ctx.send('This server has default giveaway settings or has not changed anything yet.')
+
+        embed = discord.Embed()
+        embed.set_author(name='Giveaway Settings')
+        embed.description = f'Giveaway Manager: <@&{data[0]}>'
+
+        await ctx.send(embed=embed)
+
+    @commands.hybrid_group(name='giveaway', fallback='help', aliases=['g'])
+    @commands.has_guild_permissions(manage_guild=True)
+    @app_commands.default_permissions(manage_guild=True)
+    @app_commands.guilds(TESTING_GUILD) 
+    async def giveaway(
+        self, 
+        ctx: MyContext
+        ):
+        """Base command for creating giveaways."""
+        await ctx.help()
+
+    @giveaway.command(name='end')
     @app_commands.guilds(TESTING_GUILD)
     @app_commands.describe(message_id='The message id of the giveaway.')
     @app_commands.default_permissions(manage_guild=True)
     @commands.has_guild_permissions(manage_guild=True)
-    async def gend(
+    async def giveaway_end(
         self, 
         ctx: MyContext,
         *,
@@ -115,26 +147,7 @@ class giveaways2(commands.Cog, description='The giveaways rewrite including butt
         await end_giveaway(self.bot, message_id, data, message)
         await ctx.send(EMOTES['check'], hide=True)
 
-    @commands.hybrid_group(name='giveaway-settings', fallback='info')
-    @app_commands.guilds(TESTING_GUILD)
-    @app_commands.default_permissions(manage_guild=True)
-    @commands.has_guild_permissions(manage_guild=True)
-    async def giveaway_settings(
-        self, 
-        ctx: MyContext):
-        """Manage giveaway settings."""
-
-        data = await show_settings(self.bot, ctx.guild.id)
-        if not data:
-            return await ctx.send('This server has default giveaway settings or has not changed anything yet.')
-
-        embed = discord.Embed()
-        embed.set_author(name='Giveaway Settings')
-        embed.description = f'Giveaway Manager: <@&{data[0]}>'
-
-        await ctx.send(embed=embed)
-
-    @commands.hybrid_command(name='gstart')
+    @giveaway.command(name='start')
     @app_commands.default_permissions(manage_guild=True)
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.guilds(TESTING_GUILD)
@@ -142,7 +155,7 @@ class giveaways2(commands.Cog, description='The giveaways rewrite including butt
     @app_commands.describe(winners='Amount of winners.')
     @app_commands.describe(requirements='Requirements to join this giveaway.')
     @app_commands.describe(prize='Prize you are giving away.')
-    async def gstart(
+    async def giveaway_start(
         self, 
         ctx: MyContext, 
         duration: FutureTime, 
@@ -163,15 +176,16 @@ class giveaways2(commands.Cog, description='The giveaways rewrite including butt
                             f"**Winners:** {winners} \n"\
                             f"**Duration:** {human_timedelta(duration.dt)} \n"
 
-        if not all(x is False for x in requirements.values()):
+        if not all(bool(x) is False for x in requirements.values()):
             role_fmt = ', '.join(r.mention for r in requirements['role'])
             bypass_fmt = ', '.join(r.mention for r in requirements['bypass'])
             blacklist_fmt = ', '.join(r.mention for r in requirements['blacklist'])
             value = f"Role{'s' if len(requirements['role']) > 1 else ''}: {role_fmt if role_fmt != '' else 'No requirements.'}\n"\
                     f"Bypass: {bypass_fmt if bypass_fmt != '' else 'No bypass role'} \n"\
                     f"Blacklist: {blacklist_fmt if blacklist_fmt != '' else 'No blacklist role'}" 
-            embed.add_field(name='Requirements', value=value)
-                            
+            embed.add_field(name='Requirements', value=value) 
+        else:
+            embed.set_footer(text='No Requirements')       
         
         view = ConfirmationEmojisView(
             timeout=60, author_id=ctx.author.id, ctx=ctx)
@@ -203,7 +217,6 @@ class giveaways2(commands.Cog, description='The giveaways rewrite including butt
                 pass
 
             message = await ctx.channel.send(embed=giveaway, view=GiveawayEntryView(ctx, view.message))
-
             await insert_giveaway(
                 self.bot, 
                 ctx.guild.id, 
@@ -211,7 +224,8 @@ class giveaways2(commands.Cog, description='The giveaways rewrite including butt
                 message.id, 
                 duration.dt.replace(tzinfo=None),
                 giveaway.to_dict(),
-                winners
+                winners,
+                requirements
                 )
 
             try:

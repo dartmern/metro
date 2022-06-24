@@ -1,4 +1,5 @@
 import datetime
+import json
 import typing
 from bot import MetroBot
 
@@ -9,11 +10,24 @@ async def insert_giveaway(
     message_id: int,
     ends_at: datetime.datetime,
     embed_raw: typing.Dict,
-    winners: int
+    winners: int,
+    requirements: typing.Dict
     ):
     """Insert a giveaway."""
     query = """
-            INSERT INTO giveaway (guild_id, channel_id, message_id, ends_at, raw, winners, ended)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            INSERT INTO giveaway (guild_id, channel_id, message_id, ends_at, raw, winners, ended, requirements)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             """
-    await bot.db.execute(query, guild_id, channel_id, message_id, ends_at, str(embed_raw), winners, False)
+    requirements = json.dumps(requirements, default=str)
+
+    await bot.db.execute(
+        query, 
+        guild_id, 
+        channel_id, 
+        message_id, 
+        ends_at, 
+        str(embed_raw), 
+        winners, 
+        False, 
+        str(requirements)
+        )

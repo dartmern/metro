@@ -3,6 +3,7 @@ from bot import MetroBot
 
 from utils.embeds import create_embed
 from .get_entries import get_entries
+from .get_giveaway import get_giveaway
 
 import discord
 import random
@@ -13,10 +14,10 @@ async def end_giveaway(
     message_id: int,
     data: List, # formatted list from database
     message: discord.Message
-    
     ):
     """End a giveaway and delete the entries."""
     entries = await get_entries(bot, message_id)
+    data = await get_giveaway(bot, message_id)
 
     raw_embed = data[0]
     amount_of_winners = data[1]
@@ -29,6 +30,16 @@ async def end_giveaway(
         embed.color = discord.Color(3553599)
 
     else:
+        requirements = data[5]
+        if all(bool(x) is False for x in requirements.values()):
+            # no req
+            pass
+        else:
+            role_req = requirements['role']
+            bypass_req = requirements['bypass']
+            blacklist_req = requirements['blacklist']
+
+            
         try:
             winners = random.sample(entries, amount_of_winners)
         except ValueError:
@@ -45,7 +56,6 @@ async def end_giveaway(
     embed.description = old
     embed.set_footer(text=message.embeds[0].footer.text)
 
-        
     button = discord.ui.Button()
     button.disabled = True
     button.style = discord.ButtonStyle.red

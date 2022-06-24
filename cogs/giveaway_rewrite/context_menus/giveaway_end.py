@@ -6,7 +6,7 @@ from utils.custom_context import MyContext
 
 @app_commands.context_menu(name='End Giveaway')
 async def end_giveaway_context_menu(interaction: discord.Interaction, message: discord.Message):
-    command: commands.Command = interaction.client.get_command('gend')
+    command: commands.Command = interaction.client.get_command('giveaway end')
     context: MyContext = await interaction.client.get_context(interaction)
     try:
         await context.invoke(command, message_id=message.id)
