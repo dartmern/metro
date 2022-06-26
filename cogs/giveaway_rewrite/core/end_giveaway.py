@@ -45,7 +45,7 @@ async def end_giveaway(
                 if message.guild.get_member(entry['author_id']) not in message.guild.members:
                     entries.remove(entry)
                     continue
-                
+
                 resp = await validate_entry(
                     bot,
                     entry,
@@ -55,7 +55,6 @@ async def end_giveaway(
                     message.guild)
                 if resp is False:
                     entries.remove(entry)
-                    print('removed')
 
         if len(entries) == 0:
             alert_message = 'Not enough valid entries to determine a winner!'
