@@ -42,6 +42,10 @@ async def end_giveaway(
             blacklist_req = requirements['blacklist']
 
             for entry in entries:
+                if message.guild.get_member(entry['author_id']) not in message.guild.members:
+                    entries.remove(entry)
+                    continue
+                
                 resp = await validate_entry(
                     bot,
                     entry,
