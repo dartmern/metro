@@ -38,6 +38,46 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
             if data:
                 entry = await get_entry(self.bot, message_id, interaction.user.id)
                 if not entry:
+                    requirements = ast.literal_eval(data[5])
+
+                    role_req = [ele for ele in requirements['role'] if ele not in map(lambda x: x.id, interaction.user.roles)]
+                    blacklist_req = [ele for ele in requirements['blacklist'] if ele in map(lambda x: x.id, interaction.user.roles)]
+                    bypass_req = [ele for ele in requirements['bypass'] if ele in map(lambda x: x.id, interaction.user.roles)]
+                    
+                    if blacklist_req:
+
+                        roles = [f"<@&{role}>" for role in blacklist_req]
+                        if len(roles) > 1:
+                            roles[-1] = f"and {roles[-1]}"
+                        
+                        embed = create_embed(
+                            f'{EMOTES["cross"]} You cannot join this giveaway because you the following blacklisted roles: \n{", ".join(roles)}',
+                            color=discord.Color.red()
+                        )
+                        
+                        return await interaction.response.send_message(embed=embed, ephemeral=True)
+
+                    if role_req:
+                        if bypass_req:
+                            pass
+                        else:
+                            roles = [f"<@&{role}>" for role in role_req]
+                            if len(roles) > 1:
+                                roles[-1] = f"and {roles[-1]}"
+
+                            embed = create_embed(
+                                f'{EMOTES["cross"]} You are missing the following roles to join this giveaway:\n {", ".join(roles)}',
+                                color=discord.Color.red())
+
+                            if requirements['bypass']:
+                                roles = [f"<@&{role}>" for role in requirements['bypass']]
+                                if len(roles) > 1:
+                                    roles[-1] = f"and {roles[-1]}"
+
+                                embed.description += f'\n Bypass Roles: {", ".join(roles)}'
+                                
+                            return await interaction.response.send_message(embed=embed, ephemeral=True)
+                    
 
                     await insert_entry(self.bot, message_id, interaction.user.id)
                     
@@ -177,9 +217,9 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
                             f"**Duration:** {human_timedelta(duration.dt)} \n"
 
         if not all(bool(x) is False for x in requirements.values()):
-            role_fmt = ', '.join(r.mention for r in requirements['role'])
-            bypass_fmt = ', '.join(r.mention for r in requirements['bypass'])
-            blacklist_fmt = ', '.join(r.mention for r in requirements['blacklist'])
+            role_fmt = ', '.join([f"<@&{role}>" for role in requirements['role']])
+            bypass_fmt = ', '.join([f"<@&{role}>" for role in requirements['bypass']])
+            blacklist_fmt = ', '.join([f"<@&{role}>" for role in requirements['blacklist']])
             value = f"Role{'s' if len(requirements['role']) > 1 else ''}: {role_fmt if role_fmt != '' else 'No requirements.'}\n"\
                     f"Bypass: {bypass_fmt if bypass_fmt != '' else 'No bypass role'} \n"\
                     f"Blacklist: {blacklist_fmt if blacklist_fmt != '' else 'No blacklist role'}" 
@@ -202,13 +242,33 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
         else:
             await view.message.edit(content=f'Creating giveaway...', embeds=[], view=None)
 
+            requirement = ""
+            if requirements['role']:
+                roles = [f"<@&{role}>" for role in requirements['role']]
+                if len(roles) > 1:
+                    roles[-1] = f"and {roles[-1]}"
+                requirement += f'Required Role{"s" if len(requirements["role"]) > 1 else ""}: {", ".join(roles)} \n'
+
+            if requirements['bypass']:
+                roles = [f"<@&{role}>" for role in requirements['bypass']]
+                if len(roles) > 1:
+                    roles[-1] = f"and {roles[-1]}"
+                requirement += f'Bypass Role{"s" if len(requirements["bypass"]) > 1 else ""}: {", ".join(roles)} \n'
+            
+            if requirements['blacklist']:
+                roles = [f"<@&{role}>" for role in requirements['blacklist']]
+                if len(roles) > 1:
+                    roles[-1] = f"and {roles[-1]}"
+                requirement += f'Blacklisted Role{"s" if len(requirements["blacklist"]) > 1 else ""}: {", ".join(roles)} \n'
+
             giveaway = discord.Embed(
                 color=discord.Color.green()
             )
             giveaway.set_author(name=prize)
             giveaway.description = f'Click the button below to enter! \n'\
                     f'Ends {discord.utils.format_dt(duration.dt, "R")} ({discord.utils.format_dt(duration.dt, "f")}) \n'\
-                    f'Hosted by: {ctx.author.mention}'           
+                    f'{requirement}'\
+                    f'Hosted by: {ctx.author.mention}'  
             giveaway.set_footer(text=f'{winners} winner{"s" if winners > 1 else ""} | 0 entries')
 
             try:

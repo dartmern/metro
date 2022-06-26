@@ -29,22 +29,22 @@ class Requirements(commands.Converter):
 
             if len(split) == 1:
                 role = await RoleConverter().convert(ctx, arg)
-                requirements["role"] += [role]
+                requirements["role"] += [role.id]
                 continue
                 
             if split[0] == "role":
                 role = await RoleConverter().convert(ctx, split[1])
-                requirements["role"] += [role]
+                requirements["role"] += [role.id]
                 continue
 
             if split[0] == "bypass":
                 role = await RoleConverter().convert(ctx, split[1])
-                requirements["bypass"] += [role]
+                requirements["bypass"] += [role.id]
                 continue
 
             if split[0] == "blacklist":
                 role = await RoleConverter().convert(ctx, split[1])
-                requirements["blacklist"] += [role]
+                requirements["blacklist"] += [role.id]
 
         requirements["role"] = list(set(requirements["role"]))
         requirements["bypass"] = list(set(requirements["bypass"]))

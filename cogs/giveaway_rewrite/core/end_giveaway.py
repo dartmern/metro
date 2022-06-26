@@ -1,9 +1,11 @@
+import json
 from typing import List
 from bot import MetroBot
 
 from utils.embeds import create_embed
 from .get_entries import get_entries
 from .get_giveaway import get_giveaway
+from .validate_entry import validate_entry
 
 import discord
 import random
@@ -30,7 +32,7 @@ async def end_giveaway(
         embed.color = discord.Color(3553599)
 
     else:
-        requirements = data[5]
+        requirements = ast.literal_eval(data[5])
         if all(bool(x) is False for x in requirements.values()):
             # no req
             pass
@@ -39,15 +41,30 @@ async def end_giveaway(
             bypass_req = requirements['bypass']
             blacklist_req = requirements['blacklist']
 
-            
-        try:
-            winners = random.sample(entries, amount_of_winners)
-        except ValueError:
-            winners = entries # when somehow there are more winners than entries everybody that entered wins
-        winners_fmt = ", ".join([f"<@{record['author_id']}>" for record in winners])
+            for entry in entries:
+                resp = await validate_entry(
+                    bot,
+                    entry,
+                    role_req,
+                    bypass_req,
+                    blacklist_req, 
+                    message.guild)
+                if resp is False:
+                    entries.remove(entry)
+                    print('removed')
 
-        alert_message = f'Winners: {winners_fmt}'
-        embed.color = discord.Color.red()
+        if len(entries) == 0:
+            alert_message = 'Not enough valid entries to determine a winner!'
+            embed.color = discord.Color(3553599)
+        else:
+            try:
+                winners = random.sample(entries, amount_of_winners)
+            except ValueError:
+                winners = entries # when somehow there are more winners than entries everybody that entered wins
+            winners_fmt = ", ".join([f"<@{record['author_id']}>" for record in winners])
+
+            alert_message = f'Winners: {winners_fmt}'
+            embed.color = discord.Color.red()
 
     old = embed.description 
     old = old.replace('Click the button below to enter!', alert_message) # bad way of doing this but i'm testing
