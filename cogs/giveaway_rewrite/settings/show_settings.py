@@ -7,7 +7,7 @@ async def show_settings(
     """Show giveaway settings for a guild id."""
 
     query = """
-            SELECT * FROM giveaway_settings
+            SELECT (manager, ping) FROM giveaway_settings
             WHERE guild_id = $1
             """
     return await bot.db.fetchval(query, guild_id)

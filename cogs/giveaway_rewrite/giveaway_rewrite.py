@@ -1,4 +1,5 @@
 import ast
+from typing import Optional
 
 import discord
 from discord.ext import commands
@@ -20,7 +21,9 @@ from .core.insert_giveaway import insert_giveaway
 from .core.end_giveaway import end_giveaway
 from .converters.winners import Winners
 from .converters.requirements import Requirements 
+
 from .settings.show_settings import show_settings   
+from .settings.add_setting import add_setting
 
 class giveaways(commands.Cog, description='The giveaways rewrite including buttons.'):
     def __init__(self, bot: MetroBot):
@@ -128,9 +131,8 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
 
         await end_giveaway(self.bot, message_id, data, message)
 
-    @commands.hybrid_group(name='giveaway-settings', fallback='info')
+    @commands.hybrid_group(name='giveaway-settings', fallback='info', aliases=['gset'])
     @app_commands.guilds(TESTING_GUILD)
-    @app_commands.default_permissions(manage_guild=True)
     @commands.has_guild_permissions(manage_guild=True)
     async def giveaway_settings(
         self, 
@@ -139,14 +141,42 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
 
         data = await show_settings(self.bot, ctx.guild.id)
         if not data:
+            # this will be changed but for now it's like this
             return await ctx.send('This server has default giveaway settings or has not changed anything yet.')
 
-        embed = discord.Embed()
+        manager = f'<@&{data[0]}>' if data[0] else None
+        ping_role = f'<@&{data[1]}>' if data[1] else None
+
+        embed = discord.Embed(color=ctx.color)
         embed.set_author(name='Giveaway Settings')
-        embed.description = f'Giveaway Manager: <@&{data[0]}>'
+        embed.description = f'Giveaway Manager: {manager} \n'\
+                            f'Ping Role: {ping_role}'
 
         await ctx.send(embed=embed)
 
+    @giveaway_settings.command(name='manager')
+    @app_commands.guilds(TESTING_GUILD)
+    @commands.has_guild_permissions(manage_guild=True)
+    @app_commands.describe(role='Role you want to set as manager.')
+    async def giveaway_settings_manager(
+        self,
+        ctx: MyContext, *, role: Optional[discord.Role] = None):
+        """Set a giveaway manager role. Leave blank to reset the role."""
+
+        await add_setting(self.bot, 'manager', role.id if role else None, ctx.guild.id)
+        await ctx.send(EMOTES['check'], hide=True)
+        
+    @giveaway_settings.command(name='ping')
+    @app_commands.guilds(TESTING_GUILD)
+    @app_commands.describe(role='Role you want to ping for giveaways.')
+    async def giveaway_settings_ping(
+        self,
+        ctx: MyContext, *, role: Optional[discord.Role] = None):
+        """Set the giveaway ping role. Leave blank to reset the role."""
+
+        await add_setting(self.bot, 'ping', role.id if role else None, ctx.guild.id)
+        await ctx.send(EMOTES['check'], hide=True)
+    
     @commands.hybrid_group(name='giveaway', fallback='help', aliases=['g'])
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.default_permissions(manage_guild=True)
@@ -169,8 +199,7 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
         *,
         message_id: MessageID):
         """End a giveaway."""
-        
-
+    
         data = await get_giveaway(self.bot, message_id)
         if not data:
             return await ctx.send("That doesn't seem like a giveaway id.", hide=True)
