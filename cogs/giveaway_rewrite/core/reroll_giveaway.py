@@ -1,23 +1,21 @@
-import json
+import random
 from typing import List
-from bot import MetroBot
-
-from utils.embeds import create_embed
-from .get_entries import get_entries
-from .get_giveaway import get_giveaway
-from .validate_entry import validate_entry
 
 import discord
-import random
 import ast
+from bot import MetroBot
+from utils.embeds import create_embed
 
-async def end_giveaway(
+from .get_entries import get_entries
+from .validate_entry import validate_entry
+
+async def reroll_giveaway(
     bot: MetroBot,
     message_id: int,
     data: List, # formatted list from database
-    message: discord.Message
-    ):
-    """End a giveaway and delete the entries."""
+    message: discord.Message):
+    """Reroll a giveaway."""
+
     entries = await get_entries(bot, message_id)
 
     raw_embed = data[0]
@@ -65,7 +63,7 @@ async def end_giveaway(
                 winners = entries # when somehow there are more winners than entries everybody that entered wins
             winners_fmt = ", ".join([f"<@{record['author_id']}>" for record in winners])
 
-            alert_message = f'Winners: {winners_fmt}'
+            alert_message = f'Rerolled Winners: {winners_fmt}'
             embed.color = discord.Color.red()
 
     old = embed.description 
@@ -88,14 +86,8 @@ async def end_giveaway(
     if len(entries) > 0:
         term = 'has' if len(winners) < 2 else 'have'
         new_embed = create_embed(
-            alert_message if len(entries) == 0 else f'{winners_fmt} {term} won the giveaway for **{message.embeds[0].author.name}**',
-            color=discord.Color.yellow()
+            alert_message if len(entries) == 0 else f'{winners_fmt} {term} won the reroll for **{message.embeds[0].author.name}**',
+            color=discord.Color.orange()
         )
         await message.reply(embed=new_embed)
 
-    query = """
-            UPDATE giveaway
-            SET ended = $1
-            WHERE message_id = $2
-            """
-    await bot.db.execute(query, True, message_id)

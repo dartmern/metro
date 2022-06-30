@@ -19,6 +19,7 @@ from .core.get_entry import get_entry
 from .core.insert_entry import insert_entry
 from .core.insert_giveaway import insert_giveaway
 from .core.end_giveaway import end_giveaway
+from .core.reroll_giveaway import reroll_giveaway
 from .converters.winners import Winners
 from .converters.requirements import Requirements 
 
@@ -216,8 +217,36 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
         await end_giveaway(self.bot, message_id, data, message)
         await ctx.send(EMOTES['check'], hide=True)
 
+    @giveaway.command(name='reroll')
+    @commands.has_guild_permissions(manage_guild=True)
+    async def giveaway_reroll(
+        self,
+        ctx: MyContext,
+        message_id: MessageID,
+        winners: int = 1):
+        """Reroll a giveaway."""
+
+        data = await get_giveaway(self.bot, message_id)
+        if not data:
+            return await ctx.send("That doesn't seem like a giveaway id.", hide=True)
+
+        if data[4] is False:
+            return await ctx.send("This giveaway has not ended yet therefore you cannot reroll it.", hide=True)
+        
+        channel = self.bot.get_channel(data[3]) # data[3] is the channel id
+        if not channel:
+            return await ctx.send("It seems liske the giveaway's channel was deleted.", hide=True)
+
+        try:
+            message = await channel.fetch_message(message_id)
+        except discord.HTTPException:
+            return await ctx.send("It seems like the giveaway's message was deleted.", hide=True)
+
+        await reroll_giveaway(self.bot, message_id, data, message)
+        await ctx.send(EMOTES['check'], hide=True)
+        
+
     @giveaway.command(name='start')
-    @app_commands.default_permissions(manage_guild=True)
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.guilds(TESTING_GUILD)
     @app_commands.describe(duration='Duration of this giveaway.')
