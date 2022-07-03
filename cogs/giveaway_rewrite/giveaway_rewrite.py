@@ -133,7 +133,6 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
         await end_giveaway(self.bot, message_id, data, message)
 
     @commands.hybrid_group(name='giveaway-settings', fallback='info', aliases=['gset'])
-    @app_commands.guilds(TESTING_GUILD)
     @commands.has_guild_permissions(manage_guild=True)
     async def giveaway_settings(
         self, 
@@ -156,7 +155,6 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
         await ctx.send(embed=embed)
 
     @giveaway_settings.command(name='manager')
-    @app_commands.guilds(TESTING_GUILD)
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.describe(role='Role you want to set as manager.')
     async def giveaway_settings_manager(
@@ -168,7 +166,6 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
         await ctx.send(EMOTES['check'], hide=True)
         
     @giveaway_settings.command(name='ping')
-    @app_commands.guilds(TESTING_GUILD)
     @app_commands.describe(role='Role you want to ping for giveaways.')
     async def giveaway_settings_ping(
         self,
@@ -181,7 +178,6 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
     @commands.hybrid_group(name='giveaway', fallback='help', aliases=['g'])
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.default_permissions(manage_guild=True)
-    @app_commands.guilds(TESTING_GUILD) 
     async def giveaway(
         self, 
         ctx: MyContext
@@ -190,7 +186,6 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
         await ctx.help()
 
     @giveaway.command(name='end')
-    @app_commands.guilds(TESTING_GUILD)
     @app_commands.describe(message_id='The message id of the giveaway.')
     @app_commands.default_permissions(manage_guild=True)
     @commands.has_guild_permissions(manage_guild=True)
@@ -250,7 +245,6 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
 
     @giveaway.command(name='start')
     @commands.has_guild_permissions(manage_guild=True)
-    @app_commands.guilds(TESTING_GUILD)
     @app_commands.describe(duration='Duration of this giveaway.')
     @app_commands.describe(winners='Amount of winners.')
     @app_commands.describe(requirements='Requirements to join this giveaway.')
