@@ -26,7 +26,6 @@ class GiveawayEntryView(discord.ui.View):
 
         button = GiveawayEntryButton()
         button.custom_id = custom_id
-        button.label = 'Enter giveaway!'
         button.emoji = '\U0001f389'
         button.style = discord.ButtonStyle.green
 
@@ -71,7 +70,7 @@ class UnenterGiveawayView(discord.ui.View):
         self.ending = ending
 
     @discord.ui.button(
-        label='Unenter this giveaway.', 
+        label='Leave this giveaway.', 
         emoji=EMOTES['cross'],
         style=discord.ButtonStyle.red
     )
@@ -81,7 +80,7 @@ class UnenterGiveawayView(discord.ui.View):
         await interaction.response.defer()
 
         if discord.utils.utcnow().replace(tzinfo=None) > self.ending:
-            embed = create_embed('It seems like it\'s too late to unenter this giveaway.', color=discord.Color.yellow())
+            embed = create_embed('It seems like it\'s too late to leave this giveaway.', color=discord.Color.yellow())
             return await interaction.edit_original_message(embed=embed, view=None)
 
         data = await get_entry(self.bot, self.message_id, interaction.user.id)
@@ -92,7 +91,7 @@ class UnenterGiveawayView(discord.ui.View):
 
         button.style = discord.ButtonStyle.green
         button.disabled = True
-        button.label = 'Unentered this giveaway.'
+        button.label = 'Left this giveaway.'
         button.emoji = EMOTES['check']
 
         embed = self.org_message.embeds[0]
@@ -104,5 +103,5 @@ class UnenterGiveawayView(discord.ui.View):
         embed.set_footer(text=final)
         await self.org_message.edit(embed=embed)
 
-        embed = create_embed('You have unentered this giveaway.', color=discord.Color.yellow())
-        await interaction.edit_original_message(embed=embed, view=self)
+        embed = create_embed('You have left this giveaway.', color=discord.Color.yellow())
+        await interaction.edit_original_message(embed=embed, view=None)
