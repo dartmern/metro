@@ -1,4 +1,3 @@
-from code import InteractiveConsole
 import contextlib
 from typing import Any, Optional
 from urllib.parse import quote_plus
@@ -10,12 +9,14 @@ import math
 import random
 
 from discord.ext import commands, menus
+from discord import app_commands
 
 from bot import MetroBot
 from utils.custom_context import MyContext
 from utils.json_loader import read_json
 from utils.new_pages import RoboPages, SimplePages
 from utils.useful import traceback_maker
+from utils.constants import TESTING_GUILD
 
 _info = read_json('info')
 
@@ -381,11 +382,12 @@ class music(commands.Cog, description='Play high quality music in a voice channe
         await ctx.send(f"Joined the voice channel {channel.mention}", reply=False)
 
 
-    @commands.command(name='play', aliases=['p'])
+    @commands.hybrid_command(name='play', aliases=['p'])
+    @app_commands.guilds(TESTING_GUILD)
     async def play(self, ctx: MyContext, *, query: str) -> None:
         """Play a song from the query."""
         if not ctx.author.voice:
-            raise commands.BadArgument("You aren't connected to a voice channel.")
+            return await ctx.send("You aren't connected to a voice channel.", hide=True)
 
         if not (player := ctx.voice_client) or ctx.author.voice.channel != ctx.voice_client.channel:
             await ctx.invoke(self.join)  
@@ -395,24 +397,24 @@ class music(commands.Cog, description='Play high quality music in a voice channe
         results = await player.get_tracks(query, ctx=ctx)
 
         if not results:
-            raise commands.BadArgument("No results were found with that search query.")
+            return await ctx.send("No results were found with that search query.", hide=True)
 
         if not player.is_playing and not isinstance(results, pomice.Playlist):
             await player.queue.put(results[0])
             return await player.do_next()
 
         if player.controller and ctx.channel != player.controller.channel:
-            return await ctx.send("The player is currently being played in %s head there to use commands." % player.controller.channel.mention)
+            return await ctx.send("The player is currently being played in %s head there to use commands." % player.controller.channel.mention, hide=True)
 
         if isinstance(results, pomice.Playlist):
             for track in results.tracks:
                 await player.queue.put(track)
-            await ctx.send(f"📚 Enqueued `{', '.join(map(lambda x: x.title, results.tracks))}`")
+            await ctx.send(f"📚 Enqueued `{', '.join(map(lambda x: x.title, results.tracks))}`", hide=True)
             await player.do_next()
         else:
             track = results[0]
             await player.queue.put(track)
-            await ctx.send(f"📚 Enqueued `{results[0]}`")
+            await ctx.send(f"📚 Enqueued `{results[0]}`", hide=True)
 
     @commands.command(aliases=['disconnect', 'leave'])
     async def stop(self, ctx: MyContext):

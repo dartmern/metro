@@ -2,6 +2,8 @@ import io
 import discord
 from discord import errors
 from discord.ext import commands
+from discord.app_commands import AppCommandError
+from discord import app_commands
 
 import humanize
 import traceback
@@ -11,7 +13,7 @@ import datetime as dt
 from bot import MetroBot
 from cogs.stars import StarError
 from utils import errors
-from utils.constants import DEVELOPER_ROLE
+from utils.constants import DEVELOPER_ROLE, ERROR_CHANNEL_ID
 
 from utils.useful import Cooldown, Embed
 from utils.checks import check_dev
@@ -46,15 +48,27 @@ class core(commands.Cog, description="Core events."):
         self.bot = bot
         self.cooldown_mapping = commands.CooldownMapping.from_cooldown(3, 7, commands.BucketType.user)
         self.blacklist_message_sent = []
-        self.error_channel = 912447757212606494
+        self.error_channel = ERROR_CHANNEL_ID
         self.error_emoji = 'https://images-ext-1.discordapp.net/external/b9E12Jxz-Fmlg25PNTCYYPrXMomcrAhxWu1JTM4MAh4/https/i.imgur.com/9gQ6A5Y.png'
+
+        self.bot.tree.on_error = self.on_app_command_error
 
     @property
     def emoji(self) -> str:
         return ''
 
+    async def on_app_command_error(
+        self, interaction: discord.Interaction, error: AppCommandError):
+        """Handle application command errors."""
+        print('fired')
+        print(type(error))
+        if isinstance(error, pomice.exceptions.NoNodesAvailable):
+            return await interaction.response.send_message(f"{self.bot.emotes['cross']} There are no lavalink nodes available.", ephemeral=True)
+
     @commands.Cog.listener()
     async def on_command_error(self, ctx : MyContext, error):
+        """Handle message command / traditional command errors."""
+
         embed = Embed()
         embed.color = discord.Color.red()
 
@@ -79,9 +93,12 @@ class core(commands.Cog, description="Core events."):
                     f"You are blacklisted from using Metro" + (f" for {info}" if info else "")
                 )
 
-        if isinstance(error, commands.CommandInvokeError):
+        if isinstance(error, (commands.CommandInvokeError, commands.HybridCommandError)):
             
             error = error.original
+            if isinstance(error, app_commands.errors.CommandInvokeError):
+                error = error.original
+                
             if isinstance(error, discord.errors.Forbidden):
                 embed.description = "I don't have the permissions to do that."\
                         "\nThis might be due to me missing permissions in the current channel or server."\
