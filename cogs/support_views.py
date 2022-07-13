@@ -1,13 +1,17 @@
+import asyncio
 import re
 import discord
 from discord.ext import commands
 
 from bot import MetroBot
-from utils.constants import FEEDBACK_CHANNEL, SUPPORT_GUILD, SUPPORT_ROLE, BOTS_ROLE, BOT_REQUESTS_CHANNEL
+from utils.constants import FEEDBACK_CHANNEL, SUPPORT_CATEGORY, SUPPORT_CHANNEL, SUPPORT_GUILD, SUPPORT_ROLE, BOTS_ROLE, BOT_REQUESTS_CHANNEL
 from utils.custom_context import MyContext
 from utils.converters import BotUser
+from utils.embeds import create_embed
 from utils.useful import Cooldown, Embed, ts_now
 from utils.decos import in_support
+
+from config.view import SupportView
 
 class support(commands.Cog, description='Support only commands.'):
     def __init__(self, bot : MetroBot):
@@ -74,8 +78,6 @@ class support(commands.Cog, description='Support only commands.'):
             embed.description = f"The bot you requested, <@{bot_id}> was rejected from **{guild.name}**"
             
             await author.send(embed=embed)
-            
-            
 
     @commands.command(hidden=True)
     @commands.check(Cooldown(1, 10, 1, 10, bucket=commands.BucketType.member))
@@ -129,42 +131,25 @@ class support(commands.Cog, description='Support only commands.'):
 
             await ctx.send('Your bot request has been submitted to the moderators. \nI will DM you about the status of your request.')
 
-    @commands.command(name='feedback')
-    @commands.check(Cooldown(1, 600, 1, 600, commands.BucketType.user))
-    async def give_feedback(self, ctx: MyContext, *, message: str):
-        """
-        Give feedback about the bot.
-        
-        This can be almost anything from "good bot" to
-        a long ass essay. Thank you for feedback!
-        """
-        channel = self.bot.get_channel(FEEDBACK_CHANNEL)
-        if not channel:
-            raise commands.BadArgument("This command is broken as of now....")
+    @commands.command(name='panel')
+    @commands.is_owner()
+    async def panel(self, ctx: MyContext):
+        """Send the support button panel to the support channel."""
 
-        embed = discord.Embed(color=discord.Color.green())
-        embed.set_author(name=ctx.author, icon_url=ctx.author.display_avatar.url)
-        embed.description = f"Feedback given: {ts_now('F')} ({ts_now('R')})\nUser ID: {ctx.author.id}\n\n{message}"
-        embed.set_footer(text='You can use ?dm <id> <message> to thank them with a message.')
-        await channel.send(embed=embed)
-        await ctx.send(f"{self.bot.emotes['check']} Feedback submitted! Thank you.")
+        channel = self.bot.get_channel(SUPPORT_CHANNEL)
 
-    @commands.command(name='dm', hidden=True)
-    async def ___message(self, ctx: MyContext, id: int, *, message: str):
-        """Send a message to a user id."""
-        if ctx.guild.id != SUPPORT_GUILD:
-            return 
-        if SUPPORT_ROLE not in list(map(int, ctx.author.roles)):
-            return 
+        embed = create_embed('Please choose a button below that matches your request.', color=discord.Color.yellow())
+        await channel.send(embed=embed, view=SupportView())
 
-        user = await self.bot.try_user(id)
-        if not user:
-            raise commands.BadArgument("User was not found....")
-        try:
-            await user.send(message)
-            await ctx.check()
-        except:
-            await ctx.cross()      
-    
+    @commands.command(name='close')
+    async def close_ticket(self, ctx: MyContext):
+        """Close a support ticket."""
+
+        category = self.bot.get_channel(SUPPORT_CATEGORY)
+        if ctx.channel.category == category:
+            await ctx.send(f'Closing ticket in 5 seconds. \nIf you have additional requests create another ticket in <#{SUPPORT_CHANNEL}>')
+            await asyncio.sleep(5)
+            await ctx.channel.delete()
+
 async def setup(bot):
     await bot.add_cog(support(bot))

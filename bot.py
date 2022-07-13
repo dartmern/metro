@@ -17,6 +17,7 @@ import traceback
 import mystbin
 import aiohttp
 import logging
+from config.view import SupportView
 
 from utils.checks import check_dev
 from utils.constants import BOT_LOGGER_CHANNEL, BOT_OWNER_ID, DEFAULT_INVITE, DEVELOPER_IDS, DOCUMENTATION, EMOTES, GITHUB_URL, PATREON_URL, SLASH_GUILDS, SUPPORT_GUILD, SUPPORT_STAFF, SUPPORT_URL, TEST_BOT_ID
@@ -294,14 +295,16 @@ class MetroBot(commands.AutoShardedBot):
             self.blacklist[member.id] = False
             await ctx.send(f"{self.check} Removed **{member}** from the bot blacklist.")
 
-
+    async def setup_hook(self) -> None:    
+        self.add_view(SupportView())
+    
     async def on_ready(self):
         await self.wait_until_ready()
 
         print(
             f"-----\nLogged in as: {self.user.name} : {self.user.id}\n-----\nMy default prefix{'es are' if len(self.PRE) >= 2 else ' is'}: {', '.join(self.PRE) if len(self.PRE) >= 2 else self.PRE[0]}\n-----")
 
-        user = self.get_user(525843819850104842)
+        user = self.get_user(BOT_OWNER_ID)
         data = read_json("restart")
         if data:
             channel = self.get_channel(data['channel'])
