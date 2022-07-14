@@ -10,6 +10,8 @@ from utils.custom_context import MyContext
 from utils.new_pages import SimplePages
 from utils.useful import Embed
 
+from thefuzz import process
+
 async def setup(bot: MetroBot):
     await bot.add_cog(tags(bot))
 
@@ -47,7 +49,12 @@ class tags(commands.Cog, description='Manage and create tags'):
 
         data = await self.bot.db.fetchval("SELECT (text, uses) FROM tags WHERE guild_id = $1 AND name = $2", ctx.guild.id, tag.lower())
         if not data:
-            raise commands.BadArgument("Tag not found.")
+            data = await self.bot.db.fetch("SELECT (name) FROM tags WHERE guild_id = $1", ctx.guild.id)
+            choices = [x['name'] for x in data]
+            x = process.extract(tag, choices, limit=3)
+
+            names = '\n'.join(choice[0] for choice in x)
+            raise commands.BadArgument(f"Tag not found. Did you mean...\n{names}")
         else:
             await ctx.send(data[0], reference=ctx.replied_reference, reply=False)
             await self.bot.db.execute("UPDATE tags SET uses = $1 WHERE guild_id = $2 AND text = $3", data[1]+1, ctx.guild.id, data[0])
@@ -127,5 +134,6 @@ class tags(commands.Cog, description='Manage and create tags'):
         if not data:
             raise commands.BadArgument("This server has no tags.")
         
-        menu = SimplePages(source=TagSource(data, per_page=15), ctx=ctx, compact=True)
+        print(data)
+        menu = SimplePages(source=TagSource(data[::-1], per_page=15), ctx=ctx, compact=True)
         await menu.start()

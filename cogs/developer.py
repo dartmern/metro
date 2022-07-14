@@ -242,13 +242,13 @@ class developer(commands.Cog, description="Developer commands."):
 
     @moderator_guildblacklist.command(name='add')
     @is_support()
-    async def moderator_guildblacklist_add(self, ctx: MyContext, guild: discord.Guild, *, reason: Optional[str]):
+    async def moderator_guildblacklist_add(self, ctx: MyContext, guild: int, *, reason: Optional[str]):
         """Add a guild to the guild blacklist."""
         await self.bot.add_to_guildblacklist(guild, reason=reason, ctx=ctx)
 
     @moderator_guildblacklist.command(name='remove')
     @is_support()
-    async def moderator_guildblacklist_remove(self, ctx: MyContext, *, guild: discord.Guild):
+    async def moderator_guildblacklist_remove(self, ctx: MyContext, *, guild: int):
         """Remove a guild from the guild blacklist."""
         await self.bot.remove_from_guildblacklist(guild, ctx=ctx)
 
@@ -316,6 +316,23 @@ class developer(commands.Cog, description="Developer commands."):
             await ctx.paginate(blacklisted, per_page=10, compact=True)
         else:
             await ctx.send("No users are currently blacklisted.")
+
+    @moderator.command(name='leave')
+    @is_support()
+    async def moderator_leave(self, ctx: MyContext, guild_id: int):
+        """Leave a guild."""
+
+        guilds = map(lambda x: x.id, self.bot.guilds)
+        if guild_id in guilds:
+            guild = self.bot.get_guild(guild_id)
+            try:
+                await guild.leave()
+            except discord.HTTPException:
+                return await ctx.send('Leaving this guild somehow failed...')
+            await ctx.send(f'Left the guild **{guild.name}**')
+        else:
+            await ctx.send("I am not apart of that guild or it does not exist.")
+
 
     @commands.group(name='premium', aliases=['pm'], invoke_without_command=True, case_insensitive=True)
     #@is_support()

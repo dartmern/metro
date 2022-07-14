@@ -130,8 +130,9 @@ class Modal(discord.ui.Modal, title='Create custom permissions.'):
 
     permissions_int = discord.ui.TextInput(
             label='Permissions integer.',
-            placeholder='Enter a valid permissions integer.', 
-            style=discord.TextStyle.short
+            placeholder='Enter a permissions integer. Defaults to no permissions.', 
+            style=discord.TextStyle.short,
+            required=False
         )
     application_commands = discord.ui.TextInput(
         label='Invite with the applications.commands scope?',
@@ -141,8 +142,9 @@ class Modal(discord.ui.Modal, title='Create custom permissions.'):
     )
 
     async def on_submit(self, interaction: discord.Interaction):
+        permissions_int = self.permissions_int.value or 0
         try:
-            permissions_int = int(self.permissions_int.value)
+            permissions_int = int(permissions_int)
         except:
             return await interaction.response.send_message('Invaild permissions integer.', ephemeral=True)
 
@@ -157,7 +159,7 @@ class Modal(discord.ui.Modal, title='Create custom permissions.'):
             pass
         else:
             scopes = ('bot', 'applications.commands')
-
+        
         embed = create_embed(
             discord.utils.oauth_url(self.application.id, permissions=discord.Permissions(permissions_int), scopes=scopes)
         )

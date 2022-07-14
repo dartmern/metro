@@ -36,6 +36,7 @@ class SupportView(discord.ui.View):
         await interaction.response.send_message(f'Created a ticket for you in {channel.mention}', ephemeral=True)
 
         embed = create_embed('You can ask your question here and close the ticket with `?close`', color=discord.Color.yellow())
+        embed.description += f"""\n\nTicket created {discord.utils.format_dt(discord.utils.utcnow(), 'R')}\nCreated by: {interaction.user.mention}"""
         await channel.send(embed=embed)
 
         try:
@@ -77,6 +78,7 @@ class SupportView(discord.ui.View):
         await interaction.response.send_message(f'Created a ticket for you in {channel.mention}', ephemeral=True)
 
         embed = create_embed('You can state your bug/command error id here and close the ticket with `?close`', color=discord.Color.yellow())
+        embed.description += f"""\n\nTicket created {discord.utils.format_dt(discord.utils.utcnow(), 'R')}\nCreated by: {interaction.user.mention}"""
         await channel.send(embed=embed)
 
         try:

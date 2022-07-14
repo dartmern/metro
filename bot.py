@@ -238,8 +238,8 @@ class MetroBot(commands.AutoShardedBot):
         embed = discord.Embed(color=discord.Color.orange(), description=f"{self.emotes['idle']} Shard #{shard_id} has connected.")
         await self.status_logger.send(embed=embed)
 
-    async def add_to_guildblacklist(self, guild: discord.Guild, *, reason: Optional[str] = None, ctx: MyContext, silent: bool = False):
-        if guild.id == SUPPORT_GUILD:
+    async def add_to_guildblacklist(self, guild: int, *, reason: Optional[str] = None, ctx: MyContext, silent: bool = False):
+        if guild == SUPPORT_GUILD:
             return await ctx.send("I have been hard configurated to not blacklist this guild.", reply=False)
 
         query = """
@@ -247,24 +247,24 @@ class MetroBot(commands.AutoShardedBot):
                 VALUES ($1, $2, $3, $4, $5)
                 """
         try:
-            await self.db.execute(query, guild.id, True, ctx.author, (discord.utils.utcnow().replace(tzinfo=None)), reason)
+            await self.db.execute(query, guild, True, ctx.author.id, (discord.utils.utcnow().replace(tzinfo=None)), reason)
         except asyncpg.exceptions.UniqueViolationError:
             return await ctx.send("This guild is already blacklisted.", reply=False)
-        self.guildblacklist[guild.id] = True
+        self.guildblacklist[guild] = True
 
         if silent is False:
-            return await ctx.send(f"{self.emotes['check']} Added **{guild.name}** to blacklist.")
+            return await ctx.send(f"{self.emotes['check']} Added **{guild}** to blacklist.")
 
-    async def remove_from_guildblacklist(self, guild: discord.Guild, *, ctx: MyContext):
+    async def remove_from_guildblacklist(self, guild: int, *, ctx: MyContext):
         query = """
-                DELETE FROM guildblacklist WHERE guild = $1
+                DELETE FROM guild_blacklist WHERE guild = $1
                 """
-        status = await self.db.execute(query, guild.id)
+        status = await self.db.execute(query, guild)
         if status == "DELETE 0":
-            await ctx.send(f"{self.emotes['cross']} **{guild.name}** is not currently blacklisted.")
+            await ctx.send(f"{self.emotes['cross']} **{guild}** is not currently blacklisted.")
         else:
-            self.guildblacklist[guild.id] = False
-            await ctx.send(f"{self.emotes['check']} Removed **{guild.name}** from the blacklist.")
+            self.guildblacklist[guild] = False
+            await ctx.send(f"{self.emotes['check']} Removed **{guild}** from the blacklist.")
 
     async def add_to_blacklist(self, ctx : MyContext, member : Union[discord.Member, discord.User], reason : str = None, *, silent : bool = False):
         if check_dev(self, member):
