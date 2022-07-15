@@ -177,7 +177,6 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
         await ctx.send(EMOTES['check'], hide=True)
     
     @commands.hybrid_group(name='giveaway', fallback='help', aliases=['g'])
-    @app_commands.guilds(TESTING_GUILD)
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.default_permissions(manage_guild=True)
     async def giveaway(
@@ -325,11 +324,10 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
                 pass # for now idk what to do at the moment
     
     @giveaway.command(name='create', with_app_command=True)
-    @app_commands.guilds(TESTING_GUILD)
     @commands.has_guild_permissions(manage_guild=True)
     async def giveaway_create(self, ctx: MyContext):
         """Interactively create a giveaway."""
-        
+
         if ctx.interaction:
             await ctx.interaction.response.send_modal(GiveawayCreate(interaction=ctx.interaction))
     
