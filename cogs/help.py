@@ -803,13 +803,13 @@ class MetroHelp(commands.HelpCommand):
         if command.signature == "":
             em = Embed(
                 title=f"`{command.qualified_name}`",
-                description=self.get_doc(command),
+                description=self.get_doc(command).replace('[p]', self.context.prefix),
                 color=self.context.color
             )
         else:
             em = Embed(
                 title=f"`{command.qualified_name}` `{command.signature}`",
-                description=self.get_doc(command),
+                description=self.get_doc(command).replace('[p]', self.context.prefix),
                 color=self.context.color
             )
 
