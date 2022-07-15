@@ -6,6 +6,7 @@ from discord.ext import commands
 from discord import app_commands
 
 from bot import MetroBot
+from cogs.giveaway_rewrite.modals.giveaway_create import GiveawayCreate
 from cogs.utility import Timer, utility
 from utils.custom_context import MyContext
 from utils.embeds import create_embed
@@ -176,6 +177,7 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
         await ctx.send(EMOTES['check'], hide=True)
     
     @commands.hybrid_group(name='giveaway', fallback='help', aliases=['g'])
+    @app_commands.guilds(TESTING_GUILD)
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.default_permissions(manage_guild=True)
     async def giveaway(
@@ -258,44 +260,13 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
         *, 
         prize: str):
         """Start a giveaway in the current channel."""
-
-        start = discord.utils.utcnow()
+        
+        message = await ctx.send('Creating giveaway...')
 
         utility_cog: utility = self.bot.get_cog('utility')
         if not utility_cog:
-            return await ctx.send('This feature is currently unavailable.')
-
-        embed = discord.Embed(title='Is this information correct?', color=discord.Colour.yellow())
-        embed.description = f"**Prize:** {prize} \n"\
-                            f"**Winners:** {winners} \n"\
-                            f"**Duration:** {human_timedelta(duration.dt)} \n"
-
-        if not all(bool(x) is False for x in requirements.values()):
-            role_fmt = ', '.join([f"<@&{role}>" for role in requirements['role']])
-            bypass_fmt = ', '.join([f"<@&{role}>" for role in requirements['bypass']])
-            blacklist_fmt = ', '.join([f"<@&{role}>" for role in requirements['blacklist']])
-            value = f"Role{'s' if len(requirements['role']) > 1 else ''}: {role_fmt if role_fmt != '' else 'No requirements.'}\n"\
-                    f"Bypass: {bypass_fmt if bypass_fmt != '' else 'No bypass role'} \n"\
-                    f"Blacklist: {blacklist_fmt if blacklist_fmt != '' else 'No blacklist role'}" 
-            embed.add_field(name='Requirements', value=value) 
+            return await message.edit(content='This feature is currently unavailable.')
         else:
-            embed.set_footer(text='No Requirements')       
-        
-        view = ConfirmationEmojisView(
-            timeout=60, author_id=ctx.author.id, ctx=ctx)
-        view.message = await ctx.send(embed=embed, view=view)
-        await view.wait()
-
-        difference = discord.utils.utcnow() - start 
-        duration.dt = duration.dt + difference
-
-        if view.value is False:
-            return await view.message.edit(content='Confirmation canceled.', embeds=[], view=None)
-        if view.value is None:
-            return await view.message.edit(content='Confirmation timed out.', embeds=[], view=None)
-        else:
-            await view.message.edit(content=f'Creating giveaway...', embeds=[], view=None)
-
             requirement = ""
             if requirements['role']:
                 roles = [f"<@&{role}>" for role in requirements['role']]
@@ -326,11 +297,11 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
             giveaway.set_footer(text=f'{winners} winner{"s" if winners > 1 else ""} | 0 entries')
 
             try:
-                await view.message.delete()
+                await message.delete()
             except discord.HTTPException:
                 pass
 
-            message = await ctx.channel.send(embed=giveaway, view=GiveawayEntryView(ctx, view.message))
+            message = await ctx.channel.send(embed=giveaway, view=GiveawayEntryView(ctx, message))
             await insert_giveaway(
                 self.bot, 
                 ctx.guild.id, 
@@ -352,6 +323,16 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
                 )
             except Exception:
                 pass # for now idk what to do at the moment
+    
+    @giveaway.command(name='create', with_app_command=True)
+    @app_commands.guilds(TESTING_GUILD)
+    @commands.has_guild_permissions(manage_guild=True)
+    async def giveaway_create(self, ctx: MyContext):
+        """Interactively create a giveaway."""
+        
+        if ctx.interaction:
+            await ctx.interaction.response.send_modal(GiveawayCreate(interaction=ctx.interaction))
+    
 
     @property
     def emoji(self) -> str:
