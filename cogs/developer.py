@@ -3,7 +3,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 
-from typing import Optional, Union
+from typing import Literal, Optional, Union
 
 import traceback
 import time
@@ -160,7 +160,7 @@ class developer(commands.Cog, description="Developer commands."):
     async def issue(self, ctx: MyContext, issue: int):
         """Sends the github issue link."""
 
-        await ctx.send(f'<https://github.com/dartmern/metro/issues/{issue}>')
+        await ctx.send(f'https://github.com/dartmern/metro/issues/{issue}')
 
     @commands.group(name='moderator', aliases=['mod'], invoke_without_command=True, case_insensitive=True)
     @is_support()
@@ -170,12 +170,49 @@ class developer(commands.Cog, description="Developer commands."):
 
     @moderator.command(name='sync')
     @is_support()
-    async def moderator_sync(self, ctx: MyContext, *, guild_id: Optional[int]):
-        """Sync the slash commands in that guild."""
-        guild_id = guild_id or TESTING_GUILD_ID
-        guild = discord.Object(guild_id)
-        await self.bot.tree.sync(guild=guild)
-        await ctx.send('\U0001f44d')
+    async def moderator_sync(
+        self, ctx: MyContext,
+        guilds: commands.Greedy[discord.Object],
+        option: Optional[Literal["~", "*", "^"]] = None):
+        """
+        Syncs application commands within the bot.
+        
+        Valid Options:
+        `~`: syncs the current guild
+        `*`: copies all global app commands to current guild and syncs
+        `^`: clears all commands from the current guild target and syncs
+
+        You can sync multiple guilds like: [p]mod sync guild1 guild2
+        """
+        if not guilds:
+            if option == "~":
+                synced = await ctx.bot.tree.sync(guild=ctx.guild)
+            elif option == "*":
+                ctx.bot.tree.copy_global_to(guild=ctx.guild)
+                synced = await ctx.bot.tree.sync(guild=ctx.guild)
+            elif option == "^":
+                ctx.bot.tree.clear_commands(guild=ctx.guild)
+                await ctx.bot.tree.sync(guild=ctx.guild)
+                synced = []
+            else:
+                synced = await ctx.bot.tree.sync()
+
+            await ctx.send(
+                f"Synced {len(synced)} commands {'globally' if option is None else 'to the current guild.'}"
+            )
+            return
+
+        ret = 0
+        for guild in guilds:
+            try:
+                await ctx.bot.tree.sync(guild=guild)
+            except discord.HTTPException:
+                pass
+            else:
+                ret += 1
+
+        await ctx.send(f"Synced the tree to {ret}/{len(guilds)}.")
+
 
     @moderator.command(name='whatown')
     @is_support()
@@ -380,7 +417,6 @@ class developer(commands.Cog, description="Developer commands."):
             
         else:
             await ctx.send("Only premium **guilds** are available.")
-
 
 
     @commands.command(slash_command=False)
