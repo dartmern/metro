@@ -98,10 +98,9 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
     def __init__(self, bot : MetroBot):
         self.bot = bot
         self.page_types = {
+            'discord.py-2.0': 'https://discordpy.readthedocs.io/en/latest',
             'discord.py': 'https://discordpy.readthedocs.io/en/stable',
             'python': 'https://docs.python.org/3',
-            'discord.py-2.0': 'https://discordpy.readthedocs.io/en/latest',
-            'enhanced-discord.py' : 'https://enhanced-dpy.readthedocs.io/en/latest',
             'aiohttp' : 'https://docs.aiohttp.org/en/stable/'  
         }
 
@@ -182,9 +181,45 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         self, 
         interaction: discord.Interaction, 
         key: str, 
-        object: str
+        obj: str,
+        search: bool = True # weather this is a search or execution
     ):
-        pass #wip
+        page_types = self.page_types
+
+
+        if not hasattr(self, '_rtfm_cache'):
+            await interaction.response.defer()
+            await self.build_rtfm_lookup_table(page_types)
+
+        obj = re.sub(r'^(?:discord\.(?:ext\.)?)?(?:commands\.)?(.+)', r'\1', obj)
+
+        if key.startswith('latest'):
+            # point the abc.Messageable types properly:
+            q = obj.lower()
+            for name in dir(discord.abc.Messageable):
+                if name[0] == '_':
+                    continue
+                if q == name:
+                    obj = f'abc.Messageable.{name}'
+                    break
+
+        cache = list(self._rtfm_cache[key].items())
+
+        def transform(tup):
+            return tup[0]
+
+        matches = fuzzy.finder(obj, cache, key=lambda t: t[0], lazy=False)[:8]
+
+        if search:
+            return [key for key, url in matches]
+
+        e = Embed()
+        if len(matches) == 0:
+            return await interaction.response.send_message('No matches were found. Sorry.', ephemeral=True)
+
+
+        e.description = '\n'.join(f'[`{key}`]({url})' for key, url in matches)
+        await interaction.response.send_message(embed=e)
 
 
     async def do_rtfm(self, ctx : MyContext, key: str, obj: str):
@@ -229,17 +264,23 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
 
     @app_commands.command(name='rtfm')
     @app_commands.describe(library='The library you would like to search in.')
-    @app_commands.guilds(discord.Object(TESTING_GUILD_ID))
+    @app_commands.describe(object='The entity you want to search for.')
+    @app_commands.guilds(TESTING_GUILD)
     async def rtfm_slash(
         self, 
         interaction: discord.Interaction,
         library: str,
-        object: str
+        object: Optional[str]
     ):
         """Search through documentation."""
 
         if library not in list(self.page_types):
             return await interaction.response.send_message(f'That is not a valid library.', ephemeral=True)
+
+        if not object:
+            return await interaction.response.send_message(self.page_types[library])
+
+        await self.do_slash_rtfm(interaction, library, object, search=False)
 
     @rtfm_slash.autocomplete('library')
     async def rtfm_slash_library_autocomplete(
@@ -258,20 +299,28 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         interaction: discord.Interaction,
         current: str
     ) -> List[app_commands.Choice[str]]:
+
+        library = interaction.namespace.library or list(self.page_types.values())[0] # default is d.py latest
+        items = await self.do_slash_rtfm(interaction, library, current)
         return [
             app_commands.Choice(name=item, value=item)
-            for item in self.do_rtfm()
+            for item in items if current.lower() in item.lower()
         ]
 
     @commands.group(name="rtfm",invoke_without_command=True, case_insensitive=True, aliases=['rtfd'])
     @commands.bot_has_permissions(send_messages=True)
     async def rtfm(self, ctx, *, obj : str = None):
-        """Gives you a documentation link for a enhanced-discord.py entity.
+        """Gives you a documentation link for a discord.py entity. (latest branch)
+
         Events, objects, and functions are all supported through a
         a cruddy fuzzy algorithm.
+
+        It is recommended that you use the slash command version
+        of this command if it's possible. Autocomplete can give
+        you more assistance when searching.
         """
 
-        await self.do_rtfm(ctx, 'enhanced-discord.py', obj)
+        await self.do_rtfm(ctx, 'discord.py-2.0', obj)
 
     @rtfm.command(name="python",aliases=["py"])
     @commands.bot_has_permissions(send_messages=True)
@@ -294,14 +343,6 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         """Gives you a documentation link for a discord.py entity."""
 
         await self.do_rtfm(ctx, "discord.py", object)
-
-
-    @rtfm.command(name='edpy')
-    @commands.bot_has_permissions(send_messages=True)
-    async def rtfm_edpy(self, ctx, *, object : str):
-        """Gives you a documentation link for a ed-py entity."""
-
-        await self.do_rtfm(ctx, 'enhanced-discord.py', object)
 
     @rtfm.command(name='aiohttp')
     @commands.bot_has_guild_permissions(send_messages=True)

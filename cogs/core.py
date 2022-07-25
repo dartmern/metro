@@ -60,10 +60,8 @@ class core(commands.Cog, description="Core events."):
     async def on_app_command_error(
         self, interaction: discord.Interaction, error: AppCommandError):
         """Handle application command errors."""
-        print('fired')
-        print(type(error))
-        if isinstance(error, pomice.exceptions.NoNodesAvailable):
-            return await interaction.response.send_message(f"{self.bot.emotes['cross']} There are no lavalink nodes available.", ephemeral=True)
+
+        await interaction.response.send_message(error)
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx : MyContext, error):
