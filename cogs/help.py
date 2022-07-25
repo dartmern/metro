@@ -38,6 +38,42 @@ for the help command. If you have questions please ping
 dartmern#7563 in my support server or in discord.py #playground.
 """
 
+class BotInfoExtended(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=300)
+
+    @discord.ui.button(label='Linecount')
+    async def linecount_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        
+        embed = discord.Embed(color=discord.Color.yellow())
+
+        p = pathlib.Path('./')
+        cm = cr = fn = cl = ls = fc = 0
+        for f in p.rglob('*.py'):
+            if str(f).startswith("venv"):
+                continue
+            fc += 1
+            with f.open(encoding='utf8',errors='ignore') as of:
+                for l in of.readlines():
+                    l = l.strip()
+                    if l.startswith('class'):
+                        cl += 1
+                    if l.startswith('def'):
+                        fn += 1
+                    if l.startswith('async def'):
+                        cr += 1
+                    if '#' in l:
+                        cm += 1
+                    ls += 1
+        embed.description = f"\nFiles: {fc:,}"\
+            f"\nLines: {ls:,}"\
+            f"\nClasses: {cl:,}"\
+            f"\nFunctions: {fn:,}"\
+            f"\nCoroutines: {cr:,}"\
+            f"\nComments: {cm:,}"
+
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
 class SupportView(discord.ui.View):
     def __init__(self, ctx : MyContext):
         super().__init__(timeout=300)
@@ -1056,96 +1092,20 @@ class meta(commands.Cog, description='Get bot stats and information.'):
         """View the bot's privacy policy."""
 
         await ctx.send(f"My privacy policy: <{self.bot.privacy_policy}>")
-
-    @commands.command(name='search', aliases=['commandsearch'])
-    async def search(self, ctx: MyContext, *, search_query: str):
-        """
-        Search through my commands and find that hidden command.
-        """
-
-        commands = [str(command) for command in self.bot.walk_commands()]
-         
-        matches = get_close_matches(search_query, commands)
-
-        embed = Embed()
-
-        if len(matches) > 0:
-            to_send = []
-            for command in matches:
-                command = self.bot.get_command(command)
-                if len(command.name) < 15:
-                    empty_space = 15 - len(command.name)
-                    signature = f"`{command.qualified_name}{' '*empty_space}:` {command.short_doc if len(command.short_doc) < 58 else f'{command.short_doc[0:58]}...'}"
-                else:
-                    signature = f"`{command.qualified_name[0:14]}...` {command.short_doc if len(command.short_doc) < 58 else f'{command.short_doc[0:58]}...'}"
-                to_send.append(signature)
-
-            embed.colour = discord.Colour.green()
-            embed.description = "\n".join(to_send)
-            embed.set_footer(text=f'{len(matches)} matches.')
-
-            await ctx.send(embed=embed)
-        else:
-            await ctx.send("No matches were found. Try again with a different query.")
             
-    @commands.command(aliases=['upvote'])
+    @commands.hybrid_command(aliases=['upvote'])
     async def vote(self, ctx: MyContext, *, bot: Optional[discord.User]):
         """Get vote links for the bot."""
         bot = bot or self.bot.user
         if not bot.bot:
-            raise commands.BadArgument("This is not a bot.")
+            await ctx.send("This is not a bot.", hide=True)
         view = VoteView(ctx, bot, bot_instance=self.bot)
         await view.start()
 
-    @commands.command(name='bot-info', aliases=['botinfo', 'bi', 'info', 'stats', 'about'])
+    @commands.hybrid_command(name='bot-info', aliases=['botinfo', 'bi', 'info', 'stats', 'about'])
     async def _bot_info(self, ctx: MyContext):
         """Get all the information about me."""
         embed = await NewHelpView(ctx, {}, ctx.bot.help_command).bot_info_embed()
-        await ctx.reply(embed=embed)
 
-    @commands.command()
-    async def diagnose(self, ctx: MyContext, *, command: DiscordCommand):
-        """Diagnose a command."""
+        await ctx.reply(embed=embed, view=BotInfoExtended())
 
-        command: commands.Command = command
-        if await command.can_run(ctx):
-            check = self.bot.emotes['check']
-        else:
-            check = self.bot.emotes['cross']
-
-        await ctx.send(f"**{command.name} command**\n\nCan use: {check}\nCategory: {command.cog_name}")
-
-    @commands.command(name='linecount', aliases=['lc'])
-    @commands.check(Cooldown(1, 10, 1, 8, commands.BucketType.user))
-    async def _linecount(self, ctx: MyContext):
-        """Get the linecount for Metro."""
-
-        await ctx.typing()
-
-        embed = discord.Embed(color=ctx.color)
-
-        p = pathlib.Path('./')
-        cm = cr = fn = cl = ls = fc = 0
-        for f in p.rglob('*.py'):
-            if str(f).startswith("venv"):
-                continue
-            fc += 1
-            with f.open(encoding='utf8',errors='ignore') as of:
-                for l in of.readlines():
-                    l = l.strip()
-                    if l.startswith('class'):
-                        cl += 1
-                    if l.startswith('def'):
-                        fn += 1
-                    if l.startswith('async def'):
-                        cr += 1
-                    if '#' in l:
-                        cm += 1
-                    ls += 1
-        embed.description = f"\nFiles: {fc:,}"\
-            f"\nLines: {ls:,}"\
-            f"\nClasses: {cl:,}"\
-            f"\nFunctions: {fn:,}"\
-            f"\nCoroutines: {cr:,}"\
-            f"\nComments: {cm:,}"
-        await ctx.send(embed=embed, reply=False)
