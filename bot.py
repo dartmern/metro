@@ -20,7 +20,7 @@ import logging
 from config.view import SupportView
 
 from utils.checks import check_dev
-from utils.constants import BOT_LOGGER_CHANNEL, BOT_OWNER_ID, DEFAULT_INVITE, DEVELOPER_IDS, DOCUMENTATION, EMOTES, GITHUB_URL, PATREON_URL, SLASH_GUILDS, SUPPORT_GUILD, SUPPORT_STAFF, SUPPORT_URL, TEST_BOT_ID
+from utils.constants import BOT_LOGGER_CHANNEL, BOT_OWNER_ID, DEFAULT_INVITE, DEVELOPER_IDS, DOCUMENTATION, EMOTES, GITHUB_URL, PATREON_URL, PRIVACY_POLICY, SLASH_GUILDS, SUPPORT_GUILD, SUPPORT_STAFF, SUPPORT_URL, TEST_BOT_ID
 from utils.remind_utils import human_timedelta
 
 from utils.useful import Cooldown, ts_now
@@ -213,6 +213,10 @@ class MetroBot(commands.AutoShardedBot):
     @property
     def support(self) -> str:
         return SUPPORT_URL
+
+    @property
+    def privacy_policy(self) -> str:
+        return PRIVACY_POLICY
 
     async def on_shard_disconnect(self, shard_id: int):
         if self.user.id == self.TEST_BOT_ID:

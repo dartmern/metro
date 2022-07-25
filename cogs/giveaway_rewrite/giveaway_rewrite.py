@@ -183,7 +183,9 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
         self, 
         ctx: MyContext
         ):
-        """Base command for creating giveaways."""
+        """Base command for creating giveaways.
+        
+        See `[p]giveaway-settings` for giveaway customization."""
         await ctx.help()
 
     @giveaway.command(name='end')

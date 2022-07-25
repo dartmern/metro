@@ -5,7 +5,7 @@ from bot import MetroBot
 
 async def add_setting(
     bot: MetroBot,
-    setting: typing.Literal['manager'],
+    setting: typing.Literal['manager', 'ping'],
     value: typing.Any,
     guild_id: int
     ):

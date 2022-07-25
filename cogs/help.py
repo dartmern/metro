@@ -205,7 +205,7 @@ class InviteView(discord.ui.View):
 
         self.message = await _send(embed=embed, view=self)
 
-    @discord.ui.button(row=1, label='Create custom permissions', style=discord.ButtonStyle.green)
+    @discord.ui.button(row=1, label='Choose permissions', style=discord.ButtonStyle.green)
     async def custom_perms(self, interaction: discord.Interaction, button: discord.ui.Button):
         button.disabled = True
         try:
@@ -213,7 +213,7 @@ class InviteView(discord.ui.View):
         except:
             await interaction.message.edit(view=self)
 
-        await interaction.response.send_modal(Modal())
+        await interaction.response.send_modal(Modal(self.client, title='Create custom permissions'))
 
     @discord.ui.button(emoji='🗑️', style=discord.ButtonStyle.red, row=1)
     async def stop_pages(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -687,7 +687,7 @@ class ButtonMenuSrc(menus.ListPageSource):
         else:
             title = f"`{self.group}` `{self.group.signature}`"
 
-        embed = Embed(title=title, description=self.description, color=self.ctx.color)
+        embed = Embed(title=title, description=self.description.replace("[p]", self.ctx.prefix), color=self.ctx.color)
 
 
         cooldown = discord.utils.find(lambda x: isinstance(x, Cooldown), self.group.checks) or Cooldown(1, 3, 1, 1,
@@ -986,7 +986,7 @@ class meta(commands.Cog, description='Get bot stats and information.'):
             'extras' : {'examples' : "[p]help ban\n[p]help config enable\n[p]help invite"}
         }
 
-        self.bot = bot
+        self.bot: MetroBot = bot
         self.old_help_command = bot.help_command
         bot.help_command = MetroHelp(command_attrs=attrs)
         bot.help_command.cog = self
@@ -996,16 +996,16 @@ class meta(commands.Cog, description='Get bot stats and information.'):
         return 'ℹ️'
 
 
-    @commands.command(slash_command=True)
+    @commands.hybrid_command()
     @commands.bot_has_permissions(send_messages=True)
-    async def uptime(self, ctx):
+    async def uptime(self, ctx: MyContext):
         """Get the bot's uptime."""
 
-        await ctx.send(f'I have an uptime of: **{get_bot_uptime(self.bot, brief=False)}**',hide=True)
+        await ctx.send(f'I have an uptime of: **{get_bot_uptime(self.bot, brief=False)}**', hide=True)
 
-    @commands.command(name='ping', aliases=['pong'])
+    @commands.hybrid_command(name='ping', aliases=['pong'])
     @commands.check(Cooldown(1, 5, 1, 3, commands.BucketType.member))
-    async def ping(self, ctx):
+    async def ping(self, ctx: MyContext):
         """Show the bot's latency in milliseconds.
         Useful to see if the bot is lagging out."""
 
@@ -1036,7 +1036,7 @@ class meta(commands.Cog, description='Get bot stats and information.'):
                     f'\n<:mdiscord:904157585266049104> **Websocket:** | {round(self.bot.latency*1000)} ms'
                     f'\n:infinity: **Shard Latency:** | {round(shard.latency *1000)} ms \n{mess}')
 
-    @commands.command(name='invite',slash_command=True)
+    @commands.hybrid_command(name='invite')
     @commands.bot_has_permissions(send_messages=True)
     async def invite(self, ctx: MyContext, *, bot: discord.User = None):
         """Get invite links for a bot."""
@@ -1045,10 +1045,17 @@ class meta(commands.Cog, description='Get bot stats and information.'):
             raise commands.BadArgument("This is not a bot.")
         await InviteView(ctx).start(None, bot)
 
-    @commands.command()
+    @commands.hybrid_command()
     @commands.bot_has_permissions(send_messages=True, embed_links=True)
     async def support(self, ctx: MyContext):
+        """Get an invite link for my support server."""
         await SupportView(ctx).start(None)
+
+    @commands.hybrid_command(aliases=['tos'])
+    async def privacy(self, ctx: MyContext):
+        """View the bot's privacy policy."""
+
+        await ctx.send(f"My privacy policy: <{self.bot.privacy_policy}>")
 
     @commands.command(name='search', aliases=['commandsearch'])
     async def search(self, ctx: MyContext, *, search_query: str):
@@ -1094,12 +1101,6 @@ class meta(commands.Cog, description='Get bot stats and information.'):
     async def _bot_info(self, ctx: MyContext):
         """Get all the information about me."""
         embed = await NewHelpView(ctx, {}, ctx.bot.help_command).bot_info_embed()
-        await ctx.reply(embed=embed)
-
-    @commands.command(aliases=['tos'])
-    async def privacy(self, ctx: MyContext):
-        """Privacy for the bot."""
-        embed = discord.Embed(color=ctx.color, description="**Privacy Policy:** https://dartmern.github.io/metro/privacy/privacy/\n**Terms of Service:** https://dartmern.github.io/metro/privacy/tos")
         await ctx.reply(embed=embed)
 
     @commands.command()

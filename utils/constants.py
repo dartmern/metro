@@ -63,5 +63,6 @@ DOCUMENTATION = 'https://dartmern.github.io/metro/'
 DEFAULT_INVITE = "https://discord.com/oauth2/authorize?client_id=788543184082698252&scope=bot+applications.commands&permissions=140932115831"
 GITHUB_URL = 'https://github.com/dartmern/metro'
 SUPPORT_URL = 'https://discord.gg/2ceTMZ9qJh'
+PRIVACY_POLICY = 'https://gist.github.com/dartmern/083f4c3fc1dd223dea6894139c5cf338'
 
 
