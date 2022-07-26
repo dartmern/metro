@@ -6,7 +6,7 @@ from discord.enums import try_enum
 from discord.ext import commands, menus
 from discord import app_commands
 
-from typing import Dict, Literal, Optional
+from typing import Dict, List, Literal, Optional
 
 from bot import MetroBot
 from utils.constants import TESTING_GUILD
@@ -429,6 +429,77 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         embed.description = f'{self.bot.check} **|** Reset all my prefixes!'
         embed.colour = discord.Colour.green()
         return await ctx.send(embed=embed)
+
+    @app_commands.command(name='source')
+    @app_commands.guilds(TESTING_GUILD)
+    @app_commands.describe(command='The command\'s source you wish to search for.')
+    async def source_app_command(self, interaction: discord.Interaction, command: Optional[str]):
+        """Get the bot's source code or a specific command's."""
+
+        source_url = 'https://github.com/dartmern/metro'
+        license_url = 'https://github.com/dartmern/metro/blob/master/LICENSE'
+        branch = 'master'
+
+        if command is None:
+            embed = Embed(color=interaction.client.user.color)
+            embed.set_author(name='Here is my source code:')
+            embed.description = str(f"My code is under the [**MPL**]({license_url}) license\n → {source_url}")
+            return await interaction.response.send_message(embed=embed)#, view=StopView(ctx))
+
+        if command == 'help':
+            src = type(self.bot.help_command)
+            module = src.__module__
+            filename = inspect.getsourcefile(src)
+            obj = 'help'
+        else:
+            obj = self.bot.get_command(command.replace('.', ' '))
+            if obj is None:
+                embed = Embed(description=f"Take the [**entire reposoitory**]({source_url})", color=ctx.color)
+                embed.set_footer(text='Please make sure you follow the license.')
+                return await interaction.response.send_message(embed=embed)
+
+            src = obj.callback.__code__
+            module = obj.callback.__module__
+            filename = src.co_filename
+
+        lines, firstlineno = inspect.getsourcelines(src)
+        code_lines = inspect.getsource(src)
+        if not module.startswith('discord'):
+            # not a built-in command
+            location = os.path.relpath(filename).replace('\\', '/')
+        else:
+            location = module.replace('.', '/') + '.py'
+            source_url = 'https://github.com/Rapptz/discord.py'
+            branch = 'master'
+
+        
+        final_url = f'<{source_url}/blob/{branch}/{location}#L{firstlineno}-L{firstlineno + len(lines) - 1}>'
+        embed = Embed(color=interaction.client.user.color)
+        embed.description = f"**__My source code for `{str(obj)}` is located at:__**\n{final_url}"\
+                f"\n\nMy code is under licensed under the [**Mozilla Public License**]({license_url})."
+
+        await interaction.response.send_message(embed=embed)#, view=SourceView(ctx, code_lines))
+
+    @source_app_command.autocomplete('command')
+    async def source_app_command_autocomplete(
+        self,
+        interaction: discord.Interaction,
+        current: str
+    ) -> List[app_commands.Choice[str]]:
+
+        new = []
+        for command in interaction.client.commands:
+            if isinstance(command, commands.Group):
+                new.append(command.name)
+                for subcommand in command.commands:
+                    new.append(command.name + " " + subcommand.name)
+            else:
+                new.append(command.name)
+
+        return [
+            app_commands.Choice(name=item, value=item)
+            for item in new if current.lower() in item.lower()
+        ]
 
     @commands.command(aliases=['sourcecode', 'code', 'src'])
     @commands.bot_has_permissions(send_messages=True, embed_links=True)
