@@ -347,7 +347,8 @@ class music(commands.Cog, description='Play high quality music in a voice channe
     async def on_pomice_track_exception(self, player: Player, track, _):
         await player.do_next()
 
-    @commands.command(name='lyrics')
+    @commands.hybrid_command(name='lyrics')
+    @app_commands.describe(song='The song you want to search for.')
     async def lyrics(self, ctx: MyContext, *, song: str):
         """Get the lyrics of a song."""
         
@@ -364,7 +365,8 @@ class music(commands.Cog, description='Play high quality music in a voice channe
             menu = SimplePages(source=LyricsSource(js['lyrics'].split("\n"), js), ctx=ctx, compact=True)
             await menu.start()
 
-    @commands.command(name='join', aliases=['summon', 'connect'])
+    @commands.hybrid_command(name='join', aliases=['summon', 'connect'])
+    @app_commands.describe(channel='The voice channel you want me to join.')
     async def join(self, ctx: MyContext, *, channel: Optional[discord.VoiceChannel]=None):
         """Join a voice channel."""
 
@@ -383,7 +385,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
 
 
     @commands.hybrid_command(name='play', aliases=['p'])
-    @app_commands.guilds(TESTING_GUILD)
+    @app_commands.describe(query='The song query you want me to play.')
     async def play(self, ctx: MyContext, *, query: str) -> None:
         """Play a song from the query."""
         if not ctx.author.voice:
@@ -416,7 +418,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
             await player.queue.put(track)
             await ctx.send(f"📚 Enqueued `{results[0]}`", hide=True)
 
-    @commands.command(aliases=['disconnect', 'leave'])
+    @commands.hybrid_command(aliases=['disconnect', 'leave'])
     async def stop(self, ctx: MyContext):
         """Stop the player."""
         if not ctx.author.voice:
@@ -442,9 +444,10 @@ class music(commands.Cog, description='Play high quality music in a voice channe
             await ctx.send(f'{ctx.author.mention} has voted to stop the player. Votes: {len(player.stop_votes)}/{required}', reply=False)
 
 
-    @commands.command()
-    async def volume(self, ctx: MyContext, *, volume: int):
-        """Change the players volume, between 1 and 100."""
+    @commands.hybrid_command()
+    @app_commands.describe(volume='The volume you want to change. Must be 1-100')
+    async def volume(self, ctx: MyContext, *, volume: commands.Range[int, 1, 100]):
+        """Change the volume of the music being played."""
 
         if not ctx.author.voice:
             raise commands.BadArgument("You aren't connected to a voice channel.")
@@ -464,7 +467,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
         await player.set_volume(volume*5)
         await ctx.send(f'Set the volume to **{volume}**%', reply=False)
 
-    @commands.command()
+    @commands.hybrid_command()
     async def shuffle(self, ctx: MyContext):
         """Shuffle the queue."""
 
