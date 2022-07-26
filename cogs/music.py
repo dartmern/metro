@@ -307,15 +307,14 @@ class music(commands.Cog, description='Play high quality music in a voice channe
                     spotify_client_id=spotify_id,
                     spotify_client_secret=spotify_secret
             )
+            print("Music node created.")
         except Exception as e:
             if isinstance(e, ClientConnectorError):
                 pass
             elif str(e) == "A node with identifier 'MAIN' already exists.":
                 pass
             else:
-                print(traceback_maker(e))
-            
-        print("Music node created.")
+                print('Music server cannot be connected at this time.')
 
     async def required(self, ctx: commands.Context):
         """Method which returns required votes based on amount of members in a channel."""
