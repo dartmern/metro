@@ -297,6 +297,8 @@ class core(commands.Cog, description="Core events."):
         elif isinstance(error, commands.TooManyArguments):
             return await ctx.send("Too many arguments were passed to this command!")
 
+        elif isinstance(error, commands.RangeError):
+            return await ctx.send(f"Value of {error.value} must be between {error.minimum} and {error.maximum}.")
 
         elif isinstance(error, commands.CheckFailure):
             return
