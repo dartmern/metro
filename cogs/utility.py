@@ -304,7 +304,9 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         e.set_footer(text=f'Post time: {round(post_time, 3)}')
         return await ctx.send(embed=e)
 
-    @commands.command(name='permissions',brief="Shows a member's permissions in a specific channel.")
+    @commands.hybrid_command(name='permissions',brief="Shows a member's permissions in a specific channel.")
+    @app_commands.describe(member='The member\'s permissions you want to view.')
+    @app_commands.describe(channel='The channel you want to view the member\'s permissions.')
     @commands.guild_only()
     @commands.bot_has_permissions(send_messages=True)
     async def member_perms(self, ctx, member : Optional[discord.Member], channel : Optional[discord.TextChannel]):
@@ -322,7 +324,8 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
         await self.say_permissions(ctx, member, channel)
 
-    @commands.command()
+    @commands.hybrid_command()
+    @app_commands.describe(characters='The characters you want information on.')
     @commands.bot_has_permissions(send_messages=True)
     async def charinfo(self, ctx, *, characters: str):
         """Shows you information about a number of characters.
@@ -339,7 +342,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             return await ctx.send('Output too long to display.')
         await ctx.send(msg)
 
-    @commands.group(name='prefix', case_insensitive=True, invoke_without_command=True)
+    @commands.hybrid_group(name='prefix', case_insensitive=True, invoke_without_command=True, fallback='help')
     @commands.has_permissions(manage_guild=True)
     @commands.bot_has_permissions(send_messages=True)
     async def prefix(self, ctx : MyContext):
@@ -351,6 +354,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
     @prefix.command(name='add')
     @commands.has_permissions(manage_guild=True)
+    @app_commands.describe(prefix='The prefix you want to add.')
     async def prefix_add(self, ctx : MyContext, prefix : str) -> discord.Message:
         """
         Add a prefix to the guild's prefixes.
@@ -392,6 +396,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
     
     @prefix.command(name='remove')
+    @app_commands.describe(prefix='The prefix you want to remove.')
     @commands.has_permissions(manage_guild=True)
     async def prefix_remove(self, ctx : MyContext, prefix : str) -> discord.Message:
         """Remove a prefix from the bot's prefixes."""
@@ -416,11 +421,11 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
     async def prefix_clear(self, ctx : MyContext):
         """Clears all my prefixes and resets to default."""
 
-        confirm = await ctx.confirm('Are you sure you want to clear all your prefixes?', timeout=30)
-        if confirm is None:
-            return await ctx.send('Timed out.')
-        if confirm is False:
-            return await ctx.send('Canceled.')
+        confirm = await ctx.confirm('Are you sure you want to clear all your prefixes?', timeout=30, delete_after=False)
+        if confirm.value is None:
+            return await confirm.message.edit(content='Timed out.', view=None)
+        if confirm.value is False:
+            return await confirm.message.edit(content='Canceled.', view=None)
 
         await self.bot.db.execute('DELETE FROM prefixes WHERE guild_id = $1', ctx.guild.id)
         self.bot.prefixes[ctx.guild.id] = self.bot.PRE
@@ -428,10 +433,9 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         embed = Embed()
         embed.description = f'{self.bot.check} **|** Reset all my prefixes!'
         embed.colour = discord.Colour.green()
-        return await ctx.send(embed=embed)
+        return await confirm.message.edit(content="", embed=embed, view=None)
 
     @app_commands.command(name='source')
-    @app_commands.guilds(TESTING_GUILD)
     @app_commands.describe(command='The command\'s source you wish to search for.')
     async def source_app_command(self, interaction: discord.Interaction, command: Optional[str]):
         """Get the bot's source code or a specific command's."""
@@ -454,7 +458,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         else:
             obj = self.bot.get_command(command.replace('.', ' '))
             if obj is None:
-                embed = Embed(description=f"Take the [**entire reposoitory**]({source_url})", color=ctx.color)
+                embed = Embed(description=f"Could not find that command. Take the [**entire reposoitory**]({source_url})", color=interaction.client.user.color)
                 embed.set_footer(text='Please make sure you follow the license.')
                 return await interaction.response.send_message(embed=embed)
 
@@ -486,7 +490,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         interaction: discord.Interaction,
         current: str
     ) -> List[app_commands.Choice[str]]:
-
+            
         new = []
         for command in interaction.client.commands:
             if isinstance(command, commands.Group):
@@ -499,7 +503,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         return [
             app_commands.Choice(name=item, value=item)
             for item in new if current.lower() in item.lower()
-        ]
+        ][:8]
 
     @commands.command(aliases=['sourcecode', 'code', 'src'])
     @commands.bot_has_permissions(send_messages=True, embed_links=True)
@@ -605,13 +609,14 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         return js['html_url']
 
 
-    @commands.group(case_insensitive=True, invoke_without_command=True)
+    @commands.hybrid_group(case_insensitive=True, invoke_without_command=True, fallback='help')
     async def todo(self, ctx : MyContext):
         """Manage your todo lists."""
 
-        await ctx.send_help('todo')
+        await ctx.help()
 
     @todo.command(name='add')
+    @app_commands.describe(item='The item you want added to your todo list.')
     async def add(self, ctx : MyContext, *, item : commands.clean_content):
         """Add an item to your todo list"""
 
@@ -636,6 +641,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
 
     @todo.command(name='remove')
+    @app_commands.describe(index='The index of the item you want to remove. See /todo list')
     async def todo_remove(self, ctx : MyContext, index : int):
         """Remove one of your todo list entries."""
 
@@ -661,22 +667,28 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
     async def todo_clear(self, ctx : MyContext):
         """Clear all your todo entries."""
 
-        confirm = await ctx.confirm('Are you sure you want to clear your entire todo list?',delete_after=True, timeout=30)
+        confirm = await ctx.confirm(
+            'Are you sure you want to clear your entire todo list?', 
+            delete_after=False, 
+            timeout=30,
+            interaction=ctx.interaction if ctx.interaction else None)
 
-        if confirm is None:
-            return await ctx.send('Timed out.')
+        if confirm.value is None:
+            return await confirm.message.edit(content='Timed out.', view=None)
 
-        if confirm is False:
-            return await ctx.send('Canceled.')
+        if confirm.value is False:
+            return await confirm.message.edit(content='Canceled.', view=None)
 
         count = await self.bot.db.fetchval(
             "WITH deleted AS (DELETE FROM todo WHERE user_id = $1 RETURNING *) SELECT count(*) FROM deleted;", ctx.author.id
         )
         embed = Embed()
         embed.description = f"__**Cleared {count} entries from your todo list.**__"
-        return await ctx.send(embed=embed)
+        return await confirm.message.edit(content='', embed=embed, view=None)
     
     @todo.command(name='edit')
+    @app_commands.describe(index='The index of the item you want to edit. See /todo list')
+    @app_commands.describe(text='The new text for that todo item.')
     async def todo_edit(self, ctx: MyContext, index: int, *, text: commands.clean_content) -> discord.Message:
         """Edit an exisiting todo list entry."""
 
@@ -709,7 +721,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         if not data:
             return await ctx.send(f"Your todo list is empty.")
 
-        menu = SimplePages(source=TodoListSource(entries=data, ctx=ctx), ctx=ctx, hide=True, compact=True)
+        menu = SimplePages(source=TodoListSource(entries=data, ctx=ctx), ctx=ctx, compact=True)
         await menu.start()
         
     @commands.command(aliases=['save'])
@@ -895,8 +907,9 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
         return timer
 
-    @commands.group(aliases=['remind','rm'], usage="<when>", invoke_without_command=True)
+    @commands.hybrid_group(aliases=['remind','rm'], usage="<when>", invoke_without_command=True, fallback='create')
     @commands.bot_has_permissions(send_messages=True)
+    @app_commands.describe(when='The duration and what you want to be reminded of.')
     async def reminder(self, ctx, *, when : UserFriendlyTime(commands.clean_content, default='\u2026')):
         """Reminds you of something after a certain amount of time.
 
@@ -910,43 +923,6 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
         Times are in UTC.
         """
-        if not when:
-            raise commands.BadArgument('Invalid time provided, try e.g. "tomorrow" or "3 days"')
-        try:
-            await self.create_timer(
-            when.dt,
-            "reminder",
-            ctx.author.id,
-            ctx.channel.id,
-            when.arg,
-            connection=self.bot.db,
-            created=ctx.message.created_at,
-            message_id=ctx.message.id
-            )
-        except Exception as e:
-            return await ctx.send(str(e))
-
-        delta = discord.utils.format_dt(when.dt, 'R')
-        await ctx.send(f'Alright, {ctx.author.mention} I will remind you {delta} about: \n> {when.arg}')
-
-    @reminder.command(
-        name='create',
-        aliases=['make']
-    )
-    async def reminder_create(self, ctx: MyContext, *, when: UserFriendlyTime(commands.clean_content, default='\u2026')):
-        """Reminds you of something after a certain amount of time.
-
-        The input can be any direct date (e.g. YYYY-MM-DD) or a human
-        readable offset. Examples:
-
-        - "next thursday at 3pm do something funny"
-        - "do the dishes tomorrow"
-        - "in 3 days do the thing"
-        - "2d unmute someone"
-
-        Times are in UTC.
-        """
-        
         if not when:
             raise commands.BadArgument('Invalid time provided, try e.g. "tomorrow" or "3 days"')
         try:
@@ -992,12 +968,11 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         menu = SimplePages(source=MySource(records, len(records)), compact=True, ctx=ctx)
         await menu.start()
     
-
-    
     @reminder.command(
         name='delete',
         aliases=['cancel','remove']
     )
+    @app_commands.describe(id='The ID of the reminder you want to delete.')
     async def reminder_remove(self, ctx, *, id : int):
         """
         Deletes a reminder by it's id
@@ -1027,7 +1002,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         name='clear',
         aliases=['wipe']
     )
-    async def reminder_clear(self, ctx):
+    async def reminder_clear(self, ctx: MyContext):
         """
         Clear all reminders you set.
         """
@@ -1046,13 +1021,13 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         if total == 0:
             return await ctx.send("You have no reminders to clear.")
 
-        confirm = await ctx.confirm(f'Are you sure you want to clear **{total}** reminder(s)', timeout=30)
+        confirm = await ctx.confirm(f'Are you sure you want to clear **{total}** reminder(s)', timeout=30, delete_after=False)
 
-        if confirm is None:
-            return await ctx.send('Timed out.')
+        if confirm.value is None:
+            return await confirm.message.edit(content='Timed out.', view=None)
 
-        if confirm is False:
-            return await ctx.send('Canceled.')
+        if confirm.value is False:
+            return await confirm.message.edit(content='Canceled.', view=None)
 
         query = """DELETE FROM reminders WHERE event = 'reminder' AND extra #>> '{args,0}' = $1;"""
 
@@ -1062,7 +1037,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             self._task.cancel()
             self._task = self.bot.loop.create_task(self.dispatch_timers())
 
-        await ctx.send(f'Successfully deleted **{total}** reminder(s)')
+        await confirm.message.edit(content=f'Successfully deleted **{total}** reminder(s)', view=None)
         
     
     @commands.Cog.listener()
@@ -1118,8 +1093,9 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             await ctx.send(to_send)
 
 
-    @commands.command(name='first-message', aliases=['firstmsg', 'firstmessage'])
+    @commands.hybrid_command(name='first-message', aliases=['firstmsg', 'firstmessage'])
     @commands.check(Cooldown(1, 3, 1, 2, commands.BucketType.user))
+    @app_commands.describe(channel='The channel you want to see the first message.')
     async def first_message(self, ctx: MyContext, *, channel: Optional[discord.TextChannel]) -> discord.Message:
         """Get the first message in a channel."""
         channel = channel or ctx.channel
@@ -1220,9 +1196,9 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             raise commands.BadArgument(f"{self.bot.emotes['cross']} You have no highlights to clear...")
 
         confirm = await ctx.confirm("Are you sure you want to clear your highlight list?")
-        if confirm is False:
+        if confirm.value is False:
             return await ctx.send("Canceled.")
-        if confirm is None:
+        if confirm.value is None:
             return await ctx.send("Timed out.")
         
         await self.bot.db.execute("DELETE FROM highlight WHERE author_id = $1 AND guild_id = $2", ctx.author.id, ctx.guild.id)
