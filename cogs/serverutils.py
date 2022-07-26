@@ -14,7 +14,7 @@ from discord.ext import commands
 
 from bot import MetroBot
 from utils.checks import can_execute_action, check_dev
-from utils.constants import DISBOARD_ID, SLASH_GUILDS
+from utils.constants import DISBOARD_ID, EMOTES, SLASH_GUILDS
 from utils.converters import ActionReason, ImageConverter, RoleConverter
 from utils.custom_context import MyContext
 from utils.remind_utils import FutureTime, UserFriendlyTime, human_timedelta
@@ -1511,8 +1511,8 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
 
         embed.add_field(name="\U00002139 General", value=f'__**ID:**__ {member.id} \n__**Username:**__ {member}\n__**Nickname:**__ {await ctx.emojify(member.nick)} {member.nick if member.nick else ""} \n__**Owner:**__ {self.bot.check if member.id == member.guild.owner_id else self.bot.cross} • __**Bot:**__ {await ctx.emojify(member.bot)} \n__**Join Position:**__ {sorted(ctx.guild.members, key=lambda m: m.joined_at or discord.utils.utcnow()).index(member) + 1}')
 
-        embed.add_field(name='<:inviteme:924868244525940807> Created at', value=f'╰ {discord.utils.format_dt(member.created_at, "F")} ({discord.utils.format_dt(member.created_at, "R")})', inline=False)
-        embed.add_field(name='<:joined_at:928188524006608936> Joined at', value=f'╰ {discord.utils.format_dt(member.joined_at, "F")} ({discord.utils.format_dt(member.joined_at, "R")})', inline=True)
+        embed.add_field(name=f'{EMOTES["inviteme"]} Created at', value=f'╰ {discord.utils.format_dt(member.created_at, "F")} ({discord.utils.format_dt(member.created_at, "R")})', inline=False)
+        embed.add_field(name=f'{EMOTES["joined_at"]} Joined at', value=f'╰ {discord.utils.format_dt(member.joined_at, "F")} ({discord.utils.format_dt(member.joined_at, "R")})', inline=True)
 
         roles = [role.mention for role in member.roles if not role.is_default()]
         roles.reverse()
@@ -1522,13 +1522,8 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         else:
             roles = "This member has no roles."
 
-        embed.add_field(name='<:role:923611835066908712> Roles [%s]' % (len(member.roles) - 1), value=roles, inline=False)
+        embed.add_field(name=f'{EMOTES["role"]} Roles [{len(member.roles) - 1}]', value=roles, inline=False)
 
-        # 2 fetchvals as it's faster than iterating through the entire table of like 50k messages
-        total_messages = await ctx.bot.db.fetchval("SELECT COUNT(*) as c FROM messages WHERE author_id = $1 AND server_id = $2", member.id, ctx.guild.id)
-        global_messages = await ctx.bot.db.fetchval("SELECT COUNT(*) as c FROM messages WHERE author_id = $1", member.id)
-
-        embed.add_field(name='<:messages:928380915560874055> Messages', value=f'`{total_messages:,}` total messages, `{global_messages:,}` global messages.')
         return embed
         
     async def serverinfo_embed(self, ctx: MyContext, guild: discord.Guild):
@@ -1538,19 +1533,16 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             await ctx.typing()
             await guild.chunk()
 
-        messages = await ctx.bot.db.fetchval("SELECT COUNT(*) as c FROM messages WHERE server_id = $1", guild.id)
-
         embed = discord.Embed(color=ctx.color)
         embed.set_author(name=guild.name, icon_url=guild.icon.url if guild.icon else None)
 
         embed.add_field(name='\U00002139 General', value=f"__**ID:**__ {guild.id} \n__**Owner:**__ {guild.owner if guild.owner else 'Not Found'}\n__**Verification Level:**__ {str(guild.verification_level).title()}\n__**Filesize Limit:**__ {humanize.naturalsize(guild.filesize_limit)}\n__**Role count:**__ {len(guild.roles)}")
 
-        embed.add_field(name='<:channels:928388464892842024> Channels', value=f'<:text:928390522182193232> Text: {len([x for x in guild.channels if isinstance(x, discord.TextChannel)])}\n<:voice:928389079266127972> Voice: {len([x for x in guild.channels if isinstance(x, discord.VoiceChannel)])}\n<:category:928391020859772968> Category: {len([x for x in guild.channels if isinstance(x, discord.CategoryChannel)])} \n<:stage:928391073091432458> Stage: {len([x for x in guild.channels if isinstance(x, discord.StageChannel)])}')
-        embed.add_field(name='<:members:908483589157576714> Members', value=f"\U0001f465 Humans: {len([x for x in guild.members if not x.bot])}\n<:bot:925107948789837844> Bots: {len([x for x in guild.members if x.bot])}\n\U0000267e Total: {len(guild.members)}\n\U0001f4c1 Limit: {guild.max_members}", inline=True)
+        embed.add_field(name=f'{EMOTES["channels"]} Channels', value=f'{EMOTES["text"]} Text: {len([x for x in guild.channels if isinstance(x, discord.TextChannel)])}\n{EMOTES["voice"]} Voice: {len([x for x in guild.channels if isinstance(x, discord.VoiceChannel)])}\n{EMOTES["category"]} Category: {len([x for x in guild.channels if isinstance(x, discord.CategoryChannel)])} \n{EMOTES["stage"]} Stage: {len([x for x in guild.channels if isinstance(x, discord.StageChannel)])}')
+        embed.add_field(name=f'{EMOTES["members"]} Members', value=f"\U0001f465 Humans: {len([x for x in guild.members if not x.bot])}\n{EMOTES['bot']} Bots: {len([x for x in guild.members if x.bot])}\n\U0000267e Total: {len(guild.members)}\n\U0001f4c1 Limit: {guild.max_members}", inline=True)
 
-        embed.add_field(name='<:joined_at:928188524006608936> Created at', value=f"{discord.utils.format_dt(guild.created_at, 'F')} ({discord.utils.format_dt(guild.created_at, 'R')})")
-        
-        embed.add_field(name='<:messages:928380915560874055> Messages', value=f"`{int(messages):,}` messages")
+        embed.add_field(name=f'{EMOTES["joined_at"]} Created at', value=f"{discord.utils.format_dt(guild.created_at, 'F')} ({discord.utils.format_dt(guild.created_at, 'R')})")
+
         return embed
 
     async def channelinfo_embed(
@@ -1558,11 +1550,9 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         channel: Union[discord.TextChannel, discord.VoiceChannel, discord.StageChannel]):
         """This function returns a embed for a Text/Voice/Stage channel instance."""
 
-        messages = await ctx.bot.db.fetchval("SELECT COUNT(*) as c FROM messages WHERE channel_id = $1 AND server_id = $2", channel.id, ctx.guild.id)
-        
         embed = discord.Embed(color=discord.Colour.light_gray(), title=f'#{channel.name}')
         embed.add_field(name='\U00002139 General', value=f"__**Mention:**__ {channel.mention} \n__**Name:**__ {channel.name} \n__**ID:**__ {channel.id}\n__**Type:**__ {str(channel.type).title()}\n__**Created on:**__ {discord.utils.format_dt(channel.created_at, 'F')} ({discord.utils.format_dt(channel.created_at, 'R')})")
-        embed.add_field(name='<:messages:928380915560874055> Messages', value=f'`{int(messages):,}` total messages', inline=False)
+
         return embed
 
     @commands.command(name='user-info', aliases=['userinfo', 'ui','whois'])
