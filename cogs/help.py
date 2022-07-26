@@ -203,9 +203,6 @@ class Modal(discord.ui.Modal, title='Create custom permissions.'):
         embed.set_author(name=f'Invite {self.application} to your server', icon_url=self.application.display_avatar.url)
         return await interaction.response.send_message(embed=embed, ephemeral=True)
 
-
-
-
 class InviteView(discord.ui.View):
     def __init__(self, ctx : MyContext):
         super().__init__(timeout=300)
@@ -999,7 +996,6 @@ class MetroHelp(commands.HelpCommand):
 from discord import app_commands
 
 @app_commands.context_menu(name='Invite Bot')
-@app_commands.guilds(TESTING_GUILD)
 async def invite_bot_context_menu(interaction: discord.Interaction, member: discord.Member):
     if not member.bot:
         return await interaction.response.send_message('This is not a bot.', ephemeral=True)

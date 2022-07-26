@@ -90,7 +90,7 @@ async def calculator_context_menu(interaction: discord.Interaction, message: dis
     await interaction.followup.send(content=content, ephemeral=False)
 
 async def setup(bot: MetroBot):
-    bot.tree.add_command(calculator_context_menu, guild=TESTING_GUILD)
+    bot.tree.add_command(calculator_context_menu)
     await bot.add_cog(extras(bot))
 
 class extras(commands.Cog, description='Extra commands for your use.'):
