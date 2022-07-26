@@ -569,9 +569,9 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             raise commands.BadArgument(to_send)
 
         confirm = await ctx.confirm(f"Are you sure you want to add **{role.name}** to **{ctx.guild.member_count}** members.")
-        if confirm is False:
+        if confirm.value is False:
             raise commands.BadArgument("Canceled.")
-        if confirm is None:
+        if confirm.value is None:
             raise commands.BadArgument("Timed out.")
 
         if ctx.guild.chunked is False:
@@ -625,9 +625,9 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             raise commands.BadArgument(to_send)
 
         confirm = await ctx.confirm(f"Are you sure you want to remove **{role.name}** from **{ctx.guild.member_count}** members.")
-        if confirm is False:
+        if confirm.value is False:
             raise commands.BadArgument("Canceled.")
-        if confirm is None:
+        if confirm.value is None:
             raise commands.BadArgument("Timed out.")
 
         if ctx.guild.chunked is False:
@@ -683,9 +683,9 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         bots = [bot for bot in ctx.guild.members if bot.bot]
 
         confirm = await ctx.confirm(f"Are you sure you want to add **{role.name}** to **{len(bots)}** bots.")
-        if confirm is False:
+        if confirm.value is False:
             raise commands.BadArgument("Canceled.")
-        if confirm is None:
+        if confirm.value is None:
             raise commands.BadArgument("Timed out.")
 
         if ctx.guild.chunked is False:
@@ -741,9 +741,9 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         bots = [bot for bot in ctx.guild.members if bot.bot]
 
         confirm = await ctx.confirm(f"Are you sure you want to remove **{role.name}** from **{len(bots)}** bots.")
-        if confirm is False:
+        if confirm.value is False:
             raise commands.BadArgument("Canceled.")
-        if confirm is None:
+        if confirm.value is None:
             raise commands.BadArgument("Timed out.")
 
         if ctx.guild.chunked is False:
@@ -799,9 +799,9 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         humans = [hum for hum in ctx.guild.members if not hum.bot]
 
         confirm = await ctx.confirm(f"Are you sure you want to add **{role.name}** to **{len(humans)}** humans.")
-        if confirm is False:
+        if confirm.value is False:
             raise commands.BadArgument("Canceled.")
-        if confirm is None:
+        if confirm.value is None:
             raise commands.BadArgument("Timed out.")
 
         if ctx.guild.chunked is False:
@@ -857,9 +857,9 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         humans = [hum for hum in ctx.guild.members if not hum.bot]
 
         confirm = await ctx.confirm(f"Are you sure you want to remove **{role.name}** from **{len(humans)}** humans.")
-        if confirm is False:
+        if confirm.value is False:
             raise commands.BadArgument("Canceled.")
-        if confirm is None:
+        if confirm.value is None:
             raise commands.BadArgument("Timed out.")
 
         if ctx.guild.chunked is False:
@@ -1035,9 +1035,9 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             raise commands.BadArgument(to_send)
 
         confirm = await ctx.confirm(f"Are you sure you want to add **{target_role.name}** to **{len(base_role.members)}** members.")
-        if confirm is False:
+        if confirm.value is False:
             raise commands.BadArgument("Canceled.")
-        if confirm is None:
+        if confirm.value is None:
             raise commands.BadArgument("Timed out.")
 
         if ctx.guild.chunked is False:
@@ -1092,9 +1092,9 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             raise commands.BadArgument(to_send)
 
         confirm = await ctx.confirm(f"Are you sure you want to remove **{target_role.name}** from **{len(base_role.members)}** members.")
-        if confirm is False:
+        if confirm.value is False:
             raise commands.BadArgument("Canceled.")
-        if confirm is None:
+        if confirm.value is None:
             raise commands.BadArgument("Timed out.")
 
         if ctx.guild.chunked is False:
@@ -1314,9 +1314,9 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             raise commands.BadArgument("You cannot nuke threads.")
 
         confirm = await ctx.confirm(f'Are you sure you want to nuke {channel.mention}', timeout=30.0)
-        if confirm is False:
+        if confirm.value is False:
             return await ctx.send("Canceled.")
-        if confirm is None:
+        if confirm.value is None:
             return await ctx.send("Timed out.")
 
         new_channel = await channel.clone(name=channel.name)
@@ -1424,9 +1424,9 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
                 raise commands.BadArgument("No notes were found for this member. Use `%snote add <member> <note>` to add a note." % ctx.clean_prefix)
             
         confirm = await ctx.confirm(f"This will clear **{len(data)}** from {member}'s notes, are you sure?", timeout=30)
-        if confirm is None:
+        if confirm.value is None:
             return await ctx.send("Timed out.")
-        if confirm is False:
+        if confirm.value is False:
             return await ctx.send("Canceled.")
 
         async with ctx.typing():

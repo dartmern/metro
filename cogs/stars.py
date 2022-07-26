@@ -521,9 +521,9 @@ class stars(commands.Cog, description='Manage and create starboard commands. \nT
 
         if hasattr(starboard, 'locked'):
             confirm = await ctx.confirm("Apparently, a previously configured starboard channel was deleted. Is this true?")
-            if confirm is None:
+            if confirm.value is None:
                 raise commands.BadArgument("Timed out.")
-            if confirm is False:
+            if confirm.value is False:
                 return await ctx.send("Aborting starboard creation. Join bot support server for more info.")
             await self.bot.db.execute("DELETE FROM starboard WHERE id=$1", ctx.guild.id)
 

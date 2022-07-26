@@ -399,10 +399,10 @@ class configuration(commands.Cog, description='Configure the bot/server.'):
 
         confirm = await ctx.confirm(f'Are you sure you want to clear all your disabled commands?',timeout=30)
 
-        if confirm is None:
+        if confirm.value is None:
             return await ctx.send('Timed out.')
 
-        if confirm is False:
+        if confirm.value is False:
             return await ctx.send('Canceled.')
 
         await ctx.typing()
@@ -542,10 +542,10 @@ class configuration(commands.Cog, description='Configure the bot/server.'):
 
         confirm = await ctx.confirm('Are you sure you want to clear your ignored list?',timeout=30)
 
-        if confirm is False:
+        if confirm.value is False:
             return await ctx.send('Canceled.')
 
-        if confirm is None:
+        if confirm.value is None:
             return await ctx.send('Timed out.')
 
         query = """

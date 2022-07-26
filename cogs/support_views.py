@@ -103,9 +103,9 @@ class support(commands.Cog, description='Support only commands.'):
             '\n\nHit the **Confirm** button below to submit your request and agree to these terms.', timeout=60  
             )
 
-        if confirm is False:
+        if confirm.value is False:
             return await ctx.send('Canceled.')
-        if confirm is None:
+        if confirm.value is None:
             return await ctx.send('Timed out.')
 
         else:

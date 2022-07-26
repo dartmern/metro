@@ -101,7 +101,7 @@ class MyContext(commands.Context):
         author_id : Optional[int] = None,
         interaction : Optional[discord.Interaction] = None
 
-    ) -> Optional[bool]:
+    ) -> ConfirmationView:
 
         author_id = author_id or self.author.id
 
@@ -112,14 +112,10 @@ class MyContext(commands.Context):
             author_id=author_id
 
         )
-        if interaction:
-            view.message = await interaction.response.send_message(message, view=view)
-            await view.wait()
-            return view.value
-        else:
-            view.message = await self.send(message, view=view)
-            await view.wait()
-            return view.value
+
+        view.message = await self.send(message, view=view)
+        await view.wait()
+        return view
         
 
     async def paginate(
