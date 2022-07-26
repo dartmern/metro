@@ -72,6 +72,10 @@ class core(commands.Cog, description="Core events."):
 
         if ctx.command and ctx.command.has_error_handler():
             return
+        
+        elif ctx.interaction and not ctx.guild:
+            embed.description = "This command isn't available in my messages."
+            return await ctx.send(embed=embed)
     
         elif isinstance(error, StarError):
             return await ctx.send(str(error))
@@ -299,6 +303,10 @@ class core(commands.Cog, description="Core events."):
 
         elif isinstance(error, commands.RangeError):
             return await ctx.send(f"Value of {error.value} must be between {error.minimum} and {error.maximum}.")
+
+        elif isinstance(error, commands.NoPrivateMessage):
+            embed.description = "This command isn't available in my messages."
+            return await ctx.send(embed=embed)
 
         elif isinstance(error, commands.CheckFailure):
             return

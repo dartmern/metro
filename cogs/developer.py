@@ -31,6 +31,52 @@ from utils.custom_context import MyContext
 from utils.useful import Embed, fuzzy, pages, get_bot_uptime
 from utils.json_loader import write_json
 
+class Input(discord.ui.Modal):
+    def __init__(self, bot: MetroBot, *, title: str) -> None:
+        super().__init__(title=title)
+        self.bot = bot
+
+    string = discord.ui.TextInput(label='Code', style=discord.TextStyle.paragraph)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        
+        await interaction.response.defer(ephemeral=True)
+        # most likely gonna take longer than 3 seconds
+
+        query = self.string.value
+
+        is_multistatement = query.count(';') > 1
+        if is_multistatement:
+            # fetch does not support multiple statements
+            strategy = self.bot.db.execute
+        else:
+            strategy = self.bot.db.fetch
+
+        try:
+            start = time.perf_counter()
+            results = await strategy(query)
+            dt = (time.perf_counter() - start) * 1000.0
+        except Exception:
+            return await interaction.followup.send(f'```py\n{traceback.format_exc()}\n```')
+
+        rows = len(results)
+        if is_multistatement or rows == 0:
+            return await interaction.followup.send(f'`{dt:.2f}ms: {results}`')
+
+        headers = list(results[0].keys())
+        table = TabularData()
+        table.set_columns(headers)
+        table.add_rows(list(r.values()) for r in results)
+        render = table.render()
+
+        fmt = f'```\n{render}\n```\n*Returned {plural(rows):row} in {dt:.2f}ms*'
+        if len(fmt) > 2000:
+            fp = io.BytesIO(fmt.encode('utf-8'))
+            await interaction.followup.send('Too many results...', file=discord.File(fp, 'results.txt'))
+        else:
+            await interaction.followup.send(fmt)
+
+
 def restart_program():
     python = sys.executable
     os.execl(python, python, * sys.argv)
@@ -378,6 +424,8 @@ class developer(commands.Cog, description="Developer commands."):
         
         embed = discord.Embed(title='Metro Premium', color=ctx.color)
         embed.description = f"This bot is fully free and little to none of my features are locked behind a paywall. We want to keep it this way for as long as we can. You can get \"Metro Premium\" by supporting my patreon, that way you can support the bot and get great perks.\n\n{self.bot.donate}"
+
+        embed.set_footer(text='As of now Metro Premium has very unnoticeable features. Buying pateron can fund things like hosting and development.')
         await ctx.send(embed=embed)
 
     @premium.command(name='add', aliases=['+'])
@@ -418,55 +466,6 @@ class developer(commands.Cog, description="Developer commands."):
         else:
             await ctx.send("Only premium **guilds** are available.")
 
-
-    @commands.command(slash_command=False)
-    @is_dev()
-    async def eval(self, ctx, *, body : str):
-        """Evaluate python code."""
-
-        env = {
-            'bot': self.bot,
-            'ctx': ctx,
-            'channel': ctx.channel,
-            'author': ctx.author,
-            'guild': ctx.guild,
-            'message': ctx.message,
-            '_': self._last_result
-        }
-
-        env.update(globals())
-
-        body = self.cleanup_code(body)
-        stdout = io.StringIO()
-
-        to_compile = f'async def func():\n{textwrap.indent(body, "  ")}'
-
-        try:
-            exec(to_compile, env)
-        except Exception as e:
-            return await ctx.send(f'```py\n{e.__class__.__name__}: {e}\n```')
-
-        func = env['func']
-        try:
-            with redirect_stdout(stdout):
-                ret = await func()
-        except Exception as e:
-            value = stdout.getvalue()
-            await ctx.send(f'```py\n{value}{traceback.format_exc()}\n```')
-        else:
-            value = stdout.getvalue()
-            try:
-                await ctx.message.add_reaction('\u2705')
-            except:
-                pass
-
-            if ret is None:
-                if value:
-                    await ctx.send(f'```py\n{value}\n```')
-            else:
-                self._last_result = ret
-                await ctx.send(f'```py\n{value}{ret}\n```')
-
     @commands.command(aliases=['cls'])
     @is_dev()
     async def clearconsole(self, ctx):
@@ -479,20 +478,29 @@ class developer(commands.Cog, description="Developer commands."):
             return await ctx.send(str(e))
         await ctx.check()
 
-    @commands.command()
+    @commands.hybrid_command()
+    @app_commands.describe(channel='The channel you want this command executed in.')
+    @app_commands.describe(who='The user you want to run this command.')
+    @app_commands.describe(command='The command string you want to execute.')
+    @app_commands.guilds(TESTING_GUILD)
     @is_dev()
-    async def sudo(self, ctx, channel : Union[discord.TextChannel, None], who : Union[discord.Member, discord.User], *, command : str):
+    async def sudo(self, ctx: MyContext, channel : Union[discord.TextChannel, None], who : Union[discord.Member, discord.User], *, command : str):
         """Run a command as another user optionally in another channel."""
+
+        prefix = self.bot.user.mention + " " if ctx.interaction else ctx.prefix
 
         msg = copy.copy(ctx.message)
         channel = channel or ctx.channel
         msg.channel = channel
         msg.author = who
-        msg.content = ctx.prefix + command
+        msg.content = prefix + command
+
         new_ctx = await self.bot.get_context(msg, cls=type(ctx))
         
         await self.bot.invoke(new_ctx)
 
+        if ctx.interaction:
+            await ctx.interaction.response.send_message(f"Forced {who} to run {'/' if ctx.interaction else ctx.prefix}{command} in {channel.mention}", ephemeral=True)
 
     @commands.command(help="Reloads all extensions", aliases=['rall'])
     @is_dev()
@@ -553,10 +561,18 @@ class developer(commands.Cog, description="Developer commands."):
             await ctx.send(page)
 
 
-    @commands.command()
+    @commands.hybrid_command()
     @is_dev()
-    async def sql(self, ctx, *, query: str):
+    @app_commands.guilds(TESTING_GUILD)
+    @app_commands.describe(query='The sql query you want to run. Leave blank for a modal.')
+    async def sql(self, ctx: MyContext, *, query: Optional[str]):
         """Run some SQL."""
+
+        if ctx.interaction and not query:
+            return await ctx.interaction.response.send_modal(Input(self.bot, title='SQL'))
+
+        if not ctx.interaction and not query:
+            return await ctx.help()
 
         query = self.cleanup_code(query)
 
@@ -591,27 +607,27 @@ class developer(commands.Cog, description="Developer commands."):
         else:
             await ctx.send(fmt)
 
-    @commands.command()
-    @is_dev()
-    async def inspect(self, ctx : MyContext, *, object : str):
-        """
-        Get source code of an object.
-        """
-        command = self.bot.get_command('eval')
-        await command(ctx, body=f'import inspect\nreturn inspect.getsource({object})')
-
     def do_restart(self, message: discord.Message):
-        write_json({"id": message.id, "channel": message.channel.id, "now": ((discord.utils.utcnow()).replace(tzinfo=None)).timestamp()}, 'restart')
+        write_json(
+            {
+                "id": message.id, 
+                "channel": message.channel.id, 
+                "now": ((discord.utils.utcnow()).replace(tzinfo=None)).timestamp()
+            }, 
+            'restart')
         restart_program()
 
-    @commands.command(name='restart', aliases=['reboot'])
+    @commands.hybrid_command(name='restart', aliases=['reboot'])
+    @app_commands.guilds(TESTING_GUILD)
     @is_support()
     async def restart(self, ctx: MyContext):
         """Restart the bot."""
         message = await ctx.send(f"Restarting...", reply=False)
         self.do_restart(message)
 
-    @commands.command()
+    @commands.hybrid_command()
+    @app_commands.guilds(TESTING_GUILD)
+    @app_commands.describe(restart='Whether or not to restart the bot.')
     @commands.is_owner()
     async def update(self, ctx: MyContext, *, restart: bool = False):
         """Update the bot."""
