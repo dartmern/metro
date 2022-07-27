@@ -171,7 +171,6 @@ class core(commands.Cog, description="Core events."):
                 return await ctx.author.send(embed=embed)
 
         elif isinstance(error, commands.errors.MissingPermissions):
-
             if check_dev(ctx.bot, ctx.author):
                 await ctx.reinvoke()
                 return
@@ -197,6 +196,9 @@ class core(commands.Cog, description="Core events."):
             return # Might change this later and only handle this if the prefix is decently long.
 
         elif isinstance(error, commands.NotOwner):
+            if check_dev(self.bot, ctx.author):
+                return
+
             embed.set_author(name='Owner only command', icon_url=self.error_emoji)
             embed.description = "This command is reserved for developers/owners of %s" % self.bot.user.mention
             return await ctx.send(embed=embed)

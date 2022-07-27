@@ -1,9 +1,33 @@
 import asyncio
+from typing import Union
 import discord
 from discord.ext import menus
 
 from utils.useful import Embed
 
+class StopView(discord.ui.View):
+    def __init__(self, ctx):
+        super().__init__(timeout=300)
+        self.ctx = ctx
+
+    async def interaction_check(self, interaction: discord.Interaction):
+        if (self.ctx.user.id if isinstance(self.ctx, discord.Interaction) else self.ctx.author.id) == interaction.user.id:
+            return True
+        else:
+            await interaction.response.send_message(
+                "Only the command invoker can use this button.", ephemeral=True
+            )
+
+    @discord.ui.button(emoji='\U0001f5d1', style=discord.ButtonStyle.red)
+    async def stop_view(self, interaction : discord.Interaction, button : discord.ui.Button):
+        """
+        Stop the pagination session. 
+        Unless this pagination menu was invoked with a slash command
+        """
+
+        await interaction.response.defer()
+        await interaction.delete_original_message()
+        self.stop()
 
 class ExtraPages(menus.MenuPages):
     def __init__(self, source):

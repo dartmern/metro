@@ -28,6 +28,7 @@ from utils.constants import TESTING_GUILD, TESTING_GUILD_ID
 
 from utils.decos import in_support, is_dev, is_support
 from utils.custom_context import MyContext
+from utils.pages import StopView
 from utils.useful import Embed, fuzzy, pages, get_bot_uptime
 from utils.json_loader import write_json
 
@@ -57,11 +58,11 @@ class Input(discord.ui.Modal):
             results = await strategy(query)
             dt = (time.perf_counter() - start) * 1000.0
         except Exception:
-            return await interaction.followup.send(f'```py\n{traceback.format_exc()}\n```')
+            return await interaction.followup.send(f'```py\n{traceback.format_exc()}\n```', view=StopView(interaction))
 
         rows = len(results)
         if is_multistatement or rows == 0:
-            return await interaction.followup.send(f'`{dt:.2f}ms: {results}`')
+            return await interaction.followup.send(f'`{dt:.2f}ms: {results}`', view=StopView(interaction))
 
         headers = list(results[0].keys())
         table = TabularData()
@@ -72,9 +73,9 @@ class Input(discord.ui.Modal):
         fmt = f'```\n{render}\n```\n*Returned {plural(rows):row} in {dt:.2f}ms*'
         if len(fmt) > 2000:
             fp = io.BytesIO(fmt.encode('utf-8'))
-            await interaction.followup.send('Too many results...', file=discord.File(fp, 'results.txt'))
+            await interaction.followup.send('Too many results...', file=discord.File(fp, 'results.txt'), view=StopView(interaction))
         else:
-            await interaction.followup.send(fmt)
+            await interaction.followup.send(fmt, view=StopView(interaction))
 
 
 def restart_program():
@@ -588,11 +589,11 @@ class developer(commands.Cog, description="Developer commands."):
             results = await strategy(query)
             dt = (time.perf_counter() - start) * 1000.0
         except Exception:
-            return await ctx.send(f'```py\n{traceback.format_exc()}\n```')
+            return await ctx.send(f'```py\n{traceback.format_exc()}\n```', view=StopView(ctx))
 
         rows = len(results)
         if is_multistatement or rows == 0:
-            return await ctx.send(f'`{dt:.2f}ms: {results}`')
+            return await ctx.send(f'`{dt:.2f}ms: {results}`', view=StopView(ctx))
 
         headers = list(results[0].keys())
         table = TabularData()
@@ -603,9 +604,9 @@ class developer(commands.Cog, description="Developer commands."):
         fmt = f'```\n{render}\n```\n*Returned {plural(rows):row} in {dt:.2f}ms*'
         if len(fmt) > 2000:
             fp = io.BytesIO(fmt.encode('utf-8'))
-            await ctx.send('Too many results...', file=discord.File(fp, 'results.txt'))
+            await ctx.send('Too many results...', file=discord.File(fp, 'results.txt'), view=StopView(ctx))
         else:
-            await ctx.send(fmt)
+            await ctx.send(fmt, view=StopView(ctx))
 
     def do_restart(self, message: discord.Message):
         write_json(

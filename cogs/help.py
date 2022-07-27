@@ -254,8 +254,6 @@ class InviteView(discord.ui.View):
         Stop the pagination session. 
         Unless this pagination menu was invoked with a slash command
         """
-        if self.ctx.interaction:
-            return await interaction.response.send_message(f"This pagination menu was invoked with a slash command. \nPlease click *dismiss message* to quit.", ephemeral=True)
 
         await interaction.response.defer()
         await interaction.delete_original_message()

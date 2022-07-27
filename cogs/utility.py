@@ -1,8 +1,6 @@
-from ast import parse
 from collections import defaultdict
 import re
 import discord
-from discord.enums import try_enum
 from discord.ext import commands, menus
 from discord import app_commands
 
@@ -13,20 +11,15 @@ from utils.constants import TESTING_GUILD
 
 from utils.json_loader import read_json
 from utils.custom_context import MyContext
-from utils.remind_utils import FutureTime, human_timedelta
+from utils.remind_utils import human_timedelta
 from utils.useful import Cooldown, Embed, delete_silent
 from utils.useful import Embed
 from utils.new_pages import SimplePages
 from utils.remind_utils import UserFriendlyTime
-from utils.pages import ExtraPages
-from utils.converters import RoleConverter
 
 from datetime import timedelta
 import json
-import random
 import io
-import pytz
-import traceback
 import asyncio
 import datetime
 import time
@@ -35,32 +28,8 @@ import asyncpg
 import yarl
 import inspect
 import unicodedata
-import argparse
 
-class StopView(discord.ui.View):
-    def __init__(self, ctx : MyContext):
-        super().__init__(timeout=120)
-        self.ctx = ctx
-
-    async def interaction_check(self, interaction: discord.Interaction):
-        if self.ctx.author.id == interaction.user.id:
-            return True
-        else:
-            await interaction.response.send_message(
-                "Only the command invoker can use this button.", ephemeral=True
-            )
-
-    @discord.ui.button(emoji='\U0001f5d1', style=discord.ButtonStyle.red)
-    async def stop_view(self, interaction : discord.Interaction, button : discord.ui.Button):
-        """
-        Stop the pagination session. 
-        Unless this pagination menu was invoked with a slash command
-        """
-
-        await interaction.response.defer()
-        await interaction.delete_original_message()
-        self.stop()
-
+from utils.pages import StopView
 
 class SourceView(discord.ui.View):
     def __init__(self, ctx : MyContext, code : str):
@@ -448,7 +417,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             embed = Embed(color=interaction.client.user.color)
             embed.set_author(name='Here is my source code:')
             embed.description = str(f"My code is under the [**MPL**]({license_url}) license\n → {source_url}")
-            return await interaction.response.send_message(embed=embed)#, view=StopView(ctx))
+            return await interaction.response.send_message(embed=embed, view=StopView(interaction))
 
         if command == 'help':
             src = type(self.bot.help_command)
@@ -460,7 +429,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             if obj is None:
                 embed = Embed(description=f"Could not find that command. Take the [**entire reposoitory**]({source_url})", color=interaction.client.user.color)
                 embed.set_footer(text='Please make sure you follow the license.')
-                return await interaction.response.send_message(embed=embed)
+                return await interaction.response.send_message(embed=embed, view=StopView(interaction))
 
             src = obj.callback.__code__
             module = obj.callback.__module__
@@ -482,7 +451,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         embed.description = f"**__My source code for `{str(obj)}` is located at:__**\n{final_url}"\
                 f"\n\nMy code is under licensed under the [**Mozilla Public License**]({license_url})."
 
-        await interaction.response.send_message(embed=embed)#, view=SourceView(ctx, code_lines))
+        await interaction.response.send_message(embed=embed, view=StopView(interaction))#, view=SourceView(ctx, code_lines))
 
     @source_app_command.autocomplete('command')
     async def source_app_command_autocomplete(
