@@ -626,6 +626,15 @@ class developer(commands.Cog, description="Developer commands."):
         message = await ctx.send(f"Restarting...", reply=False)
         self.do_restart(message)
 
+    @commands.hybrid_command(name='push')
+    @app_commands.guilds(TESTING_GUILD)
+    @commands.is_owner()
+    async def push_update(self, ctx: MyContext):
+        """Invokes git push"""
+
+        command = self.bot.get_command("jsk shell")
+        await ctx.invoke(command, argument=codeblock_converter('git push metro head'))
+
     @commands.hybrid_command()
     @app_commands.guilds(TESTING_GUILD)
     @app_commands.describe(restart='Whether or not to restart the bot.')
