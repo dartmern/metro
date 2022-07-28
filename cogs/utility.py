@@ -1091,49 +1091,49 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             for record in records:
                 self.highlight[record['text']] = (record['guild_id'], record['author_id'])
 
-    @commands.group(name='highlight', invoke_without_command=True, case_insensitive=True, aliases=['hl'])
+    @commands.hybrid_group(name='highlight', invoke_without_command=True, case_insensitive=True, aliases=['hl'], fallback='help')
     @commands.guild_only()
     async def highlight(self, ctx: MyContext):
         """Highlight word notifications."""
         await ctx.help()
 
     @highlight.command(name='add', aliases=['+'])
+    @app_commands.describe(word='The word you want added to your highlights.')
     @commands.guild_only()
     async def highlight_add(self, ctx: MyContext, *, word: commands.clean_content):
         """
         Add a word to your highlight list.
-        
-        For the best experience delete your message so people don't know your highlights.
         """
         word = word.lower() # remove the pain in the ass of highlight
 
         if len(word) < 2:
-            raise commands.BadArgument("Word needs to be at least 2 characters long.")
+            return await ctx.send("Word needs to be at least 2 characters long.", hide=True)
         if len(word) > 50:
-            raise commands.BadArgument("Word needs to be less than 50 characters long.")
+            return await ctx.send("Word needs to be less than 50 characters long.", hide=True)
         
         data = await self.bot.db.fetchval("SELECT highlight FROM highlight WHERE author_id = $1 AND guild_id = $2 AND text = $3", ctx.author.id, ctx.guild.id, word)
-        if data:
-            raise commands.BadArgument(f'"{word}" is already in your highlights list.')
-        
-        await self.bot.db.execute("INSERT INTO highlight (author_id, text, guild_id) VALUES ($1, $2, $3)", ctx.author.id, word, ctx.guild.id)
-        self.highlight[word] = (ctx.guild.id, ctx.author.id)
+        if not data:  
+            await self.bot.db.execute("INSERT INTO highlight (author_id, text, guild_id) VALUES ($1, $2, $3)", ctx.author.id, word, ctx.guild.id)
+            self.highlight[word] = (ctx.guild.id, ctx.author.id)
 
-        await ctx.send(f"{self.bot.emotes['check']} Added to your highlights.\n> It is recommended to delete your message so your highlights are private.")
-        await delete_silent(ctx.message, delay=8)
+        message = await ctx.send(f"{self.bot.emotes['check']} Updated your highlight list.", hide=True)
+        await delete_silent(ctx.message, delay=4) # deleted after 4 seconds
+        await delete_silent(message, delay=6) # deleted after 6 seconds
+
 
     @highlight.command(name='remove', aliases=['-'])
     @commands.guild_only()
     async def highlight_remove(self, ctx: MyContext, *, word: commands.clean_content):
         """Remove a word from your highlight list."""
         word = word.lower()
-
-        status = await self.bot.db.execute("DELETE FROM highlight WHERE author_id = $1 AND text = $2 AND guild_id = $3", ctx.author.id, word, ctx.guild.id)
-        if status != 'DELETE 1':
-            raise commands.BadArgument(f"{self.bot.emotes['cross']} The word \"{word}\" is not in your highlight list.")
         
-        del self.highlight[word]
-        await ctx.send(f"{self.bot.emotes['check']} Removed \"{word}\" from your highlight list.")
+        await self.bot.db.execute("DELETE FROM highlight WHERE author_id = $1 AND text = $2 AND guild_id = $3", ctx.author.id, word, ctx.guild.id)
+
+        try:
+            del self.highlight[word]
+        except KeyError:
+            pass
+        await ctx.send(f"{self.bot.emotes['check']} Updated your highlight list.", hide=True)
 
     @highlight.command(name='list', aliases=['show', 'display'])
     @commands.guild_only()
@@ -1145,15 +1145,19 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         """
         data = await self.bot.db.fetch("SELECT text FROM highlight WHERE author_id = $1 AND guild_id = $2", ctx.author.id, ctx.guild.id)
         
-        embed = discord.Embed(color=discord.Color.yellow())
-        embed.set_author(name=f'{ctx.author}\'s highlights', icon_url=ctx.author.display_avatar.url)
-        embed.description = "\n".join([x['text'] for x in data])
-        embed.set_footer(text=f'This message will get edited after 7 seconds so people don\'t know your highlights.')
-        message = await ctx.send(embed=embed)
-        await asyncio.sleep(6)
-        embed.description = "Highlights edited to hide highlights. Run the command again to see them."
-        embed.color = discord.Color.orange()
-        await message.edit(embed=embed)
+        if not data:
+            message = await ctx.send("You do not have any highlights.", hide=True)
+        else:
+            embed = discord.Embed(color=discord.Color.yellow())
+            embed.set_author(name=f'{ctx.author}\'s highlights', icon_url=ctx.author.display_avatar.url)
+            embed.description = "\n".join([x['text'] for x in data])
+            embed.set_footer(text=f'{len(data)} highlight{"s" if len(data) > 1 else ""}')
+            
+            message = await ctx.send(embed=embed, hide=True)
+
+        await delete_silent(ctx.message, delay=4) # deleted after 4 seconds
+        await delete_silent(message, delay=6) # deleted after 6 seconds
+
 
     @highlight.command(name='clear', aliases=['wipe'])
     @commands.guild_only()
@@ -1162,18 +1166,16 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
         data = await self.bot.db.fetch("SELECT * FROM highlight WHERE author_id = $1 AND guild_id = $2", ctx.author.id, ctx.guild.id)
         if not data:
-            raise commands.BadArgument(f"{self.bot.emotes['cross']} You have no highlights to clear...")
+            message = await ctx.send(f"{self.bot.emotes['cross']} You have no highlights to clear.", hide=True)
+        else:
+            await self.bot.db.execute("DELETE FROM highlight WHERE author_id = $1 AND guild_id = $2", ctx.author.id, ctx.guild.id)
+            await self.load_highlight() # whatever
 
-        confirm = await ctx.confirm("Are you sure you want to clear your highlight list?")
-        if confirm.value is False:
-            return await ctx.send("Canceled.")
-        if confirm.value is None:
-            return await ctx.send("Timed out.")
-        
-        await self.bot.db.execute("DELETE FROM highlight WHERE author_id = $1 AND guild_id = $2", ctx.author.id, ctx.guild.id)
-        await self.load_highlight() # whatever
+            message = await ctx.send(f"{self.bot.emotes['check']} Cleared all your highlights.", hide=True)
 
-        await ctx.send(f"{self.bot.emotes['check']} Cleared all your highlights.")
+        await delete_silent(ctx.message, delay=4) # deleted after 4 seconds
+        await delete_silent(message, delay=6) # deleted after 6 seconds
+
 
     async def generate_context(self, msg, hl):
         fmt = []
