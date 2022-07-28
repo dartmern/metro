@@ -1068,6 +1068,7 @@ class meta(commands.Cog, description='Get bot stats and information.'):
 
     @commands.hybrid_command(name='invite')
     @commands.bot_has_permissions(send_messages=True)
+    @app_commands.describe(bot='The bot you wish to invite. Defaults to me.')
     async def invite(self, ctx: MyContext, *, bot: discord.User = None):
         """Get invite links for a bot."""
         bot = bot or self.bot.user
@@ -1088,6 +1089,7 @@ class meta(commands.Cog, description='Get bot stats and information.'):
         await ctx.send(f"My privacy policy: <{self.bot.privacy_policy}>")
             
     @commands.hybrid_command(aliases=['upvote'])
+    @app_commands.describe(bot='The bot you wish to vote for. Defaults to me.')
     async def vote(self, ctx: MyContext, *, bot: Optional[discord.User]):
         """Get vote links for the bot."""
         bot = bot or self.bot.user
