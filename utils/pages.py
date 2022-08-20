@@ -26,7 +26,7 @@ class StopView(discord.ui.View):
         """
 
         await interaction.response.defer()
-        await interaction.delete_original_message()
+        await interaction.delete_original_response()
         self.stop()
 
 class ExtraPages(menus.MenuPages):

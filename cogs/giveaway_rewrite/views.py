@@ -81,7 +81,7 @@ class UnenterGiveawayView(discord.ui.View):
 
         if discord.utils.utcnow().replace(tzinfo=None) > self.ending:
             embed = create_embed('It seems like it\'s too late to leave this giveaway.', color=discord.Color.yellow())
-            return await interaction.edit_original_message(embed=embed, view=None)
+            return await interaction.edit_original_response(embed=embed, view=None)
 
         data = await get_entry(self.bot, self.message_id, interaction.user.id)
         if not data:
@@ -104,4 +104,4 @@ class UnenterGiveawayView(discord.ui.View):
         await self.org_message.edit(embed=embed)
 
         embed = create_embed('You have left this giveaway.', color=discord.Color.yellow())
-        await interaction.edit_original_message(embed=embed, view=None)
+        await interaction.edit_original_response(embed=embed, view=None)

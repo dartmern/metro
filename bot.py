@@ -7,6 +7,7 @@ import typing
 import asyncpixel
 import discord
 from discord.ext import commands
+from discord import app_commands
 
 from pathlib import Path
 import os
@@ -496,6 +497,9 @@ async def main():
                     await bot.load_extension(f"cogs.{file}")
 
             await bot.load_extension('jishaku') # jishaku
+
+
+            await bot.tree.set_translator(app_commands.Translator())
 
             await bot.start(token)
 
