@@ -21,6 +21,7 @@ EMOTES = {
             'dnd' : '<:dnd:819254444028854324>',
             'online' : '<:online:819254444151537665>',
             'idle': '<:idle:819254444185223170>',
+            'offline': '<:offline:819254444322455572>',
             'booster' : '<:booster:930991028998144040>',
             'moderator': '<:moderator:940085806947774556>',
             'discord': '<:mdiscord:904157585266049104>',
@@ -65,6 +66,8 @@ DEVELOPER_ROLE = 932354056020709448
 
 RDANNY_ID = 80528701850124288
 DISBOARD_ID = 302050872383242240
+MEE6_ID = 159985870458322944
+AMARI_BOT_ID = 339254240012664832
 
 PATREON_URL = "https://www.patreon.com/metrobot"
 DOCUMENTATION = 'https://dartmern.github.io/metro/'
