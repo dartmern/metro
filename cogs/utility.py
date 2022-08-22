@@ -250,11 +250,9 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         await ctx.send(embed=e)
 
     async def post_mystbin(self, data : str, encoding : str = 'utf-8'):
-        async with self.bot.session.post(f"https://mystb.in/documents", data=data) as s:
-            res = await s.json()
-            url_key = res['key']
+        paste = await self.bot.mystbin_client.create_paste(filename='paste', content=data)
         
-        return f"https://mystb.in/{url_key}"
+        return f"https://mystb.in/{paste.id}"
 
     @commands.command(name='mystbin')
     @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.user))
