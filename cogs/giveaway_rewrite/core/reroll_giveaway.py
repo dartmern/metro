@@ -21,7 +21,7 @@ async def reroll_giveaway(
     raw_embed = data[0]
     amount_of_winners = data[1]
 
-    raw = ast.literal_eval(raw_embed)
+    raw = ast.literal_eval(raw_embed.replace('null', 'None'))
     embed = discord.Embed.from_dict(raw)
 
     if len(entries) == 0:
@@ -29,7 +29,7 @@ async def reroll_giveaway(
         embed.color = discord.Color(3553599)
 
     else:
-        requirements = ast.literal_eval(data[5])
+        requirements = ast.literal_eval(data[5].replace('null', 'None'))
         if all(bool(x) is False for x in requirements.values()):
             # no req
             pass
@@ -37,6 +37,7 @@ async def reroll_giveaway(
             role_req = requirements['role']
             bypass_req = requirements['bypass']
             blacklist_req = requirements['blacklist']
+            mee6_req = requirements['mee6']
 
             for entry in entries:
                 if message.guild.get_member(entry['author_id']) not in message.guild.members:
@@ -49,6 +50,7 @@ async def reroll_giveaway(
                     role_req,
                     bypass_req,
                     blacklist_req, 
+                    mee6_req,
                     message.guild)
                 if resp is False:
                     entries.remove(entry)

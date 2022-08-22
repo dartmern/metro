@@ -10,13 +10,16 @@ import re
 import typing
 from utils.converters import RoleConverter
 
+from .mee6_converter import MEE6_Converter
+
 class Requirements(commands.Converter):
     async def convert(self, ctx: MyContext, argument: str) -> typing.Dict:
 
         requirements = {
             "role": [],
             "bypass": [],
-            "blacklist": []            
+            "blacklist": [],
+            "mee6": None           
         }
         if argument.lower() == "none": # no requirement
             return requirements
@@ -45,6 +48,10 @@ class Requirements(commands.Converter):
             if split[0] == "blacklist":
                 role = await RoleConverter().convert(ctx, split[1])
                 requirements["blacklist"] += [role.id]
+
+            if split[0] == "mee6":
+                level = await MEE6_Converter().convert(ctx, split[1])
+                requirements["mee6"] = level
 
         requirements["role"] = list(set(requirements["role"]))
         requirements["bypass"] = list(set(requirements["bypass"]))

@@ -1,6 +1,8 @@
 import ast
 from typing import Optional
 
+from mee6_py_api import API
+
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -41,14 +43,19 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
                 self.bot, message_id)
             
             if data:
+
+                await interaction.response.defer(ephemeral=True)
+
                 entry = await get_entry(self.bot, message_id, interaction.user.id)
                 if not entry:
-                    requirements = ast.literal_eval(data[5])
+                    print(data[5])
+                    requirements = ast.literal_eval(data[5].replace('null', 'None'))
 
                     role_req = [ele for ele in requirements['role'] if ele not in map(lambda x: x.id, interaction.user.roles)]
                     blacklist_req = [ele for ele in requirements['blacklist'] if ele in map(lambda x: x.id, interaction.user.roles)]
                     bypass_req = [ele for ele in requirements['bypass'] if ele in map(lambda x: x.id, interaction.user.roles)]
-                    
+                    mee6_req = requirements['mee6']
+
                     if blacklist_req:
 
                         roles = [f"<@&{role}>" for role in blacklist_req]
@@ -60,7 +67,7 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
                             color=discord.Color.red()
                         )
                         
-                        return await interaction.response.send_message(embed=embed, ephemeral=True)
+                        return await interaction.followup.send(embed=embed, ephemeral=True)
 
                     if role_req:
                         if bypass_req:
@@ -81,15 +88,25 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
 
                                 embed.description += f'\n Bypass Roles: {", ".join(roles)}'
                                 
-                            return await interaction.response.send_message(embed=embed, ephemeral=True)
+                            return await interaction.followup.send(embed=embed, ephemeral=True)
+
+                    if mee6_req:
+                        mee6api = API(interaction.guild_id)
+    
+                        level = await mee6api.levels.get_user_level(interaction.user.id)
+                        if level >= mee6_req:
+                            pass
+                        else:
+                            embed = create_embed(f'{EMOTES["cross"]} You do not have the minimum MEE6 level to enter this giveaway.\n\nYour MEE6 level: `{level}`\nMimimum Level Required: `{mee6_req}`', color=discord.Color.red())
+                            return await interaction.followup.send(embed=embed, ephemeral=True)
                     
 
                     await insert_entry(self.bot, message_id, interaction.user.id)
                     
                     embed = create_embed(f"{EMOTES['check']} Your entry has been approved for this giveaway.", color=discord.Color.green())
-                    await interaction.response.send_message(embed=embed, ephemeral=True)
+                    await interaction.followup.send(embed=embed, ephemeral=True)
 
-                    embed_dict = ast.literal_eval(data[0])
+                    embed_dict = ast.literal_eval(data[0].replace('null', 'None'))
                     embed = discord.Embed.from_dict(embed_dict)
 
                     footer = interaction.message.embeds[0].footer
@@ -104,7 +121,7 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
                     embed = create_embed(f"{EMOTES['cross']} You have already joined this giveaway.", color=discord.Color.red())
 
                     view = UnenterGiveawayView(self.bot, interaction.message.id, interaction.message, data[2])
-                    return await interaction.response.send_message(embed=embed, ephemeral=True, view=view)
+                    return await interaction.followup.send(embed=embed, ephemeral=True, view=view)
 
     @commands.Cog.listener()
     async def on_new_giveaway_timer_complete(self, timer: Timer):
@@ -269,6 +286,8 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
             return await message.edit(content='This feature is currently unavailable.')
         else:
             requirement = ""
+            if requirements['mee6']:
+                requirement += f'Required MEE6 Level: {requirements["mee6"]} \n'
             if requirements['role']:
                 roles = [f"<@&{role}>" for role in requirements['role']]
                 if len(roles) > 1:
