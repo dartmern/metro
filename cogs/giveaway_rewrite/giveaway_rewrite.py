@@ -51,7 +51,6 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
 
                 entry = await get_entry(self.bot, message_id, interaction.user.id)
                 if not entry:
-                    print(data[5])
                     requirements = ast.literal_eval(data[5].replace('null', 'None'))
 
                     role_req = [ele for ele in requirements['role'] if ele not in map(lambda x: x.id, interaction.user.roles)]
@@ -216,9 +215,17 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
         self, 
         ctx: MyContext,
         *,
-        message_id: MessageID):
+        message_id: MessageID = None):
         """End a giveaway."""
-    
+
+        if not message_id:
+            data = await get_all_giveaways(self.bot, ctx.guild.id)
+            after_sort = [entry['row'][6] for entry in data if entry['row'][3] == ctx.channel.id]
+            if not after_sort:
+                return await ctx.send('There are no active giveaways in this channel/guild.', hide=True)
+
+            message_id = max(after_sort)
+
         data = await get_giveaway(self.bot, message_id)
         if not data:
             return await ctx.send("That doesn't seem like a giveaway id.", hide=True)
@@ -238,13 +245,20 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
     @giveaway.command(name='reroll')
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.describe(message_id='The message id of the giveaway.')
-    @app_commands.describe(winners='The amount of winners to reroll. Defaults to 1.')
     async def giveaway_reroll(
         self,
         ctx: MyContext,
-        message_id: MessageID,
-        winners: int = 1):
+        *,
+        message_id: MessageID = None):
         """Reroll a giveaway."""
+
+        if not message_id:
+            data = await get_all_giveaways(self.bot, ctx.guild.id, True)
+            after_sort = [entry['row'][6] for entry in data if entry['row'][3] == ctx.channel.id]
+            if not after_sort:
+                return await ctx.send('There are no active giveaways in this channel/guild.', hide=True)
+
+            message_id = max(after_sort)
 
         data = await get_giveaway(self.bot, message_id)
         if not data:
