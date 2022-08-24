@@ -4,6 +4,8 @@ from typing import Optional
 from mee6_py_api import API
 
 import discord
+import datetime # needs to be imported (ast.literal_eval)
+import pytz
 from discord.ext import commands
 from discord import app_commands
 
@@ -23,6 +25,7 @@ from .core.insert_entry import insert_entry
 from .core.insert_giveaway import insert_giveaway
 from .core.end_giveaway import end_giveaway
 from .core.reroll_giveaway import reroll_giveaway
+from .core.get_all_giveaways import get_all_giveaways
 from .converters.winners import Winners
 from .converters.requirements import Requirements 
 
@@ -351,6 +354,32 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
 
         if ctx.interaction:
             await ctx.interaction.response.send_modal(GiveawayCreate(interaction=ctx.interaction))
+
+    @giveaway.command(name='list')
+    @commands.has_guild_permissions(manage_guild=True)
+    async def giveaway_list(self, ctx: MyContext):
+        """
+        List all the giveaways in the current guild.
+        """
+
+        to_paginate =  []
+
+        data = await get_all_giveaways(self.bot, ctx.guild.id)
+        for entry in data:
+            
+            to_paginate.append(
+                f"**{entry['row'][6]}** - {ast.literal_eval(entry['row'][0])['author']['name']} \n"\
+                f"[`Jump link`](https://discord.com/channels/{ctx.guild.id}/{entry['row'][3]}/{entry['row'][6]}) • "\
+                f"`CB:` {ast.literal_eval(entry['row'][0])['description'].split()[-1]} \n"\
+                f"`Ends:` {discord.utils.format_dt(pytz.utc.localize(entry['row'][2]), 'R')}\n"
+            )
+
+        if not data:
+            return await ctx.send('There are no active giveaways in this guild.', hide=True)
+        await ctx.paginate(to_paginate, compact=True)
+
+
+
     
 
     @property

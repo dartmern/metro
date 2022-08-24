@@ -85,7 +85,10 @@ async def end_giveaway(
     view = discord.ui.View()
     view.add_item(button)
         
-    await message.edit(embed=embed, view=view)
+    try:
+        await message.edit(embed=embed, view=view)
+    except (discord.HTTPException, discord.NotFound):
+        pass
 
     if len(entries) > 0:
         term = 'has' if len(winners) < 2 else 'have'
