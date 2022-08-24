@@ -45,7 +45,8 @@ class GiveawayCreate(discord.ui.Modal, title='Create a Giveaway'):
                 requirements = {
                     "role": [],
                     "bypass": [],
-                    "blacklist": []            
+                    "blacklist": [],
+                    "mee6": []            
                 },
                 prize=self.prize.value)
 
