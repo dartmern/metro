@@ -175,33 +175,6 @@ class extras(commands.Cog, description='Extra commands for your use.'):
         result = await self.bot.loop.run_in_executor(None, self.read_tags, ctx)
         await ctx.paginate(result, per_page=per_page)
 
-
-    @commands.command(name='shorten_url', aliases=['shorten'])
-    @commands.check(Cooldown(2, 5, 3, 5, commands.BucketType.user))
-    async def shorten_url(self, ctx: MyContext, *, url: str):
-        """
-        Shorten a long url.
-        
-        Powered by [Bitly API](https://dev.bitly.com/)
-        """
-        if not re.fullmatch(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', url):
-            raise commands.BadArgument("That is not a vaild url.")
-
-        await ctx.typing()
-
-        params = {"access_token" : bitly_token, "longUrl" : url}
-        async with self.bot.session.get("https://api-ssl.bitly.com/v3/shorten", params=params) as response:
-            if response.status != 200:
-                raise commands.BucketType("Bitly API returned a bad response. Please try again later.")
-
-            data = await response.json()
-
-        embed = Embed()
-        embed.colour = discord.Colour.orange()
-        embed.description = f'Your shortened url: {data["data"]["url"]}\nOriginal url: {url}'
-        embed.set_author(name='URL Shortner')
-        return await ctx.send(embed=embed)
-
     @commands.command(name='repl', aliases=['coliru'])
     @commands.check(Cooldown(1, 4, 1, 3, commands.BucketType.user))
     async def coliru(self, ctx: MyContext, *, code: CodeBlock):
@@ -226,33 +199,6 @@ class extras(commands.Cog, description='Extra commands for your use.'):
 
                 url = await self.bot.mystbin_client.post(output)
                 return await ctx.send("Output was too long: %s" % url)
-
-    @commands.command(name='nsfw-check')
-    @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.user))
-    async def nsfw_check(self, ctx: MyContext, *, image: Optional[str]):
-        """
-        Check for NSFW in an image.
-        
-        This command is powered by [OpenRobo API](https://api.openrobot.xyz/api/docs#operation/do_nsfw_check_api_nsfw_check_get)
-        """
-
-        url = (
-            await ImageConverter().convert(ctx, image)
-            or ctx.author.display_avatar.url
-        )
-
-        async with self.bot.session.get("https://api.openrobot.xyz/api/nsfw-check", headers={'Authorization' : or_api_token},params = {'url' : url}) as response:
-            if response.status != 200:
-                return await ctx.send("Openrobot API returned a bad result.")
-
-            response_data = await response.json()
-        
-        embed = discord.Embed()
-        embed.description = f"Is NSFW: {self.bot.emotes['check'] if response_data['nsfw_score'] > 0.25 else self.bot.emotes['cross']}"
-        embed.add_field(name=f'{self.bot.emotes["online"]} Safe Score', value=f"`{round(100 - (response_data['nsfw_score']*100), 2)}%`")
-        embed.add_field(name=f'{self.bot.emotes["dnd"]} Unsafe Score', value=f"`{round(response_data['nsfw_score']*100, 2)}%`")
-        embed.set_image(url=url)
-        await ctx.send(embed=embed)
 
     @commands.command()
     @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.user))
