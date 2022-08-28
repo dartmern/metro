@@ -101,7 +101,8 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
             'discord.py-2.0': 'https://discordpy.readthedocs.io/en/latest',
             'discord.py': 'https://discordpy.readthedocs.io/en/stable',
             'python': 'https://docs.python.org/3',
-            'aiohttp' : 'https://docs.aiohttp.org/en/stable/'  
+            'aiohttp' : 'https://docs.aiohttp.org/en/stable/',
+            'twitchio': 'https://twitchio.dev/en/latest'
         }
 
     @property
