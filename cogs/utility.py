@@ -249,12 +249,12 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         e.add_field(name='Denied', value='\n'.join(denied))
         await ctx.send(embed=e)
 
-    async def post_mystbin(self, data : str, encoding : str = 'utf-8'):
-        paste = await self.bot.mystbin_client.create_paste(filename='paste', content=data)
+    async def post_mystbin(self, content: str, *, name: str = None):
+        paste = await self.bot.mystbin_client.create_paste(filename='paste', content=content)
         
         return f"https://mystb.in/{paste.id}"
 
-    @commands.command(name='mystbin')
+    @commands.command(name='mystbin', aliases=['paste'])
     @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.user))
     async def mystbin(self, ctx: MyContext, *, content : str):
         """Create and post a mystbin online."""

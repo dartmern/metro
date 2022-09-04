@@ -150,12 +150,12 @@ class MetroBot(commands.AutoShardedBot):
             help_command=None,
             strip_after_prefix=True,
             #shard_count=10,
-            max_messages=5000
+            max_messages=250
         )
 
         self.db: asyncpg.Pool = discord.utils.MISSING
         
-        self.mystbin_client = mystbin.Client()#token=info_file['mystbin_key'])
+        self.mystbin_client = mystbin.Client(token=info_file['mystbin_key'])
         self.google_client = async_cse.Search(google_token)
         self.hypixel = asyncpixel.Hypixel(info_file['hypixel_api_key'])
 
