@@ -32,8 +32,6 @@ class LibraryConverter(commands.Converter):
             return "enhanced-discord.py"
         if param.lower() in ("dpy", "discordpy", "discord.py"):
             return "discord.py"
-        elif param.lower() in ("dpy2", "discord.py2", "discordpy2"):
-            return "discord.py-2"
         elif param.lower() in ("tio", "twitch", "twitchio"):
             return "twitchio"
         elif param.lower() in ("wl", "wave", "link", "wavelink"):
@@ -41,7 +39,7 @@ class LibraryConverter(commands.Converter):
         elif param.lower() in ("ahttp", "aiohttp"):
             return "aiohttp"
         else:
-            raise commands.UserInputError("Must be one of `enhanced-discord.py`, `discord.py`, `discord.py-2.0`, `twitchio`, `wavelink`, or `aiohttp`")
+            raise commands.UserInputError("Must be one of `enhanced-discord.py`, `discord.py`, `twitchio`, `wavelink`, or `aiohttp`")
 
 class RTFMConverter(commands.Converter):
     async def convert(self, _, param):
@@ -49,8 +47,6 @@ class RTFMConverter(commands.Converter):
             return "enhanced-discord.py"
         if param.lower() in ("dpy", "discordpy", "discord.py"):
             return "discord.py"
-        elif param.lower() in ("dpy2", "discord.py2", "discordpy2"):
-            return "discord.py-2.0"
         elif param.lower() in ("ahttp", "aiohttp"):
             return "aiohttp"
         elif param.lower() in ("python", "py", "python.org"):
@@ -98,7 +94,6 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
     def __init__(self, bot : MetroBot):
         self.bot = bot
         self.page_types = {
-            'discord.py-2.0': 'https://discordpy.readthedocs.io/en/latest',
             'discord.py': 'https://discordpy.readthedocs.io/en/stable',
             'python': 'https://docs.python.org/3',
             'aiohttp' : 'https://docs.aiohttp.org/en/stable/',
@@ -187,7 +182,6 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
     ):
         page_types = self.page_types
 
-
         if not hasattr(self, '_rtfm_cache'):
             await interaction.response.defer()
             await self.build_rtfm_lookup_table(page_types)
@@ -270,10 +264,10 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
     async def rtfm_slash(
         self, 
         interaction: discord.Interaction,
-        library: str,
-        object: Optional[str]
+        library: Optional[Literal['discord.py', 'python', 'aiohttp', 'twitchio']] = 'discord.py',
+        object: Optional[str] = None
     ):
-        """Search through documentation."""
+        """Search through documentation. Defaults to discord.py"""
 
         if library not in list(self.page_types):
             return await interaction.response.send_message(f'That is not a valid library.', ephemeral=True)
@@ -283,26 +277,15 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
 
         await self.do_slash_rtfm(interaction, library, object, search=False)
 
-    @rtfm_slash.autocomplete('library')
-    async def rtfm_slash_library_autocomplete(
-        self, 
-        interaction: discord.Interaction,
-        current: str
-    ) -> List[app_commands.Choice[str]]:
-        return [
-            app_commands.Choice(name=item, value=item)
-            for item in self.page_types if current.lower() in item.lower()
-        ]
-
     @rtfm_slash.autocomplete('object')
     async def rtfm_slash_object_autocomplete(
         self,
         interaction: discord.Interaction,
         current: str
     ) -> List[app_commands.Choice[str]]:
-
-        library = interaction.namespace.library or list(self.page_types.values())[0] # default is d.py latest
-        items = await self.do_slash_rtfm(interaction, library, current)
+    
+        library = interaction.namespace.library or list(self.page_types.items())[0][0] # default is d.py stable
+        items = await self.do_slash_rtfm(interaction, library   , current)
         return [
             app_commands.Choice(name=item, value=item)
             for item in items if current.lower() in item.lower()
@@ -311,7 +294,7 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
     @commands.group(name="rtfm",invoke_without_command=True, case_insensitive=True, aliases=['rtfd'])
     @commands.bot_has_permissions(send_messages=True)
     async def rtfm(self, ctx, *, obj : str = None):
-        """Gives you a documentation link for a discord.py entity. (latest branch)
+        """Gives you a documentation link for a discord.py entity. (stable branch)
 
         Events, objects, and functions are all supported through a
         a cruddy fuzzy algorithm.
@@ -321,7 +304,7 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         you more assistance when searching.
         """
 
-        await self.do_rtfm(ctx, 'discord.py-2.0', obj)
+        await self.do_rtfm(ctx, 'discord.py', obj)
 
     @rtfm.command(name="python",aliases=["py"])
     @commands.bot_has_permissions(send_messages=True)
@@ -329,14 +312,6 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         """Gives you a documentation link for a Python entity."""
 
         await self.do_rtfm(ctx, "python", object)
-
-    @rtfm.command(name="master",aliases=["2.0"])
-    @commands.bot_has_permissions(send_messages=True)
-    async def rtfm_master(self, ctx, *, object : str):
-        """Gives you a documentation link for a discord.py entity. (master branch)"""
-
-        await self.do_rtfm(ctx, "discord.py-2.0", object)
-
 
     @rtfm.command(name='dpy',aliases=['discordpy', 'discord.py'])
     @commands.bot_has_permissions(send_messages=True)
@@ -358,7 +333,7 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
     async def rtfm_github(self, ctx : MyContext, library : Optional[LibraryConverter], *, query : str):
         """
         Get source code from a library for items matching the query.
-        Vaild libraries: `enhanced-discord.py`, `discord.py`, `discord.py-2.0`, `twitchio`, `wavelink`, or `aiohttp`
+        Vaild libraries: `enhanced-discord.py`, `discord.py`, `twitchio`, `wavelink`, or `aiohttp`
 
         This command is powered by [IDevision API](https://idevision.net/static/redoc.html)
         """
