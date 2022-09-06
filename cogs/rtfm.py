@@ -28,9 +28,7 @@ id_token = data['id_token']
 
 class LibraryConverter(commands.Converter):
     async def convert(self, _, param):
-        if param.lower() in ("edpy", "enhanced-discord.py"):
-            return "enhanced-discord.py"
-        if param.lower() in ("dpy", "discordpy", "discord.py"):
+        if param.lower() in ("dpy", "discordpy", "discord.py", "dpy2"):
             return "discord.py"
         elif param.lower() in ("tio", "twitch", "twitchio"):
             return "twitchio"
@@ -260,7 +258,6 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
     @app_commands.command(name='rtfm')
     @app_commands.describe(library='The library you would like to search in.')
     @app_commands.describe(object='The entity you want to search for.')
-    @app_commands.guilds(TESTING_GUILD)
     async def rtfm_slash(
         self, 
         interaction: discord.Interaction,
@@ -283,6 +280,9 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         interaction: discord.Interaction,
         current: str
     ) -> List[app_commands.Choice[str]]:
+
+        if current == '':
+            return []
     
         library = interaction.namespace.library or list(self.page_types.items())[0][0] # default is d.py stable
         items = await self.do_slash_rtfm(interaction, library   , current)
@@ -293,7 +293,7 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
 
     @commands.group(name="rtfm",invoke_without_command=True, case_insensitive=True, aliases=['rtfd'])
     @commands.bot_has_permissions(send_messages=True)
-    async def rtfm(self, ctx, *, obj : str = None):
+    async def rtfm(self, ctx, *, object : str = None):
         """Gives you a documentation link for a discord.py entity. (stable branch)
 
         Events, objects, and functions are all supported through a
@@ -304,43 +304,53 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         you more assistance when searching.
         """
 
-        await self.do_rtfm(ctx, 'discord.py', obj)
+        await self.do_rtfm(ctx, 'discord.py', object)
 
     @rtfm.command(name="python",aliases=["py"])
     @commands.bot_has_permissions(send_messages=True)
-    async def rtfm_py(self, ctx, *, object : str):
-        """Gives you a documentation link for a Python entity."""
+    async def rtfm_py(self, ctx, *, object : str = None):
+        """Gives you a documentation link for a Python object."""
 
         await self.do_rtfm(ctx, "python", object)
 
-    @rtfm.command(name='dpy',aliases=['discordpy', 'discord.py'])
-    @commands.bot_has_permissions(send_messages=True)
-    async def rtfm_dpy(self, ctx, *, object : str):
-        """Gives you a documentation link for a discord.py entity."""
-
-        await self.do_rtfm(ctx, "discord.py", object)
-
     @rtfm.command(name='aiohttp')
     @commands.bot_has_guild_permissions(send_messages=True)
-    async def rtfm_aiohttp(self, ctx: MyContext, *, object: str= None):
-        """Gives you a documentation ilnk for a aiohttp entity"""
+    async def rtfm_aiohttp(self, ctx: MyContext, *, object: str = None):
+        """Gives you a documentation link for a aiohttp object."""
 
         await self.do_rtfm(ctx, 'aiohttp', object)
+
+    @rtfm.command(name='twitchio')
+    async def rtfm_twitchio(self, ctx: MyContext, *, object: str = None):
+        """Gives you a documentation link for a twitchio object."""
+
+        await self.do_rtfm(ctx, 'twitchio', object)
+
+    @rtfm.command(name='refresh', aliases=['reload'])
+    @commands.is_owner()
+    async def rtfm_refresh(self, ctx: MyContext):
+        """Refresh the RTFM lookup cache."""
+
+        async with ctx.typing():
+            await self.build_rtfm_lookup_table()
+
+        await ctx.check()
+
         
 
-    @commands.command(name='rtfs')
+    @commands.hybrid_command(name='rtfs')
     @commands.check(Cooldown(3, 8, 4, 8, commands.BucketType.user))
     async def rtfm_github(self, ctx : MyContext, library : Optional[LibraryConverter], *, query : str):
         """
         Get source code from a library for items matching the query.
-        Vaild libraries: `enhanced-discord.py`, `discord.py`, `twitchio`, `wavelink`, or `aiohttp`
+        Vaild libraries:  `discord.py`, `twitchio`, `wavelink`, or `aiohttp`
 
         This command is powered by [IDevision API](https://idevision.net/static/redoc.html)
         """
         await ctx.typing()
 
         if library is None:
-            library = "enhanced-discord.py"
+            library = "discord.py-2"
 
         url = yarl.URL("https://idevision.net/api/public/rtfs").with_query({'query' : query, 'library' : library, 'format' : 'links'})
         headers = {"User-Agent" : 'metrodiscordbot', 'Authorization' : id_token}
