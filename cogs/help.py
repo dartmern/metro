@@ -526,57 +526,6 @@ class View(discord.ui.View):
         await self.ctx.message.add_reaction(self.ctx.bot.emotes['check'])
         await interaction.message.delete()
 
-    @discord.ui.button(emoji='\U0001f4ce', label='Source', style=discord.ButtonStyle.blurple)
-    async def bar(self, interaction: discord.Interaction, button: discord.ui.Button):
-        button.disabled = True
-        button.style = discord.ButtonStyle.gray
-        await self.message.edit(view=self)
-
-        self.command = self.command.qualified_name
-
-        source_url = 'https://github.com/dartmern/metro'
-        license_url = 'https://github.com/dartmern/metro/blob/master/LICENSE'
-        branch = 'master'
-
-        if self.command is None:
-            embed = Embed(color=self.ctx.color)
-            embed.set_author(name='Here is my source code:')
-            embed.description = str(f"My code is under the [**MPL**]({license_url}) license\n → {source_url}")
-            return await interaction.response.send_message(embed=embed, ephemeral=True)
-
-        if self.command == 'help':
-            src = type(self.ctx.bot.help_command)
-            module = src.__module__
-            filename = inspect.getsourcefile(src)
-            obj = 'help'
-        else:
-            obj = self.ctx.bot.get_command(self.command.replace('.', ' '))
-            if obj is None:
-                embed = Embed(description=f"Take the [**entire reposoitory**]({source_url})", color=self.ctx.color)
-                embed.set_footer(text='Please make sure you follow the license.')
-                return await interaction.response.send_message(embed=embed, ephemeral=True)
-
-            src = obj.callback.__code__
-            module = obj.callback.__module__
-            filename = src.co_filename
-
-        lines, firstlineno = inspect.getsourcelines(src)
-        code_lines = inspect.getsource(src)
-        if not module.startswith('discord'):
-            # not a built-in command
-            location = os.path.relpath(filename).replace('\\', '/')
-        else:
-            location = module.replace('.', '/') + '.py'
-            source_url = 'https://github.com/Rapptz/discord.py'
-            branch = 'master'
-        
-        final_url = f'<{source_url}/blob/{branch}/{location}#L{firstlineno}-L{firstlineno + len(lines) - 1}>'
-        embed = Embed(color=self.ctx.color)
-        embed.description = f"**__My source code for `{str(obj)}` is located at:__**\n{final_url}"\
-                f"\n\nMy code is under licensed under the [**Mozilla Public License**]({license_url})."
-
-        await interaction.response.send_message(embed=embed, ephemeral=True)
-
 class HelpSource(menus.ListPageSource):
     def __init__(self, data, *, prefix):
         super().__init__(data, per_page=10)
@@ -604,47 +553,6 @@ class HelpSource(menus.ListPageSource):
         embed.set_footer(text=f'Type "{self.prefix}help [Command | Category]" for more information | [{menu.current_page + 1}/{maximum}]')
 
         return embed
-
-class GroupHelpPageSource(menus.ListPageSource):
-    def __init__(self, group, commands, *, prefix):
-        super().__init__(entries=commands, per_page=4)
-        self.group = group
-        self.prefix = prefix
-        self.title = f"{self.group.qualified_name.upper()}"
-        self.description = self.group.description
-
-    async def format_page(self, menu, commands):
-        
-        maximum = self.get_max_pages()
-        if maximum > 1:
-            try:
-                title = (
-                    f'{self.group.qualified_name.capitalize()} Module'
-                    + f" | [{menu.current_page + 1}/{maximum}]"
-                )
-            except KeyError:
-                title = self.title + f" | [{menu.current_page + 1}/{maximum}]"
-        else:
-            try:
-                title = f'{self.group.qualified_name.capitalize()} Module'
-            except KeyError:
-                title = self.title
-
-        embed = Embed(title=title, description=self.description)
-
-        for command in commands:
-            signature = f"{command.qualified_name} {command.signature}"
-            embed.add_field(
-                name=signature,
-                value=command.short_doc or "No help provided...",
-                inline=False,
-            )
-
-        embed.set_footer(
-            text=f'Type "{self.prefix}help [Command | Module]" for more information.'
-        )
-        return embed
-
 
 class HelpMenu(OldRoboPages):
     def __init__(self, source):
@@ -936,7 +844,7 @@ class MetroHelp(commands.HelpCommand):
 
     async def send_group_help(self, group):
         
-        entries = list(group.commands)
+        entries = await self.filter_commands(list((group.commands)))
         
         if int(len(group.commands)) == 0 or len(entries) == 0:
             view = View(self.context, command=group)
