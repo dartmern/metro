@@ -453,7 +453,7 @@ async def on_guild_join(guild: discord.Guild):
         embed.description = f"\n__**Name:**__ {guild.name} (ID: {guild.id})"\
                             f"\n__**Human/Bots:**__ {len(humans)}/{len(bots)}"\
                             f"\n__**Owner:**__ {guild.owner} (ID: {guild.owner_id})"\
-                            f"\n__**Added*:**__ {ts_now('F')} ({ts_now('R')})"
+                            f"\n__**Added:**__ {ts_now('F')} ({ts_now('R')})"
         count = discord.Embed(color=discord.Colour.purple(), description="Guilds count: **%s**" % len(bot.guilds))
         await channel.send(embeds=[embed, count])
 
