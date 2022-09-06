@@ -1,4 +1,5 @@
 import ast
+import asyncio
 from typing import Optional
 
 from mee6_py_api import API
@@ -368,6 +369,115 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
 
         if ctx.interaction:
             await ctx.interaction.response.send_modal(GiveawayCreate(interaction=ctx.interaction))
+            return 
+
+        questions = [
+            'How long will this giveaway last? Ex. 10 minutes or tomorrow',
+            'How many winners will this giveaway have?',
+            'What are you giving away? (prize)'
+            ]
+
+        answers = []
+
+        def abort_check(x: discord.Message):
+            return x.content == f'{ctx.prefix}abort'
+
+        for question in questions:
+
+            embed = create_embed(question, color=discord.Color.yellow())
+            embed.set_footer(text=f'Attempt 1/3. | Type {ctx.prefix}abort to abort.')
+            
+            message = await ctx.send(embed=embed)
+
+            def check(x: discord.Message):
+                return x.author == ctx.author and x.channel == ctx.channel
+
+            for x in range(2, 5):
+                try:
+                    user_response: discord.Message = await self.bot.wait_for('message', timeout=60, check=check)
+                except asyncio.TimeoutError:
+                    try:
+                        await message.delete()
+                    except discord.HTTPException:
+                        pass
+                    await ctx.send('Giveaway creation timed out.')
+                    return
+
+                if abort_check(user_response):
+                    await ctx.send('Aborting.')
+                    try:
+                        await message.delete()
+                    except discord.HTTPException:
+                        pass
+                    return
+
+                if question == questions[0]:
+                    try:
+                        t = await FutureTime(user_response.content).convert(ctx, user_response.content)
+                        answers.append(t)
+                    except Exception as e:
+                        if x > 3:
+                            await ctx.send('Too many failed attempts. Try again.')
+                            return
+                        try:
+                            await message.delete()
+                        except discord.HTTPException:
+                            pass
+                        embed.set_footer(text=f'Attempt {x}/3 | Type {ctx.prefix}abort to abort.')
+                        message = await ctx.send(embeds=[embed, create_embed(e)])
+                    try:
+                        await message.delete()
+                    except discord.HTTPException:
+                        pass
+                    break
+
+                if question == questions[1]:
+                    if user_response.content.isdigit():
+                        answers.append(int(user_response.content))
+                        try:
+                            await message.delete()
+                        except discord.HTTPException:
+                            pass
+                        break
+                    try:
+                        await message.delete()
+                    except discord.HTTPException:
+                        pass
+                    if x > 3:
+                        await ctx.send('Too many failed attempts. Try again.')
+                        return
+                    embed.set_footer(text=f'Attempt {x}/3 | Type {ctx.prefix}abort to abort.')
+                    message = await ctx.send(embed=embed)
+
+                if question == questions[2]:
+                    answers.append(user_response.content)
+                    try:
+                        await message.delete()
+                    except discord.HTTPException:
+                        pass
+                    break
+        
+        command = self.bot.get_command('giveaway start')
+        await ctx.invoke(
+                command, 
+                duration=answers[0], 
+                winners=answers[1],
+                requirements = {
+                    "role": [],
+                    "bypass": [],
+                    "blacklist": [],
+                    "mee6": []            
+                },
+                prize=answers[2])
+
+    @giveaway.command(name='details')
+    async def giveaway_details(self, ctx: MyContext):
+        """Give some information on how to use Metro's giveaways."""
+
+        embed = create_embed(
+            '[How to use the requirements argument for giveaways](https://imgur.com/a/ksQpZfj)'
+        )
+        await ctx.send(embed=embed)
 
     @giveaway.command(name='list')
     @commands.has_guild_permissions(manage_guild=True)
