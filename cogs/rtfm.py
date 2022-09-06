@@ -158,10 +158,10 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         return result
 
 
-    async def build_rtfm_lookup_table(self, page_types):
-        cache = {}
-        for key, page in page_types.items():
-            sub = cache[key] = {}
+    async def build_rtfm_lookup_table(self):
+        cache: dict[str, dict[str, str]] = {}
+        for key, page in self.page_types.items():
+            cache[key] = {}
             async with self.bot.session.get(page + '/objects.inv') as resp:
                 if resp.status != 200:
                     raise RuntimeError('Cannot build rtfm lookup table, try again later.')
@@ -178,11 +178,10 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         obj: str,
         search: bool = True # weather this is a search or execution
     ):
-        page_types = self.page_types
 
         if not hasattr(self, '_rtfm_cache'):
             await interaction.response.defer()
-            await self.build_rtfm_lookup_table(page_types)
+            await self.build_rtfm_lookup_table()
 
         obj = re.sub(r'^(?:discord\.(?:ext\.)?)?(?:commands\.)?(.+)', r'\1', obj)
 
@@ -226,7 +225,7 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
 
         if not hasattr(self, '_rtfm_cache'):
             await ctx.typing()
-            await self.build_rtfm_lookup_table(page_types)
+            await self.build_rtfm_lookup_table()
 
         obj = re.sub(r'^(?:discord\.(?:ext\.)?)?(?:commands\.)?(.+)', r'\1', obj)
 
