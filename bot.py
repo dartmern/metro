@@ -149,7 +149,7 @@ class MetroBot(commands.AutoShardedBot):
             owner_ids=DEVELOPER_IDS,
             help_command=None,
             strip_after_prefix=True,
-            shard_count=10,
+            #shard_count=10,
             max_messages=250
         )
 
