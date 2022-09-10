@@ -105,3 +105,11 @@ class UnenterGiveawayView(discord.ui.View):
 
         embed = create_embed('You have left this giveaway.', color=discord.Color.yellow())
         await interaction.edit_original_response(embed=embed, view=None)
+
+class Controls(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label='Controls')
+    async def controls_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """A button that displays some controls for giveaway managers."""

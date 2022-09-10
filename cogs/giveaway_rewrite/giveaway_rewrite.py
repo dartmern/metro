@@ -32,6 +32,9 @@ from .converters.requirements import Requirements
 
 from .settings.show_settings import show_settings   
 from .settings.add_setting import add_setting
+from .settings.get_setting import get_setting
+
+from .checks.manager_check import giveaway_manager_check
 
 class giveaways(commands.Cog, description='The giveaways rewrite including buttons.'):
     def __init__(self, bot: MetroBot):
@@ -197,8 +200,7 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
         await ctx.send(EMOTES['check'], hide=True)
     
     @commands.hybrid_group(name='giveaway', fallback='help', aliases=['g'])
-    @commands.has_guild_permissions(manage_guild=True)
-    @app_commands.default_permissions(manage_guild=True)
+    @giveaway_manager_check()
     async def giveaway(
         self, 
         ctx: MyContext
@@ -210,8 +212,7 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
 
     @giveaway.command(name='end')
     @app_commands.describe(message_id='The message id of the giveaway.')
-    @app_commands.default_permissions(manage_guild=True)
-    @commands.has_guild_permissions(manage_guild=True)
+    @giveaway_manager_check()
     async def giveaway_end(
         self, 
         ctx: MyContext,
@@ -244,7 +245,7 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
         await ctx.send(EMOTES['check'], hide=True)
 
     @giveaway.command(name='reroll')
-    @commands.has_guild_permissions(manage_guild=True)
+    @giveaway_manager_check()
     @app_commands.describe(message_id='The message id of the giveaway.')
     async def giveaway_reroll(
         self,
@@ -282,7 +283,7 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
         
 
     @giveaway.command(name='start')
-    @commands.has_guild_permissions(manage_guild=True)
+    @giveaway_manager_check()
     @app_commands.describe(duration='Duration of this giveaway.')
     @app_commands.describe(winners='Amount of winners.')
     @app_commands.describe(requirements='Requirements to join this giveaway.')
@@ -363,7 +364,7 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
                 pass # for now idk what to do at the moment
     
     @giveaway.command(name='create', with_app_command=True)
-    @commands.has_guild_permissions(manage_guild=True)
+    @giveaway_manager_check()
     async def giveaway_create(self, ctx: MyContext):
         """Interactively create a giveaway."""
 
@@ -480,7 +481,7 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
         await ctx.send(embed=embed)
 
     @giveaway.command(name='list')
-    @commands.has_guild_permissions(manage_guild=True)
+    @giveaway_manager_check()
     async def giveaway_list(self, ctx: MyContext):
         """
         List all the giveaways in the current guild.
