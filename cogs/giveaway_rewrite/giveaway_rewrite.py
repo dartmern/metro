@@ -247,6 +247,7 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
     @giveaway.command(name='reroll')
     @giveaway_manager_check()
     @app_commands.describe(message_id='The message id of the giveaway.')
+    @app_commands.describe(winners='The amount of winners to reroll.')
     async def giveaway_reroll(
         self,
         ctx: MyContext,
