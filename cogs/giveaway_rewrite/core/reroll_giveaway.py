@@ -13,13 +13,14 @@ async def reroll_giveaway(
     bot: MetroBot,
     message_id: int,
     data: List, # formatted list from database
-    message: discord.Message):
+    message: discord.Message,
+    winners: int = 1):
     """Reroll a giveaway."""
 
     entries = await get_entries(bot, message_id)
 
     raw_embed = data[0]
-    amount_of_winners = data[1]
+    amount_of_winners = winners
 
     raw = ast.literal_eval(raw_embed.replace('null', 'None'))
     embed = discord.Embed.from_dict(raw)

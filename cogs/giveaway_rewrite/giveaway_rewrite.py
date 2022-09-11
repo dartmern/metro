@@ -34,7 +34,7 @@ from .settings.show_settings import show_settings
 from .settings.add_setting import add_setting
 from .settings.get_setting import get_setting
 
-from .checks.manager_check import giveaway_manager_check
+from .checks.manager_check import giveaway_manager_check, giveaway_manager_check_interaction
 
 class giveaways(commands.Cog, description='The giveaways rewrite including buttons.'):
     def __init__(self, bot: MetroBot):
@@ -250,8 +250,8 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
     async def giveaway_reroll(
         self,
         ctx: MyContext,
-        *,
-        message_id: MessageID = None):
+        message_id: MessageID = None,
+        winners: int = 1):
         """Reroll a giveaway."""
 
         if not message_id:
@@ -278,7 +278,7 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
         except discord.HTTPException:
             return await ctx.send("It seems like the giveaway's message was deleted.", hide=True)
 
-        await reroll_giveaway(self.bot, message_id, data, message)
+        await reroll_giveaway(self.bot, message_id, data, message, winners)
         await ctx.send(EMOTES['check'], hide=True)
         
 
