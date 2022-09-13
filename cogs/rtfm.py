@@ -95,7 +95,8 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
             'discord.py': 'https://discordpy.readthedocs.io/en/stable',
             'python': 'https://docs.python.org/3',
             'aiohttp' : 'https://docs.aiohttp.org/en/stable/',
-            'twitchio': 'https://twitchio.dev/en/latest'
+            'twitchio': 'https://twitchio.dev/en/latest',
+            'mystbin.py': 'https://mystbinpy.readthedocs.io/en/latest/'
         }
 
     @property
@@ -260,7 +261,7 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
     async def rtfm_slash(
         self, 
         interaction: discord.Interaction,
-        library: Optional[Literal['discord.py', 'python', 'aiohttp', 'twitchio']] = 'discord.py',
+        library: Optional[Literal['discord.py', 'python', 'aiohttp', 'twitchio', 'mystbin.py']] = 'discord.py',
         object: Optional[str] = None
     ):
         """Search through documentation. Defaults to discord.py"""
