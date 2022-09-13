@@ -1,3 +1,4 @@
+import datetime
 import json
 from typing import List
 from bot import MetroBot
@@ -6,6 +7,8 @@ from utils.embeds import create_embed
 from .get_entries import get_entries
 from .get_giveaway import get_giveaway
 from .validate_entry import validate_entry
+
+from ...developer import TabularData
 
 import discord
 import random
@@ -19,6 +22,7 @@ async def end_giveaway(
     ):
     """End a giveaway and delete the entries."""
     entries = await get_entries(bot, message_id)
+    mystbin_button = None
 
     raw_embed = data[0]
     amount_of_winners = data[1]
@@ -70,6 +74,30 @@ async def end_giveaway(
             alert_message = f'Winners: {winners_fmt}'
             embed.color = discord.Color.red()
 
+            rows = [f'{bot.get_user(entry["author_id"])} ({entry["author_id"]})' for entry in entries]
+            entrants = "\n".join(rows)
+            content = f'''
+                    Giveaway Details
+
+                    Prize: {message.embeds[0].author.name}
+                    Winners: {', '.join(f"{bot.get_user(record['author_id'])} ({record['author_id']})" for record in winners)}
+                    Giveaway ID: {message_id}
+
+                    
+                    Entrants:
+                    ---------
+
+                    {entrants}
+                    '''
+            expires = datetime.datetime.now() + datetime.timedelta(days=7)
+            
+            paste = await bot.mystbin_client.create_paste(
+                filename=f'Giveaway Dump {message_id}.txt', 
+                content=content, 
+                expires=expires)
+
+            mystbin_button = discord.ui.Button(label='Entries', url=f'https://mystb.in/{paste.id}')
+
     old = embed.description 
     old = old.replace('Click the button below to enter!', alert_message) # bad way of doing this but i'm testing
     old = old.replace('Ends', 'Ended')
@@ -84,6 +112,8 @@ async def end_giveaway(
 
     view = discord.ui.View()
     view.add_item(button)
+    if mystbin_button:
+        view.add_item(mystbin_button)
         
     try:
         await message.edit(embed=embed, view=view)
