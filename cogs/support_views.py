@@ -139,13 +139,17 @@ class support(commands.Cog, description='Support only commands.'):
     async def close_ticket(self, ctx: MyContext):
         """Make a thread as Solved."""
 
-        assert isinstance(ctx.channel, discord.Thread)
+        if not isinstance(ctx.channel, discord.Thread):
+            return
+
         await ctx.message.add_reaction(self.bot.check)
+        await ctx.channel.add_tags(discord.Object(1019745545805365248))
         await ctx.channel.edit(
             locked=True, 
             archived=True, 
             reason=f'Marked solved by: {ctx.author} (ID: {ctx.author.id})',
             )
+        
 
 async def setup(bot):
     await bot.add_cog(support(bot))
