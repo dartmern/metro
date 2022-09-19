@@ -858,16 +858,16 @@ class MetroHelp(commands.HelpCommand):
     async def send_cog_help(self, cog: commands.Cog):
         to_join = []
         for command in cog.get_commands():
-            if len(command.name) < 15:
+            short_doc = command.short_doc or "No help provided..."
+            if len(command.name) < 20:
                 group_mark = '✅' if isinstance(command, commands.Group) else ''
-                empty_space = 15 - len(command.name)
+                empty_space = 20 - len(command.name)
                 if not group_mark == '':
                     empty_space = empty_space - 2
-                short_doc = command.short_doc or "No help provided..."
                 signature = f"`{command.name}{' '*empty_space}{group_mark}:` {short_doc if len(short_doc) < 58 else f'{short_doc[0:58]}...'}"
             else:
-                group_mark = '\✅' if isinstance(command, commands.Group) else ''
-                signature = f"`{command.name[0:12]}...{group_mark}` {short_doc if len(short_doc) < 58 else f'{short_doc[0:58]}...'}"
+                group_mark = '✅' if isinstance(command, commands.Group) else ''
+                signature = f"`{command.name[0:15]}...{group_mark}:` {short_doc if len(short_doc) < 58 else f'{short_doc[0:58]}...'}"
             to_join.append(signature)
 
         embed = Embed()
