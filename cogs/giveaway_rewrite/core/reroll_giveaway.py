@@ -75,16 +75,8 @@ async def reroll_giveaway(
 
     embed.description = old
     embed.set_footer(text=message.embeds[0].footer.text)
-
-    button = discord.ui.Button()
-    button.disabled = True
-    button.style = discord.ButtonStyle.red
-    button.label = 'Giveaway Ended'
-
-    view = discord.ui.View()
-    view.add_item(button)
         
-    await message.edit(embed=embed, view=view)
+    await message.edit(embed=embed)
 
     if len(entries) > 0:
         term = 'has' if len(winners) < 2 else 'have'
