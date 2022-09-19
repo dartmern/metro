@@ -30,6 +30,127 @@ import inspect
 import unicodedata
 
 from utils.pages import StopView
+from utils.embeds import create_embed
+
+class AddPrefixModal(discord.ui.Modal):
+    def __init__(self, ctx: MyContext):
+        super().__init__(title='Add a prefix.')
+        self.ctx = ctx
+        self.bot: MetroBot = ctx.bot
+
+    prefix = discord.ui.TextInput(label='Prefix', max_length=10, min_length=1)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        query = "INSERT INTO prefixes (guild_id, prefix) VALUES ($1, $2)"
+
+        try:
+            await self.bot.db.execute(query, self.ctx.guild.id, self.prefix.value)
+            self.bot.prefixes[self.ctx.guild.id] = await self.bot.fetch_prefixes(self.ctx.guild.id)
+
+            prefixes = ['`%s`' % prefix for prefix in self.bot.prefixes[self.ctx.guild.id]]
+            embed = create_embed(f'Your current prefixes: {", ".join(prefixes)}', title='Prefix Configuration')
+
+            await interaction.message.edit(embed=embed)
+            await interaction.response.send_message(f'{self.bot.check} **|** Added `{self.prefix.value}` to the guild\'s prefixes.', ephemeral=True)
+        except asyncpg.exceptions.UniqueViolationError:
+            await interaction.response.send_message(f'{self.bot.cross} **|** That is already a prefix in this guild.', ephemeral=True)
+
+class RemovePrefixSelect(discord.ui.Select):
+    def __init__(self, ctx: MyContext, *, options: List[discord.SelectOption], message: discord.Message) -> None:
+        super().__init__(options=options, max_values=len(options) - 1)
+        self.ctx = ctx
+        self.bot: MetroBot = ctx.bot
+        self.message = message
+
+    async def callback(self, interaction: discord.Interaction):
+        
+        old = list(await self.bot.fetch_prefixes(self.ctx.guild.id))
+        new = [x for x in old if x not in self.values]
+
+        for prefix in self.values:
+            query = "DELETE FROM prefixes WHERE (guild_id, prefix) = ($1, $2)"
+            await self.bot.db.execute(query, self.ctx.guild.id, prefix)
+        self.bot.prefixes[self.ctx.guild.id] = new
+
+        prefixes = ['`%s`' % prefix for prefix in self.bot.prefixes[self.ctx.guild.id]]
+        embed = create_embed(f'Your current prefixes: {", ".join(prefixes)}', title='Prefix Configuration')
+
+        removed = ['`%s`' % prefix for prefix in self.values]
+        await self.message.edit(embed=embed)
+        await interaction.response.send_message(f'{self.bot.check} **|** Removed {", ".join(removed)} from my prefixes.', ephemeral=True)
+
+
+class RemovePrefixView(discord.ui.View):
+    def __init__(self, ctx: MyContext, *, options: List[discord.SelectOption], message: discord.Message):
+        super().__init__(timeout=300)
+
+        self.add_item(RemovePrefixSelect(ctx, options=options, message=message))
+
+class PrefixView(discord.ui.View):
+    def __init__(self, ctx: MyContext):
+        super().__init__(timeout=300)
+        self.ctx = ctx
+        self.bot: MetroBot = ctx.bot
+        self.message: Optional[discord.Message] = None
+
+    async def interaction_check(self, interaction: discord.Interaction):
+        if self.ctx.author.id == interaction.user.id:
+            return True
+        else:
+            await interaction.response.send_message(
+                "Only the command invoker can use this button.", ephemeral=True
+            )
+
+    @discord.ui.button(
+        label='Add prefix', 
+        style=discord.ButtonStyle.green, 
+        emoji='<:mplus:904450883633426553>')
+    async def add_prefix_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Add a prefix prompt."""
+
+        await interaction.response.send_modal(AddPrefixModal(self.ctx))
+
+    @discord.ui.button(
+        label='Remove prefix',
+        style=discord.ButtonStyle.red,
+        emoji='<:mminus:904450883587276870>')
+    async def remove_prefix(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Remove a prefix prompt."""
+
+        options = [discord.SelectOption(label=prefix) for prefix in self.bot.prefixes[self.ctx.guild.id]]
+        embed = create_embed('Select the prefixes that you want to remove.', color=discord.Color.red())
+        await interaction.response.send_message(
+            embed=embed, 
+            view=RemovePrefixView(self.ctx, options=options, message=self.message), 
+            ephemeral=True)
+
+    @discord.ui.button(
+        label='Clear prefixes',
+        style=discord.ButtonStyle.blurple,
+        emoji='<:slash:819254444445270056>')
+    async def clear_prefixes(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Clear prefixes prompt."""
+
+        confirm = await self.ctx.confirm(
+            'Are you sure you want to clear the prefixes?', 
+            interaction=interaction,
+            delete_after=False)
+        if confirm.value is False:
+            await confirm.message.edit(content='Canceled.', view=None)
+            return
+        if confirm.value is None:
+            await confirm.message.edit(content='Timed out.', view=None)
+            return
+
+        await self.bot.db.execute('DELETE FROM prefixes WHERE guild_id = $1', self.ctx.guild.id)
+        self.bot.prefixes[self.ctx.guild.id] = self.bot.PRE
+        
+        prefixes = ['`%s`' % prefix for prefix in self.bot.prefixes[self.ctx.guild.id]]
+        embed = create_embed(f'Your current prefixes: {", ".join(prefixes)}', title='Prefix Configuration')
+
+        await self.message.edit(embed=embed)
+        await confirm.message.edit(content=f'{self.bot.check} **|** Reset all my prefixes!', view=None)
+    
 
 class SourceView(discord.ui.View):
     def __init__(self, ctx : MyContext, code : str):
@@ -309,98 +430,16 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             return await ctx.send('Output too long to display.')
         await ctx.send(msg)
 
-    @commands.hybrid_group(name='prefix', case_insensitive=True, invoke_without_command=True, fallback='help')
+    @commands.hybrid_command()
     @commands.has_permissions(manage_guild=True)
-    @commands.bot_has_permissions(send_messages=True)
-    async def prefix(self, ctx : MyContext):
-        """
-        Manage prefixes for the bot.
-        """
-        return await ctx.help()
+    async def prefix(self, ctx: MyContext):
+        """Manage custom prefixes."""
 
-
-    @prefix.command(name='add')
-    @commands.has_permissions(manage_guild=True)
-    @app_commands.describe(prefix='The prefix you want to add.')
-    async def prefix_add(self, ctx : MyContext, prefix : str) -> discord.Message:
-        """
-        Add a prefix to the guild's prefixes.
-        Use quotes to add spaces to your prefix.
-        """
-        query = """
-                INSERT INTO prefixes(guild_id, prefix) VALUES ($1, $2)
-                """
-
-        try:
-            await self.bot.db.execute(query, ctx.guild.id, prefix)
-            self.bot.prefixes[ctx.guild.id] = await self.bot.fetch_prefixes(ctx.message)
-            
-            embed = Embed()
-            embed.colour = discord.Colour.green()
-            embed.description = f'{self.bot.check} **|** Added `{prefix}` to the guild\'s prefixes.'
-            await ctx.send(embed=embed)
-
-        except asyncpg.exceptions.UniqueViolationError:
-            embed = Embed()
-            embed.colour = discord.Colour.red()
-            embed.description = f'{self.bot.cross} **|** That is already a prefix in this guild.'
-            await ctx.send(embed=embed)
-
-
-    @prefix.command(name='list')
-    async def prefix_list(self, ctx : MyContext) -> discord.Message:
-        """List all the bot's prefixes."""
-
-        prefixes = await self.bot.get_pre(self.bot, ctx.message, raw_prefix=True)
-
-        embed = Embed()
-        embed.title = 'My prefixes'
-        embed.description = (ctx.me.mention + '\n' + '\n'.join(prefixes)
-        )
-        embed.set_footer(text=f'{len(prefixes) + 1} prefixes')
-
-        await ctx.send(embed=embed)
-
-    
-    @prefix.command(name='remove')
-    @app_commands.describe(prefix='The prefix you want to remove.')
-    @commands.has_permissions(manage_guild=True)
-    async def prefix_remove(self, ctx : MyContext, prefix : str) -> discord.Message:
-        """Remove a prefix from the bot's prefixes."""
-
-        old = list(await self.bot.get_pre(self.bot, ctx.message, raw_prefix=True))
-        if prefix in old:
-            embed = Embed()
-            embed.description = f'{self.bot.check} **|** Removed `{prefix}` from my prefixes.'
-            embed.colour = discord.Colour.green()
-            await ctx.send(embed=embed)
-        else:
-            embed = Embed()
-            embed.description = f'{self.bot.cross} **|** That is not one of my prefixes.'
-            embed.colour = discord.Colour.red()
-            return await ctx.send(embed=embed)
-
-        await self.bot.db.execute('DELETE FROM prefixes WHERE (guild_id, prefix) = ($1, $2)', ctx.guild.id, prefix)
-        self.bot.prefixes[ctx.guild.id] = await self.bot.fetch_prefixes(ctx.message)
-
-    @prefix.command(name='clear')
-    @commands.has_permissions(manage_guild=True)
-    async def prefix_clear(self, ctx : MyContext):
-        """Clears all my prefixes and resets to default."""
-
-        confirm = await ctx.confirm('Are you sure you want to clear all your prefixes?', timeout=30, delete_after=False)
-        if confirm.value is None:
-            return await confirm.message.edit(content='Timed out.', view=None)
-        if confirm.value is False:
-            return await confirm.message.edit(content='Canceled.', view=None)
-
-        await self.bot.db.execute('DELETE FROM prefixes WHERE guild_id = $1', ctx.guild.id)
-        self.bot.prefixes[ctx.guild.id] = self.bot.PRE
-
-        embed = Embed()
-        embed.description = f'{self.bot.check} **|** Reset all my prefixes!'
-        embed.colour = discord.Colour.green()
-        return await confirm.message.edit(content="", embed=embed, view=None)
+        prefixes = ['`%s`' % prefix for prefix in self.bot.prefixes[ctx.guild.id]]
+        embed = create_embed(f'Your current prefixes: {", ".join(prefixes)}', title='Prefix Configuration')
+        
+        view = PrefixView(ctx)
+        view.message = await ctx.send(embed=embed, view=view)
 
     @app_commands.command(name='source')
     @app_commands.describe(command='The command\'s source you wish to search for.')
