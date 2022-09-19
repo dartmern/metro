@@ -93,6 +93,7 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         self.bot = bot
         self.page_types = {
             'discord.py': 'https://discordpy.readthedocs.io/en/stable',
+            'discord.py (master)': 'https://discordpy.readthedocs.io/en/latest',
             'python': 'https://docs.python.org/3',
             'aiohttp' : 'https://docs.aiohttp.org/en/stable/',
             'twitchio': 'https://twitchio.dev/en/latest',
@@ -261,7 +262,7 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
     async def rtfm_slash(
         self, 
         interaction: discord.Interaction,
-        library: Optional[Literal['discord.py', 'python', 'aiohttp', 'twitchio', 'mystbin.py']] = 'discord.py',
+        library: Optional[str] = 'discord.py',
         object: Optional[str] = None
     ):
         """Search through documentation. Defaults to discord.py"""
@@ -282,11 +283,23 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
     ) -> List[app_commands.Choice[str]]:
     
         library = interaction.namespace.library or list(self.page_types.items())[0][0] # default is d.py stable
-        items = await self.do_slash_rtfm(interaction, library   , current)
+        items = await self.do_slash_rtfm(interaction, library, current)
 
         return [
             app_commands.Choice(name=item, value=item)
             for item in items if current.lower() in item.lower()
+        ]
+
+    @rtfm_slash.autocomplete('library')
+    async def rtfm_slash_library_autocomplete(
+        self,
+        interaction: discord.Interaction,
+        current: str
+    ) -> List[app_commands.Choice[str]]:
+
+        return [
+            app_commands.Choice(name=item, value=item)
+            for item in list(self.page_types.keys()) if current.lower() in item.lower()
         ]
 
     @commands.group(name="rtfm",invoke_without_command=True, case_insensitive=True, aliases=['rtfd'])
@@ -323,6 +336,12 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         """Gives you a documentation link for a twitchio object."""
 
         await self.do_rtfm(ctx, 'twitchio', object)
+
+    @rtfm.command(name='mystbin', aliases=['mystbin.py'])
+    async def rtfm_mystbin(self, ctx: MyContext, *, object: str = None):
+        """Gives you a documentation link for a mystbin.py object."""
+
+        await self.do_rtfm(ctx, 'mystbin.py', object)
 
     @rtfm.command(name='refresh', aliases=['reload'])
     @commands.is_owner()
