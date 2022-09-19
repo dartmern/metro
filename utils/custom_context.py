@@ -100,7 +100,7 @@ class MyContext(commands.Context):
         timeout : float = 60.0,
         delete_after : bool = True,
         author_id : Optional[int] = None,
-        interaction : Optional[discord.Interaction] = None
+        interaction: Optional[discord.Interaction] = None
 
     ) -> ConfirmationView:
 
@@ -111,10 +111,13 @@ class MyContext(commands.Context):
             delete_after=delete_after,
             ctx=self,
             author_id=author_id
-
         )
 
-        view.message = await self.send(message, view=view)
+        if interaction:
+            await interaction.response.send_message(message, view=view, ephemeral=True)
+            view.message = await interaction.original_response()
+        else:
+            view.message = await self.send(message, view=view, ephemeral=True)
         await view.wait()
         return view
         

@@ -373,9 +373,9 @@ class MetroBot(commands.AutoShardedBot):
         return commands.when_mentioned_or(*prefix)(bot, message) if not raw_prefix else prefix
          
 
-    async def fetch_prefixes(self, message : discord.Message):
+    async def fetch_prefixes(self, guild_id: int):
         return tuple([x['prefix'] for x in
-            await self.db.fetch('SELECT prefix from prefixes WHERE guild_id = $1', message.guild.id)]) or self.PRE
+            await self.db.fetch('SELECT prefix from prefixes WHERE guild_id = $1', guild_id)]) or self.PRE
 
 
     async def get_or_fetch_member(self, guild, member_id) -> Optional[discord.Member]:
