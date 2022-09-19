@@ -280,12 +280,10 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         interaction: discord.Interaction,
         current: str
     ) -> List[app_commands.Choice[str]]:
-
-        if current == '':
-            return []
     
         library = interaction.namespace.library or list(self.page_types.items())[0][0] # default is d.py stable
         items = await self.do_slash_rtfm(interaction, library   , current)
+
         return [
             app_commands.Choice(name=item, value=item)
             for item in items if current.lower() in item.lower()
@@ -336,8 +334,6 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
 
         await ctx.check()
 
-        
-
     @commands.hybrid_command(name='rtfs')
     @commands.check(Cooldown(3, 8, 4, 8, commands.BucketType.user))
     async def rtfm_github(self, ctx : MyContext, library : Optional[LibraryConverter], *, query : str):
@@ -384,4 +380,3 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
 
 async def setup(bot):
     await bot.add_cog(docs(bot))
-
