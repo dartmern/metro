@@ -135,25 +135,17 @@ class support(commands.Cog, description='Support only commands.'):
 
             await ctx.send('Your bot request has been submitted to the moderators. \nI will DM you about the status of your request.')
 
-    @commands.command(name='panel')
-    @commands.is_owner()
-    async def panel(self, ctx: MyContext):
-        """Send the support button panel to the support channel."""
-
-        channel = self.bot.get_channel(SUPPORT_CHANNEL)
-
-        embed = create_embed('Please choose a button below that matches your request.', color=discord.Color.yellow())
-        await channel.send(embed=embed, view=SupportView())
-
-    @commands.command(name='close')
+    @commands.command(name='solved')
     async def close_ticket(self, ctx: MyContext):
-        """Close a support ticket."""
+        """Make a thread as Solved."""
 
-        category = self.bot.get_channel(SUPPORT_CATEGORY)
-        if ctx.channel.category == category:
-            await ctx.send(f'Closing ticket in 5 seconds. \nIf you have additional requests create another ticket in <#{SUPPORT_CHANNEL}>')
-            await asyncio.sleep(5)
-            await ctx.channel.delete()
+        assert isinstance(ctx.channel, discord.Thread)
+        await ctx.message.add_reaction(self.bot.check)
+        await ctx.channel.edit(
+            locked=True, 
+            archived=True, 
+            reason=f'Marked solved by: {ctx.author} (ID: {ctx.author.id})',
+            )
 
 async def setup(bot):
     await bot.add_cog(support(bot))

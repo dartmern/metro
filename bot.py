@@ -301,7 +301,7 @@ class MetroBot(commands.AutoShardedBot):
             await ctx.send(f"{self.check} Removed **{member}** from the bot blacklist.")
 
     async def setup_hook(self) -> None:    
-        self.add_view(SupportView())
+        pass
     
     async def on_ready(self):
         await self.wait_until_ready()
