@@ -1,3 +1,5 @@
+:orphan:
+
 Frequently Asked questions
 ============================
 
@@ -21,10 +23,10 @@ Metro doesn't have slash commands showing up!
 
 In order to have application commands (slash commands) you need to invite the bot with the `applications.commands`` scope.
 
-:.. note:: 
+.. note:: 
      You do not need to kick and reinvite to bot to do this.
 
-You can run `@Metro invite`` and the links will have the scope already included. (or by `clicking here <https://discord.com/oauth2/authorize?client_id=788543184082698252&scope=bot+applications.commands&permissions=140932115831>`_)
+You can run `@Metro invite` and the links will have the scope already included. (or by `clicking here <https://discord.com/oauth2/authorize?client_id=788543184082698252&scope=bot+applications.commands&permissions=140932115831>`_)
 
 .. image:: /images/applications_commands_faq_1.png
 
