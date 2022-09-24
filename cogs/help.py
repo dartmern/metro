@@ -436,8 +436,7 @@ class NewHelpView(discord.ui.View):
             name='Getting Help',
             value=f'\n • Use `{self.ctx.clean_prefix}help <command | category>` for some help and examples on any command'\
                 f'\n • Join my [support server]({self.ctx.bot.support}) for additional help'\
-                f'\n • Use the select menu below to view the categories\' commands'\
-                f'\n • Use `{self.ctx.clean_prefix}search <query>` to search for a particular command',
+                f'\n • Use the select menu below to view the categories\' commands',
             inline=True
         )
         embed.add_field(

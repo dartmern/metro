@@ -37,7 +37,7 @@ class LibraryConverter(commands.Converter):
         elif param.lower() in ("ahttp", "aiohttp"):
             return "aiohttp"
         else:
-            raise commands.UserInputError("Must be one of `enhanced-discord.py`, `discord.py`, `twitchio`, `wavelink`, or `aiohttp`")
+            raise commands.UserInputError("Library must be one of `discord.py`, `twitchio`, `wavelink`, or `aiohttp`")
 
 class RTFMConverter(commands.Converter):
     async def convert(self, _, param):
@@ -354,6 +354,8 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         await ctx.check()
 
     @commands.hybrid_command(name='rtfs')
+    @app_commands.describe(library='The library you would like to search in.')
+    @app_commands.describe(query='The query/method you want to search for.')
     @commands.check(Cooldown(3, 8, 4, 8, commands.BucketType.user))
     async def rtfm_github(self, ctx : MyContext, library : Optional[LibraryConverter], *, query : str):
         """
