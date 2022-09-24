@@ -18,7 +18,8 @@ Questions that are pointed toward some basic and general understanding.
 How do I get the ID of something?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You can check out `this article <https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID->`_ by discord's support on how to find User/Server/Message IDs.
+You can check out the article below by discord's support on how to find User/Server/Message IDs.
+https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID-
 
 Metro doesn't have slash commands showing up!
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -28,7 +29,7 @@ In order to have application commands (slash commands) you need to invite the bo
 .. note:: 
      You do not need to kick and reinvite to bot to do this.
 
-You can run `@Metro invite` and the links will have the scope already included. (or by `clicking here <https://discord.com/oauth2/authorize?client_id=788543184082698252&scope=bot+applications.commands&permissions=140932115831>`_)
+You can run `@Metro invite` and the links will have the scope already included. 
 
 .. image:: /images/applications_commands_faq_1.png
 
