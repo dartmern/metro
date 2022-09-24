@@ -54,5 +54,8 @@ Metro's embed colors are decided by the top role color of the bot.
 Change the bot's top role color to your desired color.
 
 
+Other
+--------
 
+Other related questions.
 
