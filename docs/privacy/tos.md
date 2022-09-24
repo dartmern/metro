@@ -1,5 +1,4 @@
 # Terms of Service 
-#
 
 There is terms are you agree with my interacting with the bot.
 This can be clicking a button sent by me, using a slash command or

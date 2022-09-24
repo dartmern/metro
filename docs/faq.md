@@ -2,79 +2,61 @@
 
 This is a list of Frequently Asked Questions regarding Metro.
 
-## Questions
----
+### **Questions**
 
-- [How do I get the ID of something?](https://dartmern.github.io/metro/faq/#how-do-i-get-the-id-of-something)
-- [My reaction roles aren't working, why?](https://dartmern.github.io/metro/faq/#my-reaction-roles-arent-working-why)
-- [How do I change the prefix of the bot?](https://dartmern.github.io/metro/faq/#how-do-i-change-the-prefix-of-the-bot)
+- [General Questions](#general-questions)
+    - [How do I get the ID of something?](#how-do-i-get-the-id-of-something)
+    - [Metro doesn't have slash commands showing up!](#metro-doesnt-have-slash-commands-showing-up)
+    - [How can I change my prefix?](#how-can-i-change-my-prefix)
+    - [How do I change embed colors that Metro sends?](#how-do-i-change-embed-colors-that-metro-sends)
 
+#
+# General Questions
+
+Questions that are pointed toward some basic and general understanding.
 
 ## How do I get the ID of something?
 
-You need to first enable **Developer Mode**
+You can check out [this article](https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID-) by discord's support on how to find User/Server/Message IDs.
 
-#### **On mobile:** (Scroll down for Desktop Tutorial)
+#
+## Metro doesn't have slash commands showing up!
 
-1) Click on the 3 lines to show all your servers
+In order to have application commands (slash commands) you need to invite the bot with the `applications.commands` scope.
 
-![Example here](https://media.discordapp.net/attachments/908170244890193920/908171113366978610/unknown.png?width=365&height=664)
+**Note:** You do not need to kick and reinvite to bot to do this.
 
-2) Click on your profile
+You can run `@Metro invite` and the links will have the scope already included. (or by [clicking here](https://discord.com/oauth2/authorize?client_id=788543184082698252&scope=bot+applications.commands&permissions=140932115831))
 
-![Example here](https://media.discordapp.net/attachments/908170244890193920/908171477285748756/Screenshot_20211110-174817.png?width=362&height=662)
+![Screenshot](./images/applications_commands_faq_1.png)
 
-3) Scroll all the way down and click into Behavior
+#
+## How can I change my prefix?
 
-![Example here](https://media.discordapp.net/attachments/908170244890193920/908172141462159390/Screenshot_20211110-174955.png?width=365&height=664)
-![Example here](https://media.discordapp.net/attachments/908170244890193920/908172141667692595/Screenshot_20211110-175021.png?width=361&height=662)
+Things to note:
 
-4) Toggle on Developer Mode
+- Mentioning the bot will always work as a prefix. (@Metro)
+- If you've invited the bot with `applications.commands` scope you can use *slash commands* by typing `/` and use Metro's commands
 
-![Example here](https://media.discordapp.net/attachments/908170244890193920/908172422426005564/Screenshot_20211110-175219.png?width=363&height=663)
+You can change your prefix by running `/prefix` or `@Metro prefix`
 
-#### **On Desktop:**
+![Example Here](./images/prefix_faq_1.png)
 
-1) Click on Settings
+Click `Add prefix` and enter your prefix into the prompt.
 
-![Example here](https://media.discordapp.net/attachments/908170244890193920/908538500893278268/unknown.png?width=1275&height=662)
+#
+## How do I change embed colors that Metro sends?
 
-2) Scroll down to **Advanced**
+Metro's embed colors are decided by the top role color of the bot.
 
-![Example here](https://media.discordapp.net/attachments/908170244890193920/908538737665933333/unknown.png?width=1296&height=662)
-![Example here](https://media.discordapp.net/attachments/908170244890193920/908538945124593704/unknown.png?width=1293&height=662)
-
-3) Toggle on **Developer Mode**
-
-![Example here](https://media.discordapp.net/attachments/908170244890193920/908539033607626832/unknown.png?width=1283&height=662)
+Change the bot's top role color to your desired color.
 
 
-Once **developer mode** is turned on, you can right click anything and hit **Copy ID** to get it's id.
 
 
----
-## My reaction roles aren't working, why?
-
-For reaction roles to work, make sure Metro's **top role** is higher in role position than the roles you want to add.
-
-Make sure you move my top role higher position.
-
-![Example here](https://media.discordapp.net/attachments/908170244890193920/930972439062675496/unknown.png)
-
-Join my [support server](https://discord.gg/2ceTMZ9qJh) if you have issues with this.
 
 
----
 
-## How do I change the prefix of the bot?
 
-You can use `@Metro prefix add <prefix>` if this is the first time changing the prefix. <br >
-This will remove the default prefixes as well (`m.`, `m?`)
 
-You can remove a prefix with `@Metro prefix remove <prefix>`
-
-View all the prefixes for the bot with `@Metro prefix list` <br />
-- Anyone can use this command 
-
-All the other prefix commands require `Manage Server` permissions
 
