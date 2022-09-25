@@ -15,6 +15,10 @@ import yarl
 
 from utils.custom_context import MyContext
 from utils.json_loader import read_json
+from utils.embeds import create_embed
+import utils.fuzzy as fuzzy_
+
+import lxml.etree as etree
 
 data = read_json('info')
 id_token = data['id_token']
@@ -350,12 +354,39 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
 
         async with ctx.typing():
             await self.build_rtfm_lookup_table()
+            await self.refresh_faq_cache()
 
         await ctx.check()
 
-    @commands.hybrid_command(name='rtfs')
-    @app_commands.describe(library='The library you would like to search in.')
-    @app_commands.describe(query='The query/method you want to search for.')
+    async def do_rtfs(
+        self, 
+        library: Literal['discord.py-2', 'twitchio', 'wavelink', 'aiohttp'],
+        query: str):
+
+        url = yarl.URL("https://idevision.net/api/public/rtfs").with_query({'query' : query, 'library' : library, 'format' : 'links'})
+        headers = {"User-Agent" : 'metrodiscordbot', 'Authorization' : id_token}
+
+        async with self.bot.session.get(url, headers=headers) as response:
+            if response.status != 200:
+                return create_embed(f"IDevision API returned a bad response: {response.status} ({response.reason})")
+
+            data = await response.json()
+
+        nodes : Dict = data['nodes']
+        query_time = float(data['query_time'])
+
+        if not nodes:
+            return create_embed('Could not find anything matching that query.', color=discord.Color.yellow())
+
+        to_send = [f"[{name}]({url})" for name, url in nodes.items()]
+        
+        e = Embed(title='API result', color=discord.Color.green())
+        e.description = '\n'.join(to_send)
+        e.url = 'https://idevision.net/static/redoc.html'
+        e.set_footer(text=f'Powered by iDevision API • Query time: {round(query_time, 3)}')
+        return e
+
+    @commands.command(name='rtfs')
     @commands.check(Cooldown(3, 8, 4, 8, commands.BucketType.user))
     async def rtfm_github(self, ctx : MyContext, library : Optional[LibraryConverter], *, query : str):
         """
@@ -366,38 +397,63 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         """
         await ctx.typing()
 
-        if library is None:
+        if library is None or library == 'discord.py':
             library = "discord.py-2"
 
-        url = yarl.URL("https://idevision.net/api/public/rtfs").with_query({'query' : query, 'library' : library, 'format' : 'links'})
-        headers = {"User-Agent" : 'metrodiscordbot', 'Authorization' : id_token}
+        resp = await self.do_rtfs(library, query)
+        await ctx.send(embed=resp)
 
-        async with self.bot.session.get(url, headers=headers) as response:
-            if response.status != 200:
-                return await ctx.send(f"IDevision API returned a bad response: {response.status} ({response.reason})")
+    @app_commands.command(name='rtfs')
+    @app_commands.describe(library='The library you would like to search in.')
+    @app_commands.describe(query='The query/method you want to search for.')
+    async def rtfm_github_slash(
+        self, interaction: discord.Interaction,
+        query: str, library: Optional[Literal['discord.py', 'twitchio', 'wavelink', 'aiohttp']] = 'discord.py',
+        ):
+        """Get source code from a library for items matching the query."""
 
-            data = await response.json()
+        await interaction.response.defer()
 
-        nodes : Dict = data['nodes']
-        query_time = float(data['query_time'])
+        if library is None or library == 'discord.py':
+            library = 'discord.py-2'
 
-        if not nodes:
-            e = Embed()
-            e.color = discord.Colour.yellow()
-            e.description = 'Could not find anything matching that query.'
-            e.set_footer(text=f'Query time: {round(query_time, 3)}')
-            return await ctx.send(embed=e)
+        resp = await self.do_rtfs(library, query)
+        await interaction.followup.send(embed=resp)
 
-        to_send = [f"[{name}]({url})" for name, url in nodes.items()]
+    async def refresh_faq_cache(self):
+        self.faq_entries = {}
+        base_url = 'https://metrodiscordbot.readthedocs.io/en/latest/faq.html'
+        async with self.bot.session.get(base_url) as resp:
+            text = await resp.text(encoding='utf-8')
+
+            root = etree.fromstring(text, etree.HTMLParser())
+            nodes = root.findall(".//div[@id='questions']/ul[@class='simple']/li/ul//a")
+            for node in nodes:
+                self.faq_entries[''.join(node.itertext()).strip()] = base_url + node.get('href').strip()
         
-        e = Embed()
-        e.color = discord.Colour.green()
-        e.description = '\n'.join(to_send)
-        e.url = 'https://idevision.net/static/redoc.html'
-        e.title = 'API result'
-        e.set_footer(text=f'Powered by iDevision API • Query time: {round(query_time, 3)}')
-        await ctx.send(embed=e)
+    @commands.hybrid_command(name='faq')
+    @app_commands.describe(query='The FAQ entry your looking for.')
+    async def faq_command(self, ctx: MyContext, *, query: Optional[str] = None):
+        """Shows an FAQ entry for Metro's documentation."""
 
+        if not hasattr(self, 'faq_entries'):
+            await self.refresh_faq_cache()
+
+        if query is None:
+            return await ctx.send('https://metrodiscordbot.readthedocs.io/en/latest/faq.html')
+
+        matches = fuzzy_.extract_matches(query, self.faq_entries, scorer=fuzzy_.partial_ratio, score_cutoff=40)
+        if len(matches) == 0:
+            return await ctx.send('Nothing found...')
+
+        paginator = commands.Paginator(suffix='', prefix='')
+        for key, _, value in matches:
+            paginator.add_line(f'**{key}**\n{value}')
+        page = paginator.pages[0]
+        await ctx.send(page, reference=ctx.replied_reference)
+
+    
+    
 
 async def setup(bot):
     await bot.add_cog(docs(bot))
