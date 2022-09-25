@@ -34,13 +34,7 @@ os.environ["JISHAKU_NO_DM_TRACEBACK"] = "True"
 
 info_file = read_json('info')
 
-
-logging.basicConfig(level=logging.INFO)
-#logger = logging.getLogger('discord')
-#logger.setLevel(logging.DEBUG)
-#handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
-#handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
-#logger.addHandler(handler)
+discord.utils.setup_logging()
 
 database_info = info_file['database_info']
 
@@ -305,9 +299,6 @@ class MetroBot(commands.AutoShardedBot):
     
     async def on_ready(self):
         await self.wait_until_ready()
-
-        print(
-            f"-----\nLogged in as: {self.user.name} : {self.user.id}\n-----\nMy default prefix{'es are' if len(self.PRE) >= 2 else ' is'}: {', '.join(self.PRE) if len(self.PRE) >= 2 else self.PRE[0]}\n-----")
 
         user = self.get_user(BOT_OWNER_ID)
         data = read_json("restart")

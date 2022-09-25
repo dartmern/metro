@@ -1,4 +1,5 @@
 import contextlib
+import logging
 from typing import Any, Optional
 from urllib.parse import quote_plus
 from aiohttp import ClientConnectorError
@@ -314,7 +315,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
             elif str(e) == "A node with identifier 'MAIN' already exists.":
                 pass
             else:
-                print('Music server cannot be connected at this time.')
+                logging.info('The music server cannot be connected at this time.')
 
     async def required(self, ctx: commands.Context):
         """Method which returns required votes based on amount of members in a channel."""
