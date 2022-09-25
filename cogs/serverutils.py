@@ -64,7 +64,10 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
 
         author = guild.get_member(author_id)
         if not author:
-            author = await self.bot.try_user(author_id)
+            try:
+                author = await self.bot.fetch_user(author_id)
+            except discord.HTTPException:
+                author = None
             if not author:
                 author = "Mod ID: %s" % author_id
             else:
@@ -1328,123 +1331,6 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             return await ctx.send(f"Had an issue with deleting this channel. {e}")
 
         await new_channel.send(f"Nuke-command ran by: {ctx.author}")
-
-    @commands.group(case_insensitive=True, invoke_without_command=True)
-    async def note(self, ctx: MyContext):
-        """Base command for managing notes.
-        
-        Use the `note list` command to view a member's notes.
-        You may only delete notes that you added.
-        
-        If there is a complaint with this please ping <@525843819850104842>"""
-        await ctx.help()
-
-    @note.command(name='add', aliases=['+'])
-    async def note_add(self, ctx: MyContext, member: discord.Member, *, note: commands.clean_content):
-        """Add a note to a member's notes."""
-        if member == ctx.author:
-            raise commands.BadArgument("You cannot add notes to yourself.")
-
-        async with ctx.typing():
-            id = await self.bot.db.fetch("SELECT MAX(id) FROM notes")
-            if id[0].get('max') is None:
-                id = 1
-            else:
-                id = int(id[0].get('max')) + 1
-            await self.bot.db.execute(
-                "INSERT INTO notes (id, guild_id, user_id, text, added_time, author_id) VALUES ($1, $2, $3, $4, $5, $6)", 
-                id, ctx.guild.id, member.id, note, (discord.utils.utcnow().replace(tzinfo=None)), ctx.author.id
-            )      
-            embed = Embed(color=discord.Color.green())
-            embed.description = f"{self.bot.check} __**Note taken.**__ \n> {note}"
-            embed.set_footer(text='Note ID: %s' % id)
-            return await ctx.send(embed=embed)
-        
-    @note.command(name='remove', aliases=['-'])
-    async def note_remove(self, ctx: MyContext, *, id: int):
-        """Remove a note by it's id.
-        
-        Use `note list` to show a member's notes.
-        You may only delete notes that you added unless you have `Manage Guild`."""
-
-        async with ctx.typing():
-            note = await self.bot.db.fetchval("SELECT (text, author_id) FROM notes WHERE id = $1 AND guild_id = $2", id, ctx.guild.id)
-            if not note:
-                raise commands.BadArgument("A note with that ID was not found. Use `%snote list [member]` to show a member's notes." % ctx.clean_prefix)
-            if note[1] != ctx.author.id:
-                if ctx.author_permissions().manage_guild:
-                    pass #by pass for mods
-                else:
-                    raise commands.BadArgument("You may only delete notes that **you** added.")
-
-            await self.bot.db.execute("DELETE FROM notes WHERE id = $1", id)
-
-            embed = Embed(color=discord.Colour.red())
-            embed.description = f"{self.bot.cross} __**Deleted note {id}.**__\n> {note[0]}"
-            return await ctx.send(embed=embed)
-
-    @note.command(name='list', aliases=['show'])
-    async def note_list(self, ctx: MyContext, *, member: Optional[discord.Member]):
-        """
-        Show a member's notes.
-        
-        Don't pass in a member to show your own notes.
-        """
-        member = member or ctx.author
-        
-        async with ctx.typing():
-            notes = await self.bot.db.fetch("SELECT (id, text, added_time, author_id) FROM notes WHERE user_id = $1 AND guild_id = $2", member.id, ctx.guild.id)
-            if not notes:
-                raise commands.BadArgument("No notes were found for this member. Use `%snote add <member> <note>` to add a note." % ctx.clean_prefix)
-            
-            embed = Embed()
-            embed.set_author(name="%s's notes" % member, icon_url=member.display_avatar.url)
-            embed.set_footer(text=f"{len(notes)} note{'s.' if len(notes) > 1 else '.'}")
-
-            for note in notes:
-                note_id : int = note['row'][0]
-                note_text : str = note['row'][1]
-                note_added_time : datetime.datetime = pytz.utc.localize(note['row'][2])
-                author_id : int = note['row'][3]
-
-                embed.add_field(name='Note #%s' % note_id, value=f'From <@{author_id}> {discord.utils.format_dt(note_added_time, "R")} \n> {note_text}')
-
-            return await ctx.send(embed=embed)
-
-    @note.command(name='clear', aliases=['wipe'])
-    @commands.has_guild_permissions(manage_guild=True)
-    async def note_clear(self, ctx: MyContext, *, member: discord.Member):
-        """Clear a member's notes.
-        
-        This may only be invoked by a staff member."""
-
-        async with ctx.typing():
-            data = await self.bot.db.fetch("SELECT * FROM notes WHERE user_id = $1 AND guild_id = $2", member.id, ctx.guild.id)
-            if not data:
-                raise commands.BadArgument("No notes were found for this member. Use `%snote add <member> <note>` to add a note." % ctx.clean_prefix)
-            
-        confirm = await ctx.confirm(f"This will clear **{len(data)}** from {member}'s notes, are you sure?", timeout=30)
-        if confirm.value is None:
-            return await ctx.send("Timed out.")
-        if confirm.value is False:
-            return await ctx.send("Canceled.")
-
-        async with ctx.typing():
-            await self.bot.db.execute("DELETE FROM notes WHERE user_id = $1 AND guild_id = $2", member.id)
-
-            return await ctx.send(f"Successfully cleared **{len(data)}** notes from {member}")
-
-    @note.command(name='redo', aliases=['re'])
-    async def note_redo(self, ctx: MyContext, member: discord.Member, *, note: str):
-        """Clear a member's notes and replace with a single note."""
-
-        await ctx.invoke(self.note_clear, member=member)
-        await ctx.invoke(self.note_add, member=member, note=note)
-    
-    @commands.command(aliases=['mynotes'])
-    async def notes(self, ctx: MyContext):
-        """View your own notes."""
-        await ctx.invoke(self.note_list, member=ctx.author)
 
     @commands.command(name='grant', aliases=['grant-permissions'])
     @commands.has_guild_permissions(administrator=True)
