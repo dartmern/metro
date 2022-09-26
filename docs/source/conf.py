@@ -1,3 +1,7 @@
+import os
+import sys
+
+
 # Configuration file for the Sphinx documentation builder.
 #
 # For the full list of built-in configuration values, see the documentation:
@@ -30,3 +34,7 @@ html_static_path = ['_static']
 master_doc = 'index'
 
 # intersphinx_mapping = ...
+
+extensions = ['sphinx.ext.todo', 'sphinx.ext.viewcode', 'sphinx.ext.autodoc']
+
+

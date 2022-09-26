@@ -24,3 +24,12 @@ If you're having trouble with something, these resources might help.
 - Try checking out :doc:`faq` first, it has answers to common questions
 - Ask in the support channel in our `Discord <https://discord.gg/2ceTMZ9qJh>`_ server.
 - Use `/help <command | category>` for some help on a particular command or category
+
+Manuals 
+--------------
+
+.. toctree::
+   :maxdepth: 1
+
+   Commands <commands/commands.rst>
+   Frequently Asked Questions <faq.rst>

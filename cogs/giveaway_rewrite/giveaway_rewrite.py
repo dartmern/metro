@@ -287,7 +287,7 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
     @giveaway_manager_check()
     @app_commands.describe(duration='Duration of this giveaway.')
     @app_commands.describe(winners='Amount of winners.')
-    @app_commands.describe(requirements='Requirements to join this giveaway.')
+    @app_commands.describe(requirements='Requirements to join this giveaway. For no requirements put "none"')
     @app_commands.describe(prize='Prize you are giving away.')
     async def giveaway_start(
         self, 
