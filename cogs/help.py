@@ -204,10 +204,11 @@ class WithAppCommandScopeView(discord.ui.View):
 
 
 class ChoosePermissionsView(discord.ui.View):
-    def __init__(self, application: discord.Member):
+    def __init__(self, application: discord.Member, *, interaction: discord.Interaction):
         super().__init__(timeout=300)
 
         self.application = application
+        self.old_interaction = interaction
 
         perms = []
         for name, _ in discord.Permissions.all():
@@ -225,7 +226,7 @@ class ChoosePermissionsView(discord.ui.View):
     async def confirm_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Called when the user confirms the permissions they want."""
 
-        selected = self.children[1].values + self.children[2].values
+        selected = self.children[2].values + self.children[3].values
         permissions = discord.Permissions()
 
         for perm in selected:
@@ -235,6 +236,13 @@ class ChoosePermissionsView(discord.ui.View):
         await interaction.response.send_message(
             f'Here is your custom generated invite link: \n{url}', 
             ephemeral=True, view=WithAppCommandScopeView(self.application.id, permissions=permissions, interaction=interaction))
+
+    @discord.ui.button(label='Reset', style=discord.ButtonStyle.red)
+    async def reset_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Called when the user wants to reset the select menu's options."""
+        
+        await interaction.response.defer()
+        await self.old_interaction.edit_original_response(embed=None) # does a random edit to reset the options
 
 class InviteView(discord.ui.View):
     def __init__(self, ctx : MyContext):
@@ -275,7 +283,7 @@ class InviteView(discord.ui.View):
     async def custom_perms(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message(
             'Choose the permissions you want. (Leave blank for no permissions)\nThen choose the **Confirm** button when your done.', 
-            view=ChoosePermissionsView(self.client), 
+            view=ChoosePermissionsView(self.client, interaction=interaction), 
             ephemeral=True)
 
     @discord.ui.button(emoji='🗑️', style=discord.ButtonStyle.red, row=1)
@@ -937,7 +945,7 @@ async def invite_bot_context_menu(interaction: discord.Interaction, member: disc
 
     await interaction.response.send_message(
             'Choose the permissions you want. (Leave blank for no permissions)\nThen choose the **Confirm** button when your done.', 
-            view=ChoosePermissionsView(member), 
+            view=ChoosePermissionsView(member, interaction=interaction), 
             ephemeral=True)
        
 async def setup(bot: MetroBot):
