@@ -41,10 +41,16 @@ dartmern#7563 in my support server or in discord.py #playground.
 class BotInfoExtended(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=300)
+        self.embed = None
 
     @discord.ui.button(label='Linecount')
     async def linecount_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         
+        if self.embed:
+            return await interaction.response.send_message(embed=self.embed, ephemeral=True)
+
+        await interaction.response.defer()
+
         embed = discord.Embed(color=discord.Color.yellow())
 
         p = pathlib.Path('./')
@@ -72,7 +78,9 @@ class BotInfoExtended(discord.ui.View):
             f"\nCoroutines: {cr:,}"\
             f"\nComments: {cm:,}"
 
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        self.embed = embed        
+
+        await interaction.followup.send(embed=embed, ephemeral=True)
 
 class SupportView(discord.ui.View):
     def __init__(self, ctx : MyContext):
@@ -152,56 +160,81 @@ class VoteView(discord.ui.View):
             return await interaction.response.send_message("This feature is currently not available.")
         await self.ctx.invoke(cmd, when=await UserFriendlyTime().convert(self.ctx, f'12 hours Vote for {self.bot.name}\n**top.gg**: <{self.top_gg}>\n**discordbotlist.com**: <{self.discordbotlist}>'))
         
-class Modal(discord.ui.Modal, title='Create custom permissions.'):
-    def __init__(
-        self, 
-        application: discord.Member,
-        *, 
-        title: Optional[str] = None, 
-        timeout: Optional[float] = None, 
-        custom_id: Optional[str] = discord.utils.MISSING
-    ):
-        super().__init__(title=title, timeout=timeout, custom_id=custom_id)
+
+class ChoosePermissionsSelect(discord.ui.Select):
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
+class WithAppCommandScopeView(discord.ui.View):
+    def __init__(self, application: discord.Member, *, permissions: discord.Permissions, interaction: discord.Interaction):
+        super().__init__(timeout=300)
+
+        self.application = application
+        self.permissions = permissions
+        self.old_interaction = interaction
+        self.with_app_scope = True
+        
+    @discord.ui.button(label='Remove app command scope', emoji='<:mCross:819254444217860116>', style=discord.ButtonStyle.red)
+    async def applications_commands_toggle(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Toggle switch for applications.commands scope."""
+        await interaction.response.defer()
+
+        if self.with_app_scope:
+            self.with_app_scope = False
+            button.label = 'Add app command scope'
+            button.emoji = '<:mCheck:819254444197019669>'
+            button.style = discord.ButtonStyle.green
+            
+        else:
+            self.with_app_scope = True
+            button.label = 'Remove app command scope'
+            button.emoji = '<:mCross:819254444217860116>'
+            button.style = discord.ButtonStyle.red
+
+        if self.with_app_scope:
+            scopes = ('bot', 'applications.commands')
+        else:
+            scopes = ('bot', )
+
+        url = discord.utils.oauth_url(self.application, permissions=self.permissions, scopes=scopes)
+
+        await interaction.edit_original_response(
+            content=f'Here is your custom generated invite link: \n{url}', view=self
+        )
+
+
+class ChoosePermissionsView(discord.ui.View):
+    def __init__(self, application: discord.Member):
+        super().__init__(timeout=300)
+
         self.application = application
 
-    permissions_int = discord.ui.TextInput(
-            label='Permissions integer.',
-            placeholder='Enter a permissions integer. Defaults to no permissions.', 
-            style=discord.TextStyle.short,
-            required=False
-        )
-    application_commands = discord.ui.TextInput(
-        label='Invite with the applications.commands scope?',
-        placeholder='Respond with yes/no. This defaults to True.',
-        style=discord.TextStyle.short,
-        required=False
-    )
+        perms = []
+        for name, _ in discord.Permissions.all():
+            perms.append(name)
 
-    async def on_submit(self, interaction: discord.Interaction):
-        permissions_int = self.permissions_int.value or 0
-        try:
-            permissions_int = int(permissions_int)
-        except:
-            return await interaction.response.send_message('Invaild permissions integer.', ephemeral=True)
+        select_1 = ChoosePermissionsSelect(min_values=0, max_values=24)
+        select_1.options = [discord.SelectOption(label=perm.replace('_', ' ').title(), value=perm) for perm in perms[0:24]]
+        self.add_item(select_1)
 
-        app_commands_resp = str(self.application_commands.value).lower()
+        select_2 = ChoosePermissionsSelect(min_values=0, max_values=17)
+        select_2.options = [discord.SelectOption(label=perm.replace('_', ' ').title(), value=perm) for perm in perms[24:]]
+        self.add_item(select_2)
 
-        if not app_commands_resp in ('yes', 'no', ''):
-            return await interaction.response.send_message('Respond with `yes`/`no` for application.commands scope.', ephemeral=True)
+    @discord.ui.button(label='Confirm', style=discord.ButtonStyle.green)
+    async def confirm_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Called when the user confirms the permissions they want."""
 
-        scopes = ('bot', )
+        selected = self.children[1].values + self.children[2].values
+        permissions = discord.Permissions()
 
-        if app_commands_resp == 'no':
-            pass
-        else:
-            scopes = ('bot', 'applications.commands')
-        
-        embed = create_embed(
-            discord.utils.oauth_url(self.application.id, permissions=discord.Permissions(permissions_int), scopes=scopes)
-        )
-        embed.set_footer(text=f'This is inviting {self.application} to your server and not Metro. \nI am not responsible for any damages.')
-        embed.set_author(name=f'Invite {self.application} to your server', icon_url=self.application.display_avatar.url)
-        return await interaction.response.send_message(embed=embed, ephemeral=True)
+        for perm in selected:
+            setattr(permissions, perm, True)
+            
+        url = discord.utils.oauth_url(self.application.id, permissions=permissions, scopes=('bot', 'applications.commands'))
+        await interaction.response.send_message(
+            f'Here is your custom generated invite link: \n{url}', 
+            ephemeral=True, view=WithAppCommandScopeView(self.application.id, permissions=permissions, interaction=interaction))
 
 class InviteView(discord.ui.View):
     def __init__(self, ctx : MyContext):
@@ -236,17 +269,14 @@ class InviteView(discord.ui.View):
         if client != self.ctx.bot.user:
             embed.set_footer(text=f'This is inviting {client} to your server and not {self.ctx.bot.user.name}. \nI am not responsible for any damages.')
 
-        self.message = await _send(embed=embed, view=self)
+        self.message = await _send(embed=embed, view=self, ephemeral=True)
 
     @discord.ui.button(row=1, label='Choose permissions', style=discord.ButtonStyle.green)
     async def custom_perms(self, interaction: discord.Interaction, button: discord.ui.Button):
-        button.disabled = True
-        try:
-            await self.message.edit(view=self)
-        except:
-            await interaction.message.edit(view=self)
-
-        await interaction.response.send_modal(Modal(self.client, title='Create custom permissions'))
+        await interaction.response.send_message(
+            'Choose the permissions you want. (Leave blank for no permissions)\nThen choose the **Confirm** button when your done.', 
+            view=ChoosePermissionsView(self.client), 
+            ephemeral=True)
 
     @discord.ui.button(emoji='🗑️', style=discord.ButtonStyle.red, row=1)
     async def stop_pages(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -905,7 +935,10 @@ async def invite_bot_context_menu(interaction: discord.Interaction, member: disc
     if not member.bot:
         return await interaction.response.send_message('This is not a bot.', ephemeral=True)
 
-    await interaction.response.send_modal(Modal(title='Custom permissions.', application=member))
+    await interaction.response.send_message(
+            'Choose the permissions you want. (Leave blank for no permissions)\nThen choose the **Confirm** button when your done.', 
+            view=ChoosePermissionsView(member), 
+            ephemeral=True)
        
 async def setup(bot: MetroBot):
     bot.tree.add_command(invite_bot_context_menu)
