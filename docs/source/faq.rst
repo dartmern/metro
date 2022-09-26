@@ -18,8 +18,7 @@ Questions that are pointed toward some basic and general understanding.
 How do I get the ID of something?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You can check out the article below by discord's support on how to find User/Server/Message IDs.
-https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID-
+You can check out `this article <https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID->`_ below by discord's support on how to find User/Server/Message IDs.
 
 Metro doesn't have slash commands showing up!
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
