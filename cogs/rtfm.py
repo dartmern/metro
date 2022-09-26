@@ -18,7 +18,7 @@ from utils.json_loader import read_json
 from utils.embeds import create_embed
 import utils.fuzzy as fuzzy_
 
-# import lxml.etree as etree
+import lxml.etree as etree
 
 data = read_json('info')
 id_token = data['id_token']
