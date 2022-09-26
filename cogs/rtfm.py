@@ -452,7 +452,24 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         page = paginator.pages[0]
         await ctx.send(page, reference=ctx.replied_reference)
 
-    
+    @faq_command.autocomplete('query')
+    async def faq_command_query_autocomplete(
+        self,
+        interaction: discord.Interaction,
+        current: str
+    ) -> List[app_commands.Choice[str]]:
+
+        if not hasattr(self, 'faq_entries'):
+            await interaction.response.autocomplete([])
+            await self.refresh_faq_cache()
+            return []
+
+        if not current:
+            choices = [app_commands.Choice(name=key, value=key) for key in self.faq_entries][:10]
+            return choices
+
+        matches = fuzzy_.extract_matches(current, self.faq_entries, scorer=fuzzy_.partial_ratio, score_cutoff=40)[:10]
+        return [app_commands.Choice(name=key, value=key) for key, _, _, in matches][:10]
     
 
 async def setup(bot):
