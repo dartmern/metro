@@ -11,9 +11,10 @@ import unidecode
 import stringcase
 import humanize
 from discord.ext import commands
+from discord import app_commands
 
 from bot import MetroBot
-from utils.checks import can_execute_action, check_dev
+from utils.checks import can_execute_action, can_execute_role_action, can_execute_role_edit, check_dev
 from utils.constants import DISBOARD_ID, EMOTES, SLASH_GUILDS
 from utils.converters import ActionReason, ImageConverter, RoleConverter
 from utils.custom_context import MyContext
@@ -35,6 +36,336 @@ EMOJI_RE = re.compile(r"(<(a)?:[a-zA-Z0-9_]+:([0-9]+)>)")
 # https://github.com/LeoCx1000/discord-bots/blob/master/DuckBot/cogs/utility.py#L575-L682
 # https://github.com/LeoCx1000/discord-bots/blob/master/DuckBot/cogs/utility.py#L707-L716
 
+def role_check():
+    def predicate(ctx: MyContext):
+        if not ctx.author.guild_permissions.manage_roles:
+            raise commands.MissingPermissions(['manage_roles'])
+        if not ctx.me.guild_permissions.manage_roles:
+            raise commands.BotMissingPermissions(['manage_roles'])
+        return True
+    return commands.check(predicate)
+
+def role_check_interaction():
+    def predicate(interaction: discord.Interaction):
+        if not interaction.user.guild_permissions.manage_roles:
+            raise app_commands.MissingPermissions(['manage_roles'])
+        if not interaction.guild.me.guild_permissions.manage_roles:
+            raise commands.BotMissingPermissions
+        return True
+
+    return app_commands.check(predicate)
+
+class EditColorModal(discord.ui.Modal, title='Edit Role Color'):
+    def __init__(self, *, default: str, view: discord.ui.View, ctx: MyContext) -> None:
+        super().__init__(timeout=300)
+        self._children = [
+            discord.ui.TextInput(
+                label='Color', 
+                placeholder='Ender a hex color code or color name.', 
+                default=default,
+                max_length=16)
+        ]
+        self.view: CreateRoleView = view
+        self.ctx = ctx
+
+    async def on_submit(self, interaction: discord.Interaction):
+
+        answer = self.children[0].value
+        
+        try:
+            color = await commands.ColorConverter().convert(self.ctx, answer)
+        except commands.BadArgument:
+            await interaction.response.send_message(f'Could not convert "{answer}" to a valid color.\n> Try a hex color code or a color name.', ephemeral=True)
+        
+        self.view.color = color
+
+        embed = self.view.generate_embed()
+        await interaction.message.edit(embed=embed)
+        await interaction.response.send_message(f'Role color set to: **{color}**', ephemeral=True)
+
+class EditNameModal(discord.ui.Modal, title='Edit Role Name'):
+    def __init__(self, *, default: str, view: discord.ui.View) -> None:
+        super().__init__(timeout=300)
+        self.view: CreateRoleView = view
+
+        self._children = [
+            discord.ui.TextInput(
+                label='Name', 
+                placeholder='Enter a role name...', 
+                default=default,
+                max_length=32)
+        ]
+        
+    async def on_submit(self, interaction: discord.Interaction):
+        self.view.name = self.children[0].value
+
+        embed = self.view.generate_embed()
+        await interaction.message.edit(embed=embed)
+        await interaction.response.send_message(f'Role name set to: **{self.view.name}**', ephemeral=True)
+
+class ChooseRolePermissionsSelect1(discord.ui.Select):
+    async def callback(self, interaction: discord.Interaction):
+        self.view: CreateRoleView
+
+        self.view.changes_made_1 = True
+        await interaction.response.defer()
+
+class ChooseRolePermissionsSelect2(discord.ui.Select):
+    async def callback(self, interaction: discord.Interaction):
+        self.view: CreateRoleView
+
+        self.view.changes_made_2 = True
+        await interaction.response.defer()
+
+class ChooseRolePermissionsView(discord.ui.View):
+    def __init__(self, permissions: discord.Permissions, *, interaction: discord.Interaction, view: discord.ui.View):
+        super().__init__(timeout=300)
+        
+        self.permissions = permissions
+        self.old_interaction = interaction
+        self.old_view: CreateRoleView = view
+
+        self.changes_made_1 = False
+        self.changes_made_2 = False
+
+        perms = []
+        for name, value in permissions:
+            perms.append((name, value))
+        
+
+        select_1 = ChooseRolePermissionsSelect1(min_values=0, max_values=24)
+        select_1.options = [discord.SelectOption(label=perm[0].replace('_', ' ').title(), value=perm[0], default=True if perm[1] else False) for perm in perms[0:24]]
+            
+        self.add_item(select_1)
+
+        select_2 = ChooseRolePermissionsSelect2(min_values=0, max_values=17)
+        select_2.options = [discord.SelectOption(label=perm[0].replace('_', ' ').title(), value=perm[0], default=True if perm[1] else False) for perm in perms[24:]]
+        self.add_item(select_2)
+
+    @discord.ui.button(label='Confirm', style=discord.ButtonStyle.green)
+    async def confirm_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Called when the user confirms the permissions they want."""
+
+        perms = []
+        for name, value in self.permissions:
+            perms.append((name, value))
+
+        first_values = [perm for perm, value in perms[0:24] if value] if not self.changes_made_1 else self.children[2].values
+        second_values = [perm for perm, value in perms[24:] if value] if not self.changes_made_2 else self.children[3].values
+
+        selected = first_values + second_values
+        permissions = discord.Permissions()
+
+        print(selected)
+
+        for perm in selected:
+            setattr(permissions, perm, True)
+
+        self.old_view.permissions = permissions
+        perms = []
+        for name, value in permissions:
+            if value:
+                perms.append(name.replace("_", " ").replace('guild', 'server').title())
+
+        embed = self.old_view.generate_embed()
+        await self.old_interaction.message.edit(embed=embed)
+        await self.old_interaction.edit_original_response(content=f'Permissions set to: {", ".join(perms)}', view=None)
+
+    @discord.ui.button(label='Reset', style=discord.ButtonStyle.red)
+    async def reset_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Called when the user wants to reset the select menu's options."""
+        
+        await interaction.response.defer()
+        self.__init__(discord.Permissions(), interaction=self.old_interaction, view=self.old_view) # re does init to reset perms
+        await self.old_interaction.edit_original_response(view=self) 
+
+        
+class CreateRoleView(discord.ui.View):
+    def __init__(self, *, ctx: MyContext, role: Optional[discord.Role] = None):
+        super().__init__(timeout=300)
+        
+        self.ctx = ctx
+        self.role = role
+
+        # default options
+        self.name = 'new role' if not self.role else self.role.name
+        self.color = discord.Color.default() if not self.role else self.role.color
+        self.permissions = discord.Permissions() if not self.role else self.role.permissions
+        self.hoist = False if not self.role else self.role.hoist
+        self.mentionable = False if not self.role else self.role.mentionable
+
+    def generate_embed(self):
+        embed = discord.Embed(color=self.color)
+        embed.add_field(name='Name', value=self.name)
+        embed.add_field(name='Color', value=str(self.color))
+        embed.add_field(name='Hoisted', value=str(self.hoist), inline=True)
+        embed.add_field(name='Mentionable', value=str(self.mentionable), inline=True)
+
+        permissions = []
+        for name, value in self.permissions:
+            name = name.replace("_", " ").replace('guild', 'server').title()
+            if value:
+                permissions.append(name)
+
+        embed.add_field(
+            name='Permissions', 
+            value=f'{", ".join(permissions) if permissions else "No permissions set."}',
+            inline=False)
+        embed.set_footer(text='Click the Confirm button to save your changes.')
+
+        return embed
+
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
+        
+        await self.message.edit(view=self)
+
+    async def start(self):
+        """Start the embed/view."""
+
+        self.message = await self.ctx.send(embed=self.generate_embed(), view=self)
+
+    @discord.ui.button(label='Edit name', emoji='\U0001f6e0', row=0)
+    async def edit_name_button(self, inter: discord.Interaction, button: discord.ui.Button):
+        
+        modal = EditNameModal(default=self.name, view=self)
+        await inter.response.send_modal(modal)
+
+
+    @discord.ui.button(label='Edit color', emoji='\U0001f6e0', row=0)
+    async def edit_color_button(self, inter: discord.Interaction, button: discord.ui.Button):
+
+        modal = EditColorModal(default=str(self.color), view=self, ctx=self.ctx)
+        await inter.response.send_modal(modal)
+
+    @discord.ui.button(label='Edit permissions', emoji='\U0001f6e0', row=0)
+    async def edit_permissions_button(self, inter: discord.Interaction, button: discord.ui.Button):
+        
+        view = ChooseRolePermissionsView(self.permissions, interaction=inter, view=self)
+        await inter.response.send_message('Select the role permissions you want:', ephemeral=True, view=view)
+
+    @discord.ui.button(label='Confirm', style=discord.ButtonStyle.green, row=1)
+    async def confirm_button(self, inter: discord.Interaction, button: discord.ui.Button):
+        
+        if self.role:
+            strategy = self.role.edit
+        else:
+            strategy = self.ctx.guild.create_role
+
+        try:
+            role = await strategy(
+                name=self.name, 
+                permissions=self.permissions, 
+                color=self.color,
+                mentionable=self.mentionable,
+                hoist=self.hoist)
+        except (discord.HTTPException, discord.Forbidden) as e:
+            await inter.response.send_message(content=f'Had an issue with this role: {e}', ephemeral=True)
+            await inter.message.edit(view=None)
+            return
+
+        word = 'Edited' if self.role else 'Created'
+        embed = self.generate_embed()
+        embed.set_footer(text=f'ID: {role.id}')
+        await inter.message.edit(embed=embed, content=f'{word} the role {role.mention}.', view=None)
+
+    @discord.ui.button(label='Toggle Hoist', emoji='\U0001f199', row=1)
+    async def toggle_hoist(self, inter: discord.Interaction, button: discord.ui.Button):
+
+        if self.hoist:
+            self.hoist = False
+        else:
+            self.hoist = True
+
+        embed = self.generate_embed()
+        await inter.message.edit(embed=embed)
+        await inter.response.defer()
+
+    @discord.ui.button(label='Toggle Mentionable', emoji='<:mention:1025615653798952992>', row=1)
+    async def toggle_mentionable(self, inter: discord.Interaction, button: discord.ui.Button):
+
+        if self.mentionable:
+            self.mentionable = False
+        else:
+            self.mentionable = True
+
+        embed = self.generate_embed()
+        await inter.message.edit(embed=embed)
+        await inter.response.defer()
+
+
+class AddRoleView(discord.ui.View):
+    def __init__(self, member: discord.Member, role: discord.Role, *, author: discord.Member):
+        super().__init__(timeout=180)
+
+        self.member = member
+        self.role = role
+        self.message: discord.Message
+        self.author = author
+
+    async def on_timeout(self) -> None:
+        for item in self.children:
+            item.disabled = True
+
+        await self.message.edit(view=self)
+
+    async def interaction_check(self, interaction: discord.Interaction):
+        if interaction.user.id == self.author.id:
+            return True
+        await interaction.response.send_message('This button cannot be used by you, sorry!', ephemeral=True)
+        return False
+        
+    @discord.ui.button(label='Add role', emoji='<:mplus:904450883633426553>', style=discord.ButtonStyle.green)
+    async def add_role_button(self, inter: discord.Interaction, button: discord.ui.Button):
+        
+        await inter.response.defer() # not responding with a resp but with a message edit
+
+        try:
+            await self.member.add_roles(self.role, reason=f'Role command invoked by: {inter.user} (ID: {inter.user.id})')
+        except discord.HTTPException as e:
+            return await inter.followup.send(f"Had trouble adding this role: {e}", ephemeral=True)
+
+        view = RemoveRoleView(self.member, self.role, author=self.author)
+        view.message = inter.message
+        await inter.message.edit(content=f'Added **{self.role.name}** to **{self.member}**', view=view)
+
+
+class RemoveRoleView(discord.ui.View):
+    def __init__(self, member: discord.Member, role: discord.Role, *, author: discord.Member):
+        super().__init__(timeout=180)
+
+        self.member = member
+        self.role = role
+        self.message: discord.Message
+        self.author = author
+
+    async def on_timeout(self) -> None:
+        for item in self.children:
+            item.disabled = True
+
+        await self.message.edit(view=self)
+
+    async def interaction_check(self, interaction: discord.Interaction):
+        if interaction.user.id == self.author.id:
+            return True
+        await interaction.response.send_message('This button cannot be used by you, sorry!', ephemeral=True)
+        return False
+        
+    @discord.ui.button(label='Remove role', emoji='<:mminus:904450883587276870>', style=discord.ButtonStyle.red)
+    async def remove_role_button(self, inter: discord.Interaction, button: discord.ui.Button):
+        
+        await inter.response.defer() # not responding with a resp but with a message edit
+
+        try:
+            await self.member.remove_roles(self.role, reason=f'Role command invoked by: {inter.user} (ID: {inter.user.id})')
+        except discord.HTTPException as e:
+            return await inter.followup.send(f"Had trouble removing this role: {e}", ephemeral=True)
+
+        view = AddRoleView(self.member, self.role, author=self.author)
+        view.message = inter.message
+        await inter.message.edit(content=f'Removed **{self.role.name}** from **{self.member}**', view=view)
+
 
 async def setup(bot: MetroBot):
     await bot.add_cog(serverutils(bot))
@@ -48,6 +379,8 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         self.afk_users = {}
 
         bot.loop.create_task(self.load_afkusers())
+
+    role_group = app_commands.Group(name='role', description='Base command for managing role related things.')
 
     @property
     def emoji(self) -> str:
@@ -288,7 +621,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         if not s:
             overwrites = channel.overwrites_for(ctx.guild.default_role)
             perms = overwrites.send_messages
-            if perms is True:
+            if perms is None:
                 return await ctx.send(f"Channel {channel.mention} is already unlocked.")
             else:
                 pass   
@@ -388,7 +721,150 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         embed.set_footer(text=f"ID: {role.id}")
 
         return embed
+
+    async def role_toggle(self, ctx: MyContext, member: discord.Member, role: discord.Role):
         
+        if not (await can_execute_role_action(ctx, ctx.author, member, role)):
+            return
+
+        if role in member.roles:
+            await ctx.invoke(self._role_remove, member=member, role=role)
+            return
+        elif role not in member.roles:
+            await ctx.invoke(self._role_add, member=member, role=role)
+            return
+        else:
+            await ctx.help()
+
+    async def _role_add(self, ctx: MyContext, member: discord.Member, role: discord.Role):
+
+        if not (await can_execute_role_action(ctx, ctx.author, member, role)):
+            return 
+
+        if role in member.roles:
+            view = RemoveRoleView(member, role, author=ctx.author)
+            view.message = await ctx.send(f"**{member}** already has that role. Try removing it instead.", view=view)
+            return
+
+        try:
+            await member.add_roles(role, reason=f'Role command invoked by: {ctx.author} (ID: {ctx.author.id})')
+        except discord.HTTPException as e:
+            return await ctx.send(f"Had trouble adding this role: {e}")
+
+        view = RemoveRoleView(member, role, author=ctx.author)
+        view.message = await ctx.send(f"Added **{role.name}** to **{member}**", view=view)
+
+    async def _role_remove(self, ctx: MyContext, member: discord.Member, role: discord.Role):
+
+        if not (await can_execute_role_action(ctx, ctx.author, member, role)):
+            return 
+
+        if not role in member.roles:
+            view = AddRoleView(member, role, author=ctx.author)
+            view.message = await ctx.send(f"**{member}** doesn't have that role. Try adding it instead.", view=view)
+            return
+
+        try:
+            await member.remove_roles(role, reason=f'Role command invoked by: {ctx.author} (ID: {ctx.author.id})')
+        except discord.HTTPException as e:
+            return await ctx.send(f"Had trouble removing this role: {e}")
+
+        view = AddRoleView(member, role, author=ctx.author)
+        view.message = await ctx.send(f"Removed **{role.name}** from **{member}**", view=view)
+
+    @commands.group(invoke_without_command=True)
+    @role_check()
+    async def _role(self, ctx: MyContext, member: discord.Member, *, role: RoleConverter):
+        """Toggle a role for a member."""
+
+        await self.role_toggle(ctx, member, role) 
+
+    @_role.command(name='add')
+    @role_check()
+    async def _role_add_command(self, ctx: MyContext, member: discord.Member, *, role: RoleConverter):
+        """Add a role to a member."""
+
+        await self._role_add(ctx, member, role)
+
+    @_role.command(name='remove')
+    @role_check()
+    async def _role_remove_command(self, ctx: MyContext, member: discord.Member, *, role: RoleConverter):
+        """Remove a role from a member."""
+
+        await self._role_remove(ctx, member, role)
+
+    @_role.command(name='create')
+    @role_check()
+    async def _role_create_command(self, ctx: MyContext):
+        """Create a new role."""
+
+        view = CreateRoleView(ctx=ctx)
+        await view.start()
+
+    @_role.command(name='edit')
+    @role_check()
+    async def _role_edit_command(self, ctx: MyContext, *, role: RoleConverter):
+        """Edit an existing role."""
+
+        if not (await can_execute_role_edit(ctx, role)):
+            return 
+
+        view = CreateRoleView(ctx=ctx, role=role)
+        await view.start()
+
+    @role_group.command(name='toggle')
+    @role_check_interaction()
+    @app_commands.describe(member='The member you want to toggle the role.')
+    @app_commands.describe(role='The role you want to toggle.')
+    async def role_slash(self, inter: discord.Interaction, member: discord.Member, role: discord.Role):
+        """Toggle a role for a member."""
+
+        ctx = await self.bot.get_context(inter)
+        await self.role_toggle(ctx, member, role)
+
+    @role_group.command(name='add')
+    @role_check_interaction()
+    @app_commands.describe(member='The member you want to add the role to.')
+    @app_commands.describe(role='The role you want to add.')
+    async def role_add_slash(self, inter: discord.Interaction, member: discord.Member, role: discord.Role):
+        """Add a role to a member."""
+
+        ctx = await self.bot.get_context(inter)
+        await self._role_add(ctx, member, role)
+
+    @role_group.command(name='remove')
+    @role_check_interaction()
+    @app_commands.describe(member='The member you want to remove the role from.')
+    @app_commands.describe(role='The role you want to remove.')
+    async def role_remove_slash(self, inter: discord.Interaction, member: discord.Member, role: discord.Role):
+        """Remove a role from a member."""
+
+        ctx = await self.bot.get_context(inter)
+        await self._role_remove(ctx, member, role)
+
+    @role_group.command(name='create')
+    @role_check_interaction()
+    async def role_create_slash(self, inter: discord.Interaction):
+        """Create a new role."""
+
+        ctx = await self.bot.get_context(inter)
+
+        view = CreateRoleView(ctx=ctx)
+        await view.start()
+
+    @role_group.command(name='edit')
+    @role_check_interaction()
+    @app_commands.describe(role='The role you want to edit.')
+    async def role_edit_slash(self, inter: discord.Interaction, role: discord.Role):
+        """Edit an existing role."""
+
+        ctx = await self.bot.get_context(inter)
+        if not (await can_execute_role_edit(ctx, role)):
+            return 
+
+        view = CreateRoleView(ctx=ctx, role=role)
+        await view.start()
+
     @commands.group(invoke_without_command=True)
     @commands.has_guild_permissions(manage_roles=True)
     @commands.bot_has_guild_permissions(manage_roles=True)

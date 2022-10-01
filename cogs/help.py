@@ -254,7 +254,7 @@ class InviteView(discord.ui.View):
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id == self.ctx.author.id:
             return True
-        await interaction.response.send_message('This pagination menu cannot be controlled by you, sorry!', ephemeral=True)
+        await interaction.response.send_message('This button cannot be used by you, sorry!', ephemeral=True)
         return False
 
     async def start(self, interaction: Optional[discord.Interaction] = None, client: Optional[BotUserObject] = None):
