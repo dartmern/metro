@@ -286,7 +286,7 @@ class TodoListSource(menus.ListPageSource):
         maximum = self.get_max_pages()
 
         embed = Embed()
-        embed.set_author(name=self.ctx.author, icon_url=self.ctx.author.avatar.url)
+        embed.set_author(name=self.ctx.author, icon_url=self.ctx.author.display_avatar.url)
 
         todo_list = []
         
