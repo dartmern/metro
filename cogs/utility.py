@@ -327,6 +327,8 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         self.regex_pattern = re.compile('([^\s\w]|_)+')
         self.website_regex = re.compile("https?:\/\/[^\s]*")
 
+        self.last_seen = {}
+
 
     def cog_unload(self):
         self._task.cancel()
@@ -1245,7 +1247,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         fmt = []
         async for m in msg.channel.history(limit=5):
             time = m.created_at.strftime("%H:%M:%S")
-            fmt.append(f"**[{time}] {m.author.name}:** {m.content[:200]}")
+            fmt.append(f"**[{time}] {m.author.name}:** {m.content[:100]}")
         e = discord.Embed(title=f"**{hl}**", description='\n'.join(fmt[::-1]))
         e.add_field(name='Jump to', value=f"[Jump!]({m.jump_url})")
         return e
@@ -1253,9 +1255,10 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
     @commands.Cog.listener("on_message")
     async def highlight_core(self, message: discord.Message):
         """The core of highlight."""
+        self.last_seen[message.author.id] = discord.utils.utcnow()
 
         # If you wanna call this inefficient idc. it works fine for me
-
+        
         if message.guild is None:
             return
         if message.author.bot:
@@ -1263,12 +1266,15 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
         final_message = self.website_regex.sub('', message.content.lower())
         final_message = self.regex_pattern.sub('', final_message)
-
+        
         if self.highlight:
             try:
                 for key, value in self.highlight.items(): 
+                    local_last_seen = self.last_seen.get(int(value[1]))
+                    if not local_last_seen or (discord.utils.utcnow() - local_last_seen.total_seconds() < 300):
+                        continue
                     if message.guild.id != value[0]:
-                        return
+                        continue
                     if str(key).lower() in final_message and message.author.id != value[1]:
                         e = await self.generate_context(message, key)
                         user = message.guild.get_member(value[1])
