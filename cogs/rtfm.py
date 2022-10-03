@@ -101,7 +101,8 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
             'python': 'https://docs.python.org/3',
             'aiohttp' : 'https://docs.aiohttp.org/en/stable/',
             'twitchio': 'https://twitchio.dev/en/latest',
-            'mystbin.py': 'https://mystbinpy.readthedocs.io/en/latest/'
+            'mystbin.py': 'https://mystbinpy.readthedocs.io/en/latest/',
+            'pomice': 'https://pomice.readthedocs.io/en/latest/'
         }
 
     @property
