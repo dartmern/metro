@@ -1,5 +1,6 @@
 import contextlib
 import logging
+import traceback
 from typing import Any, Optional
 from urllib.parse import quote_plus
 from aiohttp import ClientConnectorError
@@ -315,6 +316,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
             elif str(e) == "A node with identifier 'MAIN' already exists.":
                 pass
             else:
+                traceback.print_exception(e)
                 logging.info('The music server cannot be connected at this time.')
 
     async def required(self, ctx: commands.Context):
