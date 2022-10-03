@@ -306,8 +306,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
                     port="3030",
                     password=password,
                     identifier="MAIN",
-                    spotify_client_id=spotify_id,
-                    spotify_client_secret=spotify_secret
+                    session=self.bot.session
             )
             print("Music node created.")
         except Exception as e:
