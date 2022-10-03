@@ -1,6 +1,5 @@
 import datetime
 import json
-import queue
 from typing import Optional, Union
 import discord
 import re
@@ -10,13 +9,14 @@ import asyncpg
 import unidecode
 import stringcase
 import humanize
+
 from discord.ext import commands
 from discord import app_commands
 
 from bot import MetroBot
-from utils.checks import can_execute_action, can_execute_role_action, can_execute_role_edit, check_dev
-from utils.constants import DISBOARD_ID, EMOTES, SLASH_GUILDS
-from utils.converters import ActionReason, ImageConverter, RoleConverter
+from utils.checks import can_bot_execute_role_action, can_execute_action, can_execute_role_action, can_execute_role_edit
+from utils.constants import DISBOARD_ID, EMOTES
+from utils.converters import ActionReason, RoleConverter
 from utils.custom_context import MyContext
 from utils.remind_utils import FutureTime, UserFriendlyTime, human_timedelta
 from utils.useful import Cooldown, Embed
@@ -28,7 +28,7 @@ EMOJI_RE = re.compile(r"(<(a)?:[a-zA-Z0-9_]+:([0-9]+)>)")
 # Parts of lockdown/unlockdown I took from Hecate thx
 # https://github.com/Hecate946/Neutra/blob/main/cogs/mod.py#L365-L477
 
-# role is mainly from phencogs rewritten for 2.0
+# **old** role command (before rewrite) was from phencogs and adapted for d.py 2.0
 # https://github.com/phenom4n4n/phen-cogs/blob/master/roleutils/roles.py
 # for redbot btw so you might need to make adjustments
 
@@ -194,7 +194,9 @@ class CreateRoleView(discord.ui.View):
         self.hoist = False if not self.role else self.role.hoist
         self.mentionable = False if not self.role else self.role.mentionable
 
-    def generate_embed(self):
+    def generate_embed(self) -> discord.Embed:
+        """Generate the embed to edit along with the view."""
+
         embed = discord.Embed(color=self.color)
         embed.add_field(name='Name', value=self.name)
         embed.add_field(name='Color', value=str(self.color))
@@ -366,6 +368,204 @@ class RemoveRoleView(discord.ui.View):
         view.message = inter.message
         await inter.message.edit(content=f'Removed **{self.role.name}** from **{self.member}**', view=view)
 
+class CancelBulkRoleOperationView(discord.ui.View):
+    def __init__(
+        self, *, view: discord.ui.View, 
+        message: discord.InteractionMessage, ctx: MyContext):
+        super().__init__(timeout=300)
+        
+        self.view: BulkRoleView = view
+        self.message = message
+        self.ctx = ctx
+
+    async def interaction_check(self, interaction: discord.Interaction):
+        if interaction.user.id == self.ctx.author.id:
+            return True
+        await interaction.response.send_message('This button cannot be used by you, sorry!', ephemeral=True)
+        return False
+
+    @discord.ui.button(label='Cancel', style=discord.ButtonStyle.red)
+    async def cancel_button_(self, inter: discord.Interaction, button: discord.ui.Button):
+        """Called when a user wants to cancel bulk role operation."""
+
+        self.view.operation_running = False
+        await inter.response.defer()
+
+class BulkRoleView(discord.ui.View):
+    def __init__(self, *, ctx: MyContext, role: discord.Role):
+        super().__init__(timeout=300)
+
+        self.ctx = ctx
+        self.bot: MetroBot = ctx.bot
+        self.role = role
+        self.message: discord.Message
+
+        # if roles are being assigned at the moment
+        # this *can* be changed in CancelBulkRoleOptionView
+        self.operation_running: bool = False
+
+        # amount of roles added
+        # this is used in CancelBulkRoleOptionView
+        self.added_amount: int = 0
+
+        self.failed: int = 0
+        self.already_has: int = 0
+
+    async def interaction_check(self, interaction: discord.Interaction):
+        if interaction.user.id == self.ctx.author.id:
+            return True
+        await interaction.response.send_message('This button cannot be used by you, sorry!', ephemeral=True)
+        return False
+
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
+
+        await self.message.edit(view=self) 
+
+    async def enable_buttons(self):
+        for item in self.children:
+            if item._provided_custom_id:
+                continue
+            item.disabled = False
+        
+        await self.message.edit(view=self)
+
+    async def start(self):
+        """Start the embed/view."""   
+
+        embed = self.generate_embed()
+        self.message = await self.ctx.send(embed=embed, view=self)
+
+    def generate_embed(self) -> discord.Embed:
+        """Generate the embed to edit along with the view."""
+
+        embed = discord.Embed(color=discord.Color.og_blurple())
+        embed.description = f'Choose **who** you want to bulk add/remove {self.role.mention}.'
+        embed.add_field(
+            name='All (Humans + Bots)', 
+            value=f'{self.bot.emotes["members"]}: Add to all\n{self.bot.emotes["members_r"]}: Remove from all')
+        embed.add_field(
+            name='Humans',
+            value=f'\U0001f465: Add to humans\n{self.bot.emotes["humans_r"]}: Remove from humans')
+        embed.add_field(
+            name='Bots',
+            value=f'{self.bot.emotes["bot"]}: Add to bots\n{self.bot.emotes["bot_r"]}: Remove from bots')
+        
+        return embed
+
+    async def apply_bulk_action(self, who: str, removal: bool, *, inter: discord.Interaction):
+        """Apply the bulk role action.""" 
+
+        if who == 'bots':
+            group = [member for member in self.ctx.guild.members if member.bot]
+        if who == 'humans':
+            group = [member for member in self.ctx.guild.members if not member.bot]
+        if who == 'members':
+            group = self.ctx.guild.members
+
+        removal_term = 'remove' if removal else 'add'
+        grammer_term = 'from' if removal else 'to'
+
+        message = None
+        if len(group) > 5:
+            member_dt = discord.utils.utcnow() + datetime.timedelta(seconds=len(group) * 0.75)
+            duration = human_timedelta(member_dt)
+            message = f'\n*\U00002139 This should take {duration} in ideal conditions.*'
+        
+        confirm = await self.ctx.confirm(
+            message=f'Are you sure you want to {removal_term} {self.role.mention} {grammer_term} {len(group):,} {who}?{message if message else ""}',
+            delete_after=False,
+            interaction=inter, ephemeral=False)
+        if not confirm.value:
+            await confirm.message.delete()
+            return
+
+        await self.on_timeout() # disables all the buttons
+
+        view = CancelBulkRoleOperationView(view=self, message=confirm.message, ctx=self.ctx)
+        await confirm.message.edit(content=f'{removal_term.capitalize().rstrip("e")}ing {self.role.mention} {grammer_term} {len(group):,} {who}', view=view)
+
+        self.operation_running = True # start the operation
+        for member in group:
+            if self.operation_running is False:
+                break
+
+            if removal:
+                action = member.remove_roles
+            else:
+                action = member.add_roles
+
+            if not can_execute_action(self.ctx, self.ctx.author, member):
+                self.failed += 1
+                continue
+            
+            if removal:
+                if self.role not in member.roles:
+                    self.already_has += 1
+                    continue
+            else:
+                if self.role in member.roles:
+                    self.already_has += 1
+                    continue
+            
+            try:
+                await action(self.role, reason=f'Role {removal_term} all {who} command issued by: {inter.user} (ID: {inter.user.id})')
+                self.added_amount += 1
+            except discord.HTTPException:
+                self.failed += 1
+        self.operation_running = False
+
+        embed = discord.Embed(color=discord.Color.og_blurple())
+        if self.added_amount > 0:
+            embed.add_field(name='Success', value=f'{removal_term.capitalize().rstrip("e")}ed {self.role.mention} {grammer_term} {self.added_amount:,}/{len(group):,} {who}.')
+        
+        already_had_term = 'already had' if not removal else 'didn\'t have'
+
+        if self.already_has > 0:
+            embed.add_field(name=already_had_term.capitalize(), value=f'{self.already_has:,} {who} {already_had_term} the role {self.role.mention}')
+        if self.failed > 0:
+            embed.add_field(name='Failed', value=f'Failed to {removal_term} {self.role.mention} {grammer_term} {self.failed:,} {who} due to role hierarchy or permission errors.')
+        if not embed.fields:
+            embed.description = f'Did not {removal_term} any roles {grammer_term} members due to a canceled operation or an internal error.'
+
+        self.__init__(ctx=self.ctx, role=self.role) # basically resets all the counters
+
+        await confirm.message.edit(embed=embed, view=None, content=None)
+        await self.enable_buttons()
+
+
+    @discord.ui.button(disabled=True, label='\u2800', custom_id='placeholderbutton_1')
+    async def placeholder_one(self, inter, button):
+        pass # this should never get called
+
+    @discord.ui.button(emoji='<:members:908483589157576714>')
+    async def members_callback(self, inter: discord.Interaction, button: discord.ui.Button):
+        await self.apply_bulk_action('members', False, inter=inter)
+
+    @discord.ui.button(emoji='<:members_r:1025995724254629959>')
+    async def memebrs_r_callback(self, inter: discord.Interaction, button: discord.ui.Button):
+        await self.apply_bulk_action('members', True, inter=inter)
+
+    @discord.ui.button(disabled=True, label='\u2800', custom_id='placeholderbutton_2')
+    async def placeholder_two(self, inter, button):
+        pass # this should never get called
+
+    @discord.ui.button(emoji='\U0001f465', row=1)
+    async def humans_callback(self, inter: discord.Interaction, button: discord.ui.Button):
+        await self.apply_bulk_action('humans', False, inter=inter)
+
+    @discord.ui.button(emoji='<:humans_r:1025996848252588083>', row=1)
+    async def humans_r_callback(self, inter: discord.Interaction, button: discord.ui.Button):
+        await self.apply_bulk_action('humans', True, inter=inter)
+
+    @discord.ui.button(emoji='<:bot:965850583766536232>', row=1)
+    async def bot_callback(self, inter: discord.Interaction, button: discord.ui.Button):
+        await self.apply_bulk_action('bots', False, inter=inter)
+
+    @discord.ui.button(emoji='<:bot_r:1025997934237597707>', row=1)
+    async def bot_r_callback(self, inter: discord.Interaction, button: discord.ui.Button):
+        await self.apply_bulk_action('bots', True, inter=inter)
 
 async def setup(bot: MetroBot):
     await bot.add_cog(serverutils(bot))
@@ -812,6 +1012,17 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         view = CreateRoleView(ctx=ctx, role=role)
         await view.start()
 
+    @_role.command(name='bulk')
+    @role_check()
+    async def _role_bulk_command(self, ctx: MyContext, *, role: RoleConverter):
+        """Bulk add/remove roles to guild members/bots."""
+
+        if not (await can_bot_execute_role_action(ctx, role)):
+            return 
+
+        view = BulkRoleView(ctx=ctx, role=role)
+        await view.start()
+
     @role_group.command(name='toggle')
     @role_check_interaction()
     @app_commands.describe(member='The member you want to toggle the role.')
@@ -864,6 +1075,26 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
 
         view = CreateRoleView(ctx=ctx, role=role)
         await view.start()
+
+    @role_group.command(name='bulk')
+    @role_check_interaction()
+    @app_commands.describe(role='The role you want to bulk add/remove.')
+    async def role_bulk_slash(self, inter: discord.Interaction, role: discord.Role):
+        """Bulk add or remove roles to guild members/bots."""
+
+        ctx = await self.bot.get_context(inter)
+        if not (await can_bot_execute_role_action(ctx, role)):
+            return 
+
+        view = BulkRoleView(ctx=ctx, role=role)
+        await view.start()
+
+    @role_group.command(name='info')
+    @app_commands.describe(role='The role you want to view information on.')
+    async def role_info_slash(self, inter: discord.Interaction, role: discord.Role):
+        """Display information on a role."""
+        
+
 
     @commands.group(invoke_without_command=True)
     @commands.has_guild_permissions(manage_roles=True)

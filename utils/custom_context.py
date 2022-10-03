@@ -33,7 +33,10 @@ class ConfirmationView(discord.ui.View):
         self.cancel.disabled = True
         self.value = None
         if self.message:
-            await self.message.edit(view=self)
+            try:
+                await self.message.edit(view=self)
+            except:
+                pass
 
     @discord.ui.button(label='Confirm', style=discord.ButtonStyle.green)
     async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -100,7 +103,8 @@ class MyContext(commands.Context):
         timeout : float = 60.0,
         delete_after : bool = True,
         author_id : Optional[int] = None,
-        interaction: Optional[discord.Interaction] = None
+        interaction: Optional[discord.Interaction] = None,
+        ephemeral: bool = True
 
     ) -> ConfirmationView:
 
@@ -114,10 +118,10 @@ class MyContext(commands.Context):
         )
 
         if interaction:
-            await interaction.response.send_message(message, view=view, ephemeral=True)
+            await interaction.response.send_message(message, view=view, ephemeral=ephemeral, allowed_mentions=discord.AllowedMentions.none())
             view.message = await interaction.original_response()
         else:
-            view.message = await self.send(message, view=view, ephemeral=True)
+            view.message = await self.send(message, view=view, ephemeral=ephemeral)
         await view.wait()
         return view
         
