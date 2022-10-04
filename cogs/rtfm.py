@@ -187,7 +187,6 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
     ):
 
         if not hasattr(self, '_rtfm_cache'):
-            await interaction.response.defer()
             await self.build_rtfm_lookup_table()
 
         obj = re.sub(r'^(?:discord\.(?:ext\.)?)?(?:commands\.)?(.+)', r'\1', obj)
