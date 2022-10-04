@@ -376,7 +376,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
     def emoji(self) -> str:
         return 'ℹ️'
 
-    async def from_permission(self, permission : int):
+    async def from_permission(self, permission : int) -> CustomPermissions:
 
         allowed, denied = [], []
         for name, value in discord.Permissions(permission):
@@ -1328,6 +1328,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
                 pass # Can't do shit really 
 
     @commands.hybrid_command(name='timestamp', aliases=['ts'])
+    @app_commands.describe(timestamp='The time you want me to convert.')
     async def _timestamp_command(
         self, 
         ctx: MyContext, *, 

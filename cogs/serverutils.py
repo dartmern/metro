@@ -1,4 +1,5 @@
 import datetime
+import io
 import json
 from typing import Optional, Union
 import discord
@@ -54,6 +55,67 @@ def role_check_interaction():
         return True
 
     return app_commands.check(predicate)
+
+class RoleInfoView(discord.ui.View):
+    def __init__(self, *, ctx: MyContext, role: discord.Role):
+        super().__init__(timeout=300)
+        self.ctx = ctx
+        self.role = role
+        self.message: discord.Message
+
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
+        
+        await self.message.edit(view=self)
+
+    async def start(self):
+        """Start the view by sending a message."""
+
+        desc = [
+            self.role.mention,
+            f"• __**Members:**__ {len(self.role.members)}",
+            f"• __**Position:**__ {self.role.position}"
+            f" • __**Color:**__ {self.role.colour}",
+            f"• __**Hoisted:**__ {await self.ctx.emojify(self.role.hoist)}",
+            f"• __**Mentionable:**__ {await self.ctx.emojify(self.role.mentionable)}"
+            f"• __**Created:**__ {discord.utils.format_dt(self.role.created_at, 'R')}"
+        ]
+        if self.role.managed:
+            desc.append(f"• __**Managed:**__ {await self.ctx.emojify(self.role.managed)}")
+        embed = discord.Embed(color=self.role.color, title=self.role.name)
+        embed.description = '\n'.join(desc)
+        embed.set_footer(text=f'ID: {self.role.id}')
+
+        self.message = await self.ctx.send(embed=embed, view=self)
+
+    @discord.ui.button(label='Permissions')
+    async def permissions_button(self, inter: discord.Interaction, button: discord.ui.Button):
+
+        allowed, denied = [], []
+        for name, value in self.role.permissions:
+            name = name.replace("_", " ").replace('guild', 'server').title()
+            if value:
+                allowed.append(name)
+            else:
+                denied.append(name)
+        
+        await inter.response.send_message(
+            f'**Allowed:** {", ".join(allowed) if allowed else "No allowed permissions."}'\
+            f'\n\n**Denied:** {", ".join(denied) if denied else "No denied permissions."}', ephemeral=True
+        )
+
+    @discord.ui.button(label='Members')
+    async def member_button(self, inter: discord.Interaction, button: discord.ui.Button):
+        await inter.response.defer()
+
+        fmt = [f"{member} (ID: {member.id})" for member in self.role.members]
+        to_send = '\n'.join(fmt)
+        if len(fmt) > 12:
+            await inter.followup.send(f'Members of {self.role.mention}', file=discord.File(io.StringIO(to_send), filename='members.txt'), ephemeral=True)
+        else:
+            await inter.followup.send(f"Members of {self.role.mention}\n\n{to_send}", ephemeral=True)
+        
 
 class EditColorModal(discord.ui.Modal, title='Edit Role Color'):
     def __init__(self, *, default: str, view: discord.ui.View, ctx: MyContext) -> None:
@@ -1093,8 +1155,11 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
     @app_commands.describe(role='The role you want to view information on.')
     async def role_info_slash(self, inter: discord.Interaction, role: discord.Role):
         """Display information on a role."""
-        
 
+        ctx = await self.bot.get_context(inter)
+
+        view = RoleInfoView(ctx=ctx, role=role)
+        await view.start()
 
     @commands.group(invoke_without_command=True)
     @commands.has_guild_permissions(manage_roles=True)
