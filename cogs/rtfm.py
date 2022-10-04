@@ -187,6 +187,7 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
     ):
 
         if not hasattr(self, '_rtfm_cache'):
+            await interaction.response.defer()
             await self.build_rtfm_lookup_table()
 
         obj = re.sub(r'^(?:discord\.(?:ext\.)?)?(?:commands\.)?(.+)', r'\1', obj)
@@ -213,11 +214,11 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
 
         e = Embed()
         if len(matches) == 0:
-            return await interaction.response.send_message('No matches were found. Sorry.', ephemeral=True)
+            return await interaction.followup.send('No matches were found. Sorry.', ephemeral=True)
 
 
         e.description = '\n'.join(f'[`{key}`]({url})' for key, url in matches)
-        await interaction.response.send_message(embed=e)
+        await interaction.followup.send(embed=e)
 
 
     async def do_rtfm(self, ctx : MyContext, key: str, obj: str):
