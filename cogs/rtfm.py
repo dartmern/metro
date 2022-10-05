@@ -1,3 +1,4 @@
+import asyncio
 from typing import Dict, List, Literal, Optional
 import discord
 from discord.ext import commands
@@ -185,9 +186,9 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         obj: str,
         search: bool = True # weather this is a search or execution
     ):
+        await interaction.response.defer()
 
         if not hasattr(self, '_rtfm_cache'):
-            await interaction.response.defer()
             await self.build_rtfm_lookup_table()
 
         obj = re.sub(r'^(?:discord\.(?:ext\.)?)?(?:commands\.)?(.+)', r'\1', obj)
