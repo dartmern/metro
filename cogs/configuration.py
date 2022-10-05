@@ -397,13 +397,11 @@ class configuration(commands.Cog, description='Configure the bot/server.'):
         Clear all disabled commands.
         """
 
-        confirm = await ctx.confirm(f'Are you sure you want to clear all your disabled commands?',timeout=30)
+        confirm = await ctx.confirm(f'Are you sure you want to clear all your disabled commands?',timeout=30, delete_after=False)
 
-        if confirm.value is None:
-            return await ctx.send('Timed out.')
-
-        if confirm.value is False:
-            return await ctx.send('Canceled.')
+        if not confirm.value:
+            await confirm.message.edit(content='Canceled/Timed out.')
+            return
 
         await ctx.typing()
         query = "DELETE FROM command_config WHERE server_id = $1;"
@@ -540,13 +538,11 @@ class configuration(commands.Cog, description='Configure the bot/server.'):
 
         await ctx.typing()
 
-        confirm = await ctx.confirm('Are you sure you want to clear your ignored list?',timeout=30)
+        confirm = await ctx.confirm('Are you sure you want to clear your ignored list?',timeout=30, delete_after=False)
 
-        if confirm.value is False:
-            return await ctx.send('Canceled.')
-
-        if confirm.value is None:
-            return await ctx.send('Timed out.')
+        if not confirm.value:
+            await confirm.message.edit(content='Canceled/Timed out.')
+            return
 
         query = """
                 DELETE FROM plonks WHERE server_id = $1;

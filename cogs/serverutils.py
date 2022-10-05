@@ -1369,11 +1369,10 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         if isinstance(channel, discord.Thread):
             raise commands.BadArgument("You cannot nuke threads.")
 
-        confirm = await ctx.confirm(f'Are you sure you want to nuke {channel.mention}', timeout=30.0)
-        if confirm.value is False:
-            return await ctx.send("Canceled.")
-        if confirm.value is None:
-            return await ctx.send("Timed out.")
+        confirm = await ctx.confirm(f'Are you sure you want to nuke {channel.mention}', timeout=30.0, delete_after=False)
+        if not confirm.value:
+            await confirm.message.edit(content='Canceled/Timed out.')
+            return
 
         new_channel = await channel.clone(name=channel.name)
         await ctx.ghost_ping(ctx.author, channel=new_channel)

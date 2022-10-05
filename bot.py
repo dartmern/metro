@@ -320,8 +320,7 @@ class MetroBot(commands.AutoShardedBot):
 
         super().add_command(command)
         command.cooldown_after_parsing = True
-
-        #command.checks.append(Cooldown(2, 10, 2, 6, commands.BucketType.user))
+        command.checks.append(Cooldown(2, 10, 2, 6, commands.BucketType.user))
 
     async def get_context(self, message, *, cls=MyContext):
         """Making our custom context"""

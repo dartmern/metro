@@ -100,17 +100,16 @@ class support(commands.Cog, description='Support only commands.'):
 
         confirm = await ctx.confirm(
             'This server\'s moderators have the right to kick or reject your bot for any reason.'
-            '\nYou also agree that your bot does not have the following prefixes: `?`,`!`'
+            '\nYou also agree that your bot does not have the following prefixes: `?`,`m?`,`m.`'
             '\nYour bot cannot have an avatar that might be considered NSFW, ping users when they join, post NSFW messages in not NSFW marked channels.'
             '\nRules that may apply to users should also be applied to bots.'
             '\n**This is not a exextensive list and you can see all the rules listed in <#814281422780235817>**'
-            '\n\nHit the **Confirm** button below to submit your request and agree to these terms.', timeout=60  
+            '\n\nHit the **Confirm** button below to submit your request and agree to these terms.', timeout=60, delete_after=False
             )
 
-        if confirm.value is False:
-            return await ctx.send('Canceled.')
-        if confirm.value is None:
-            return await ctx.send('Timed out.')
+        if not confirm.value:
+            await confirm.message.edit(content='Canceled/Timed out.', view=None)
+            return
 
         else:
             url = f'https://discord.com/oauth2/authorize?client_id={user.id}&scope=bot&guild_id={ctx.guild.id}'
@@ -125,7 +124,7 @@ class support(commands.Cog, description='Support only commands.'):
             embed.set_footer(text=ctx.author.id)
 
             try:
-                channel = self.bot.get_channel(904184918840602684)
+                channel = self.bot.get_channel(BOT_REQUESTS_CHANNEL)
                 message = await channel.send(embed=embed)
             except discord.HTTPException as e:
                 return await ctx.send(f'Failed to add your bot.\n{str(e)}')

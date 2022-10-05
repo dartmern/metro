@@ -11,6 +11,7 @@ import utils.checks
 
 
 from typing import Dict, Any, Optional
+from utils.custom_context import MyContext
 
 
 from utils.remind_utils import human_timedelta
@@ -162,7 +163,7 @@ class Cooldown:
             alter_rate, alter_per, bucket
         )
 
-    def __call__(self, ctx):
+    def __call__(self, ctx: MyContext):
         
         if ctx.bot.premium_guilds.get(ctx.guild.id):# or ctx.bot.premium_users.get(ctx.author.id):
             ctx.bucket = self.altered_mapping.get_bucket(ctx.message)
@@ -170,9 +171,10 @@ class Cooldown:
             ctx.bucket = self.default_mapping.get_bucket(ctx.message)
         retry_after = ctx.bucket.update_rate_limit()
         if retry_after:
+            if not ctx.args:
+                return True
             raise commands.CommandOnCooldown(ctx.bucket, retry_after, BucketType.user)
         return True
-
 
 def ts_now(type : Optional[str] = 'f'):
     time =  discord.utils.format_dt(discord.utils.utcnow(), type)

@@ -225,16 +225,6 @@ class core(commands.Cog, description="Core events."):
             
             return await ctx.reply(embed=embed)
 
-        elif isinstance(error, commands.MissingRequiredArgument):
-            missing = f"{error.param.name}"
-            command = f"{ctx.clean_prefix}{ctx.command} {ctx.command.signature}"
-            separator = (' ' * (len([item[::-1] for item in command[::-1].split(missing[::-1], 1)][::-1][0]) - 1)) + (8*' ')
-            indicator = ('^' * (len(missing) + 2))
-            message = (f"\n```yaml\nSyntax: {command}\n{separator}{indicator}\n{missing} is a required argument that is missing.\n```")
-                                    
-            return await ctx.reply(message, embed=await ctx.get_help(ctx.command))
-
-
         elif isinstance(error, commands.CommandNotFound):
             return # Might change this later and only handle this if the prefix is decently long.
 
@@ -342,6 +332,16 @@ class core(commands.Cog, description="Core events."):
                     return
             else:
                 await ctx.send(embed=em, delete_after=error.retry_after)
+
+        elif isinstance(error, commands.MissingRequiredArgument):
+
+            missing = f"{error.param.name}"
+            command = f"{ctx.clean_prefix}{ctx.command} {ctx.command.signature}"
+            separator = (' ' * (len([item[::-1] for item in command[::-1].split(missing[::-1], 1)][::-1][0]) - 1)) + (8*' ')
+            indicator = ('^' * (len(missing) + 2))
+            message = (f"\n```yaml\nSyntax: {command}\n{separator}{indicator}\n{missing} is a required argument that is missing.\n```")
+                                    
+            return await ctx.reply(message, embed=await ctx.get_help(ctx.command))
 
         elif isinstance(error, commands.TooManyArguments):
             return await ctx.send("Too many arguments were passed to this command!")
