@@ -7,7 +7,7 @@ Information and Links
 - `Developer <https://discord.com/users/525843819850104842>`_
 - `Support <https://discord.gg/2ceTMZ9qJh>`_ 
 - `Invite <https://discord.com/oauth2/authorize?client_id=788543184082698252&scope=bot+applications.commands&permissions=140932115831>`_
-- `Documentation <dartmern.github.io/metro/>`_
+- `Documentation <https://metrodiscordbot.readthedocs.io/en/latest/>`_
 
 Contribute 
 ------------------
