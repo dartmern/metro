@@ -148,33 +148,12 @@ class Embed(discord.Embed):
         for n, v in fields:
             self.add_field(name=n, value=v, inline=field_inline)
 
+def dynamic_cooldown(ctx: MyContext):
+    """Dyanmic cooldown for premium users."""
 
-class Cooldown:
-    def __init__(
-        self,
-        rate: int,
-        per: float,
-        alter_rate: int,
-        alter_per: float,
-        bucket: commands.BucketType,
-    ):
-        self.default_mapping = commands.CooldownMapping.from_cooldown(rate, per, bucket)
-        self.altered_mapping = commands.CooldownMapping.from_cooldown(
-            alter_rate, alter_per, bucket
-        )
-
-    def __call__(self, ctx: MyContext):
-        
-        if ctx.bot.premium_guilds.get(ctx.guild.id):# or ctx.bot.premium_users.get(ctx.author.id):
-            ctx.bucket = self.altered_mapping.get_bucket(ctx.message)
-        else:
-            ctx.bucket = self.default_mapping.get_bucket(ctx.message)
-        retry_after = ctx.bucket.update_rate_limit()
-        if retry_after:
-            if not ctx.args:
-                return True
-            raise commands.CommandOnCooldown(ctx.bucket, retry_after, BucketType.user)
-        return True
+    if ctx.bot.premium_guilds.get(ctx.guild.id):
+        return commands.Cooldown(3, 6)
+    return commands.Cooldown(3, 8)
 
 def ts_now(type : Optional[str] = 'f'):
     time =  discord.utils.format_dt(discord.utils.utcnow(), type)

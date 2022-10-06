@@ -21,7 +21,7 @@ from utils.converters import ActionReason, RoleConverter
 from utils.custom_context import MyContext
 from utils.new_pages import SimplePageSource, SimplePages
 from utils.remind_utils import FutureTime, UserFriendlyTime, human_timedelta
-from utils.useful import Cooldown, Embed
+from utils.useful import Embed, dynamic_cooldown
 from utils.parsing import RoleParser
 from cogs.utility import Timer, utility
 
@@ -796,7 +796,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             timefmt = None
         
         ft = f" for {timefmt}" if timefmt else ""
-        await message.edit(content=f'{self.bot.check} Channel {channel.mention} locked{ft}')
+        await message.edit(content=f'{self.bot._check} Channel {channel.mention} locked{ft}')
 
     @lockdown_cmd.command(name='server', aliases=['guild'])
     @commands.has_permissions(manage_guild=True)
@@ -913,7 +913,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             reason=await ActionReason().convert(ctx, reason),
         )
         await message.edit(
-            content=f"{self.bot.check} Channel {channel.mention} unlocked."
+            content=f"{self.bot._check} Channel {channel.mention} unlocked."
         )
 
     @unlockdown_cmd.command(name='server', aliases=['guild'])
@@ -1222,7 +1222,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
             pass # Either I don't have permissions at this time or removing the roles failed
 
     @commands.command(name='temprole', usage='<member> <duration> <role>')
-    @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.member))
+    @commands.dynamic_cooldown(dynamic_cooldown, type=commands.BucketType.user)
     @commands.has_guild_permissions(manage_roles=True)
     @commands.bot_has_guild_permissions(manage_roles=True)
     async def temprole(
@@ -1447,7 +1447,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         embed.set_thumbnail(url=member.display_avatar.url)
         embed.set_footer(text="ID: %s" % member.id)
 
-        embed.add_field(name="\U00002139 General", value=f'__**ID:**__ {member.id} \n__**Username:**__ {member}\n__**Nickname:**__ {await ctx.emojify(member.nick)} {member.nick if member.nick else ""} \n__**Owner:**__ {self.bot.check if member.id == member.guild.owner_id else self.bot.cross} • __**Bot:**__ {await ctx.emojify(member.bot)} \n__**Join Position:**__ {sorted(ctx.guild.members, key=lambda m: m.joined_at or discord.utils.utcnow()).index(member) + 1}')
+        embed.add_field(name="\U00002139 General", value=f'__**ID:**__ {member.id} \n__**Username:**__ {member}\n__**Nickname:**__ {await ctx.emojify(member.nick)} {member.nick if member.nick else ""} \n__**Owner:**__ {self.bot._check if member.id == member.guild.owner_id else self.bot.cross} • __**Bot:**__ {await ctx.emojify(member.bot)} \n__**Join Position:**__ {sorted(ctx.guild.members, key=lambda m: m.joined_at or discord.utils.utcnow()).index(member) + 1}')
 
         embed.add_field(name=f'{EMOTES["inviteme"]} Created at', value=f'╰ {discord.utils.format_dt(member.created_at, "F")} ({discord.utils.format_dt(member.created_at, "R")})', inline=False)
         embed.add_field(name=f'{EMOTES["joined_at"]} Joined at', value=f'╰ {discord.utils.format_dt(member.joined_at, "F")} ({discord.utils.format_dt(member.joined_at, "R")})', inline=True)

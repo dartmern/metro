@@ -6,7 +6,7 @@ from discord import app_commands
 from bot import MetroBot
 from utils.constants import TESTING_GUILD, TESTING_GUILD_ID
 
-from utils.useful import Cooldown, Embed, fuzzy
+from utils.useful import Embed, dynamic_cooldown, fuzzy
 
 import io
 import re
@@ -389,7 +389,7 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         return e
 
     @commands.command(name='rtfs')
-    @commands.check(Cooldown(3, 8, 4, 8, commands.BucketType.user))
+    @commands.dynamic_cooldown(dynamic_cooldown, type=commands.BucketType.user)
     async def rtfm_github(self, ctx : MyContext, library : Optional[LibraryConverter], *, query : str):
         """
         Get source code from a library for items matching the query.

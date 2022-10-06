@@ -15,7 +15,7 @@ from cogs.stars import StarError
 from utils import errors
 from utils.constants import DEVELOPER_ROLE, ERROR_CHANNEL_ID
 
-from utils.useful import Cooldown, Embed
+from utils.useful import Embed
 from utils.checks import check_dev
 from utils.custom_context import MyContext
 
@@ -300,19 +300,12 @@ class core(commands.Cog, description="Core events."):
                 pass
 
             command = ctx.command
-            cooldown = discord.utils.find(lambda x: isinstance(x, Cooldown), command.checks) or Cooldown(2, 8, 2, 6,
-                                                                                                        commands.BucketType.user)
-
-            default_cooldown_per = cooldown.default_mapping._cooldown.per
-            altered_cooldown_per = cooldown.altered_mapping._cooldown.per
-
-            default_cooldown_rate = cooldown.default_mapping._cooldown.rate
-            altered_cooldown_rate = cooldown.altered_mapping._cooldown.rate
+    
 
             cooldowns = ""
-            if default_cooldown_rate is not None:
+            if error.cooldown is not None:
                 cooldowns += (
-                    f"\n\n**Cooldowns:**\nDefault: `{default_cooldown_rate}` time(s) every `{default_cooldown_per}` seconds\nPremium: `{altered_cooldown_rate}` time(s) every `{altered_cooldown_per}` seconds"
+                    f"\n\n**Cooldowns:**\nDefault: `3` time(s) every `8` seconds\nPremium: `3` time(s) every `6` seconds"
                 )
             em = Embed(
                 description=f"You are on cooldown! Try again in **{humanize.precisedelta(dt.timedelta(seconds=error.retry_after), format='%.0f' if error.retry_after > 1 else '%.1f')}**"
@@ -341,7 +334,7 @@ class core(commands.Cog, description="Core events."):
             indicator = ('^' * (len(missing) + 2))
             message = (f"\n```yaml\nSyntax: {command}\n{separator}{indicator}\n{missing} is a required argument that is missing.\n```")
                                     
-            return await ctx.reply(message, embed=await ctx.get_help(ctx.command))
+            return await ctx.send(message, embed=await ctx.get_help(ctx.command))
 
         elif isinstance(error, commands.TooManyArguments):
             return await ctx.send("Too many arguments were passed to this command!")

@@ -12,7 +12,7 @@ from utils.constants import TESTING_GUILD
 from utils.json_loader import read_json
 from utils.custom_context import MyContext
 from utils.remind_utils import human_timedelta
-from utils.useful import Cooldown, Embed, delete_silent
+from utils.useful import Embed, delete_silent, dynamic_cooldown
 from utils.useful import Embed
 from utils.new_pages import SimplePages
 from utils.remind_utils import UserFriendlyTime
@@ -90,7 +90,7 @@ class AddPrefixModal(discord.ui.Modal):
             embed = create_embed(f'Your current prefixes: {", ".join(prefixes)}', title='Prefix Configuration')
 
             await interaction.message.edit(embed=embed)
-            await interaction.response.send_message(f'{self.bot.check} **|** Added `{self.prefix.value}` to the guild\'s prefixes.', ephemeral=True)
+            await interaction.response.send_message(f'{self.bot._check} **|** Added `{self.prefix.value}` to the guild\'s prefixes.', ephemeral=True)
         except asyncpg.exceptions.UniqueViolationError:
             await interaction.response.send_message(f'{self.bot.cross} **|** That is already a prefix in this guild.', ephemeral=True)
 
@@ -116,7 +116,7 @@ class RemovePrefixSelect(discord.ui.Select):
 
         removed = ['`%s`' % prefix for prefix in self.values]
         await self.message.edit(embed=embed)
-        await interaction.response.send_message(f'{self.bot.check} **|** Removed {", ".join(removed)} from my prefixes.', ephemeral=True)
+        await interaction.response.send_message(f'{self.bot._check} **|** Removed {", ".join(removed)} from my prefixes.', ephemeral=True)
 
 
 class RemovePrefixView(discord.ui.View):
@@ -188,7 +188,7 @@ class PrefixView(discord.ui.View):
         embed = create_embed(f'Your current prefixes: {", ".join(prefixes)}', title='Prefix Configuration')
 
         await self.message.edit(embed=embed)
-        await confirm.message.edit(content=f'{self.bot.check} **|** Reset all my prefixes!', view=None)
+        await confirm.message.edit(content=f'{self.bot._check} **|** Reset all my prefixes!', view=None)
     
 
 class SourceView(discord.ui.View):
@@ -417,7 +417,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         return f"https://mystb.in/{paste.id}"
 
     @commands.command(name='mystbin', aliases=['paste'])
-    @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.user))
+    @commands.dynamic_cooldown(dynamic_cooldown, type=commands.BucketType.user)
     async def mystbin(self, ctx: MyContext, *, content : str):
         """Create and post a mystbin online."""
 
@@ -1114,7 +1114,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             pass 
         
     @commands.command(name='raw-message', aliases=['rmsg', 'raw', 'rawmessage'])
-    @commands.check(Cooldown(1, 30, 1, 15, commands.BucketType.user))
+    @commands.dynamic_cooldown(dynamic_cooldown, type=commands.BucketType.user)
     async def raw_message(self, ctx: MyContext, message: Optional[discord.Message]):
         """
         Get the raw json format of a message.
@@ -1141,7 +1141,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
 
     @commands.hybrid_command(name='first-message', aliases=['firstmsg', 'firstmessage'])
-    @commands.check(Cooldown(1, 3, 1, 2, commands.BucketType.user))
+    @commands.dynamic_cooldown(dynamic_cooldown, type=commands.BucketType.user)
     @app_commands.describe(channel='The channel you want to see the first message.')
     async def first_message(self, ctx: MyContext, *, channel: Optional[discord.TextChannel]) -> discord.Message:
         """Get the first message in a channel."""

@@ -16,7 +16,7 @@ from bot import MetroBot
 from utils.constants import TESTING_GUILD
 from utils.custom_context import MyContext
 from utils.converters import DiscordCommand, ImageConverter
-from utils.useful import Cooldown, Embed, chunkIt
+from utils.useful import Embed, chunkIt, dynamic_cooldown
 from utils.calc_tils import NumericStringParser
 from utils.json_loader import get_path, read_json, write_json
 
@@ -176,7 +176,7 @@ class extras(commands.Cog, description='Extra commands for your use.'):
         await ctx.paginate(result, per_page=per_page)
 
     @commands.command(name='repl', aliases=['coliru'])
-    @commands.check(Cooldown(1, 4, 1, 3, commands.BucketType.user))
+    @commands.dynamic_cooldown(dynamic_cooldown, type=commands.BucketType.user)
     async def coliru(self, ctx: MyContext, *, code: CodeBlock):
         """Compile code through coliru."""
 
@@ -201,7 +201,7 @@ class extras(commands.Cog, description='Extra commands for your use.'):
                 return await ctx.send("Output was too long: %s" % url)
 
     @commands.command()
-    @commands.check(Cooldown(2, 10, 2, 8, commands.BucketType.user))
+    @commands.dynamic_cooldown(dynamic_cooldown, type=commands.BucketType.user)
     async def google(self, ctx: MyContext, *, query: str):
         """Search google using it's API."""
 

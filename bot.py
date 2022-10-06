@@ -24,7 +24,6 @@ from utils.checks import check_dev
 from utils.constants import BOT_LOGGER_CHANNEL, BOT_OWNER_ID, DEFAULT_INVITE, DEVELOPER_IDS, DOCUMENTATION, EMOTES, GITHUB_URL, PATREON_URL, PRIVACY_POLICY, SLASH_GUILDS, SUPPORT_GUILD, SUPPORT_STAFF, SUPPORT_URL, TEST_BOT_ID
 from utils.remind_utils import human_timedelta
 
-from utils.useful import Cooldown, ts_now
 from utils.json_loader import read_json
 from utils.errors import UserBlacklisted
 from utils.custom_context import MyContext
@@ -181,6 +180,10 @@ class MetroBot(commands.AutoShardedBot):
         self.emotes = EMOTES
         self.TEST_BOT_ID = TEST_BOT_ID
 
+        # cooldowns
+        self.normal_cd = commands.CooldownMapping.from_cooldown(3, 8, commands.BucketType.user)
+        self.premium_cd = commands.CooldownMapping.from_cooldown(3, 6, commands.BucketType.user)
+
     @property
     def donate(self) -> str:
         return PATREON_URL
@@ -320,7 +323,6 @@ class MetroBot(commands.AutoShardedBot):
 
         super().add_command(command)
         command.cooldown_after_parsing = True
-        command.checks.append(Cooldown(2, 10, 2, 6, commands.BucketType.user))
 
     async def get_context(self, message, *, cls=MyContext):
         """Making our custom context"""
@@ -400,7 +402,6 @@ class MetroBot(commands.AutoShardedBot):
             return None
         return members[0]
 
-
 cwd = Path(__file__).parents[0]
 cwd = str(cwd)
 print(f"{cwd}\n-----")
@@ -408,8 +409,9 @@ print(f"{cwd}\n-----")
 bot = MetroBot()
 
 
-bot.check = "<:mCheck:819254444197019669>"
+bot._check = "<:mCheck:819254444197019669>"
 bot.cross = "<:mCross:819254444217860116>"
+
 
 @bot.listen('on_message')
 async def mention_prefix(message: discord.Message):

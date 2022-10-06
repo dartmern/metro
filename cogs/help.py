@@ -26,7 +26,7 @@ from difflib import get_close_matches
 
 from utils.custom_context import MyContext
 from utils.remind_utils import UserFriendlyTime
-from utils.useful import Embed, Cooldown, OldRoboPages, get_bot_uptime
+from utils.useful import Embed, OldRoboPages, dynamic_cooldown, get_bot_uptime
 from utils.converters import BotUserObject, DiscordCommand
 
 """
@@ -665,18 +665,6 @@ class ButtonMenuSrc(menus.ListPageSource):
 
         embed = Embed(title=title, description=self.description.replace("[p]", self.ctx.prefix), color=self.ctx.color)
 
-
-        cooldown = discord.utils.find(lambda x: isinstance(x, Cooldown), self.group.checks) or Cooldown(1, 3, 1, 1,
-                                                                                                     discord.ext.commands.BucketType.user)
-
-        default_cooldown_per = cooldown.default_mapping._cooldown.per
-        default_cooldown_rate = cooldown.default_mapping._cooldown.rate
-
-        embed.add_field(
-            name="Cooldowns",
-            value=f"Default: `{default_cooldown_rate}` time(s) every `{default_cooldown_per}` seconds",
-            inline=False
-        )
         embed.add_field(
             name="Aliases",
             value=f"```{', '.join(self.group.aliases) or 'No aliases'}```",
@@ -788,19 +776,6 @@ class MetroHelp(commands.HelpCommand):
                 description=self.get_doc(command).replace('[p]', self.context.prefix),
                 color=self.context.color
             )
-
-        # Cooldowns
-        cooldown = discord.utils.find(lambda x: isinstance(x, Cooldown), command.checks) or Cooldown(1, 3, 1, 1,
-                                                                                                     commands.BucketType.user)
-
-        default_cooldown_per = cooldown.default_mapping._cooldown.per
-        default_cooldown_rate = cooldown.default_mapping._cooldown.rate
-
-        em.add_field(
-            name="Cooldowns",
-            value=f"Default: `{default_cooldown_rate}` time(s) every `{default_cooldown_per}` seconds",     
-            inline=False
-        )
 
         # Aliases
         em.add_field(
@@ -982,7 +957,7 @@ class meta(commands.Cog, description='Get bot stats and information.'):
         await ctx.send(f'I have an uptime of: **{get_bot_uptime(self.bot, brief=False)}**', hide=True)
 
     @commands.hybrid_command(name='ping', aliases=['pong'])
-    @commands.check(Cooldown(1, 5, 1, 3, commands.BucketType.member))
+    @commands.dynamic_cooldown(dynamic_cooldown, type=commands.BucketType.user)
     async def ping(self, ctx: MyContext):
         """Show the bot's latency in milliseconds.
         Useful to see if the bot is lagging out."""

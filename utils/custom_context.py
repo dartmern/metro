@@ -170,7 +170,7 @@ class MyContext(commands.Context):
     async def emojify(self, object, custom_emojis : bool = True):
         if bool(object) is True:
             if custom_emojis is True:
-                return self.bot.check
+                return self.bot._check
             else:
                 return '✅'
         if bool(object) is False:

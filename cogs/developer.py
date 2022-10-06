@@ -429,6 +429,22 @@ class developer(commands.Cog, description="Developer commands."):
         embed.set_footer(text='As of now Metro Premium has very unnoticeable features. Buying pateron can fund things like hosting and development.')
         await ctx.send(embed=embed)
 
+    @premium.command(name='list')
+    @is_support()
+    async def premium_list_guilds(self, ctx: MyContext):
+        """List all the premium guilds."""
+
+        fmt = []
+        data = await self.bot.db.fetch('SELECT * FROM premium_guilds WHERE is_premium = True')
+        for entry in data:
+            guild = self.bot.get_guild(entry['server'])
+            name = guild.name if guild else 'Not Found'
+            dt = pytz.utc.localize(entry['added_time'])
+            added_time = discord.utils.format_dt(dt, style='R')
+            fmt.append(f"`{name}` ({entry['server']}) - since: {added_time}")
+
+        await ctx.paginate(fmt)
+
     @premium.command(name='add', aliases=['+'])
     @is_support()
     async def premium_add(self, ctx: MyContext, *, object: Union[discord.Guild, discord.User]):

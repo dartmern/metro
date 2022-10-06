@@ -9,7 +9,7 @@ from utils.constants import FEEDBACK_CHANNEL, SUPPORT_CATEGORY, SUPPORT_CHANNEL,
 from utils.custom_context import MyContext
 from utils.converters import BotUser
 from utils.embeds import create_embed
-from utils.useful import Cooldown, Embed, ts_now
+from utils.useful import Embed, dynamic_cooldown, ts_now
 from utils.decos import in_support
 
 from config.view import SupportView
@@ -84,7 +84,7 @@ class support(commands.Cog, description='Support only commands.'):
             await author.send(embed=embed)
 
     @commands.command(hidden=True)
-    @commands.check(Cooldown(1, 10, 1, 10, bucket=commands.BucketType.member))
+    @commands.dynamic_cooldown(dynamic_cooldown, type=commands.BucketType.member)
     @in_support()
     async def addbot(
         self, 
@@ -129,7 +129,7 @@ class support(commands.Cog, description='Support only commands.'):
             except discord.HTTPException as e:
                 return await ctx.send(f'Failed to add your bot.\n{str(e)}')
 
-            await message.add_reaction(self.bot.check)
+            await message.add_reaction(self.bot._check)
             await message.add_reaction(self.bot.cross)
 
             await ctx.send('Your bot request has been submitted to the moderators. \nI will DM you about the status of your request.')
@@ -141,7 +141,7 @@ class support(commands.Cog, description='Support only commands.'):
         if not isinstance(ctx.channel, discord.Thread):
             return
 
-        await ctx.message.add_reaction(self.bot.check)
+        await ctx.message.add_reaction(self.bot._check)
         await ctx.channel.add_tags(discord.Object(1019745545805365248))
         await ctx.channel.edit(
             locked=True, 
