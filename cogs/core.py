@@ -45,7 +45,7 @@ class ErrorView(discord.ui.View):
 class core(commands.Cog, description="Core events."):
     def __init__(self, bot : MetroBot):
         self.bot = bot
-        self.cooldown_mapping = commands.CooldownMapping.from_cooldown(3, 7, commands.BucketType.user)
+        self.cooldown_mapping = commands.CooldownMapping.from_cooldown(3, 5, commands.BucketType.user)
         self.blacklist_message_sent = []
         self.error_channel = ERROR_CHANNEL_ID
         self.error_emoji = 'https://images-ext-1.discordapp.net/external/b9E12Jxz-Fmlg25PNTCYYPrXMomcrAhxWu1JTM4MAh4/https/i.imgur.com/9gQ6A5Y.png'
@@ -59,6 +59,39 @@ class core(commands.Cog, description="Core events."):
     async def on_app_command_error(
         self, interaction: discord.Interaction, error: AppCommandError):
         """Handle application command errors."""
+        ctx: MyContext = await self.bot.get_context(interaction)
+        embed = discord.Embed(color=discord.Color.red())
+
+        if isinstance(error, errors.UserBlacklistedInteraction):
+
+            self.blacklist_message_sent.append(ctx.author.id)
+            info = await self.bot.db.fetchval('SELECT reason FROM blacklist WHERE member_id = $1', ctx.author.id)
+            return await ctx.send(
+                    f"You are blacklisted from using Metro" + (f" for {info}" if info else ""), hide=True
+                )
+
+        elif isinstance(error, app_commands.errors.BotMissingPermissions):
+            missing_perms = ", ".join(["`%s`" % perm.replace('_', ' ').replace('guild', 'server').title() for perm in error.missing_permissions])
+            embed.description = "I am missing the following permissions to run that command: \n%s" % missing_perms
+            
+            embed.set_author(name='Bot Missing Permissions', icon_url=self.error_emoji)
+
+            try:
+                return await ctx.send(embed=embed, hide=True)
+            except:
+                return await ctx.author.send(embed=embed)
+
+        elif isinstance(error, app_commands.errors.MissingPermissions):
+            if check_dev(ctx.bot, ctx.author):
+                await ctx.reinvoke()
+                return
+
+            embed.set_author(name='Missing Permissions', icon_url=self.error_emoji)
+
+            missing_perms = ", ".join(["`%s`" % perm.replace('_', ' ').replace('guild', 'server').title() for perm in error.missing_permissions])
+            embed.description = "You are missing the following permissions to run that command: \n%s" % missing_perms
+            
+            return await ctx.send(embed=embed, hide=True)
 
         ctx = await self.bot.get_context(interaction)
 
@@ -315,10 +348,7 @@ class core(commands.Cog, description="Core events."):
             
             if retry_after:
                 await self.bot.add_to_blacklist(ctx, ctx.author, f'Spamming Commands (auto-ban)', silent=True)
-                if not check_dev(self.bot, ctx.author):
-                    await ctx.send("You have been blacklisted for spamming commands. (auto-ban)")
-                else:
-                    return
+                await ctx.send("You have been blacklisted for spamming commands. (auto-ban)")
             else:
                 await ctx.send(embed=em, delete_after=error.retry_after)
 

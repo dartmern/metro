@@ -156,7 +156,7 @@ class MetroBot(commands.AutoShardedBot):
         self.add_check(self.user_blacklisted)
 
         self.maintenance = False
-        self.owner = None
+        self.owner: Optional[discord.User] = None
 
         self.support_staff = SUPPORT_STAFF
 
@@ -180,10 +180,17 @@ class MetroBot(commands.AutoShardedBot):
         #Emojis
         self.emotes = EMOTES
         self.TEST_BOT_ID = TEST_BOT_ID
+        self._check = "<:mCheck:819254444197019669>"
+        self.cross = "<:mCross:819254444217860116>"
 
         # cooldowns
         self.normal_cd = commands.CooldownMapping.from_cooldown(3, 8, commands.BucketType.user)
         self.premium_cd = commands.CooldownMapping.from_cooldown(3, 6, commands.BucketType.user)
+
+        # typechecking stuff
+        self.session: aiohttp.ClientSession
+        self.error_logger: discord.Webhook
+        self.status_logger: discord.Webhook
 
     @property
     def donate(self) -> str:
@@ -279,13 +286,13 @@ class MetroBot(commands.AutoShardedBot):
                 INSERT INTO blacklist(member_id, is_blacklisted, moderator, added_time, reason) VALUES ($1, $2, $3, $4, $5) 
                 """
         try:
-            await self.db.execute(query, member.id, True, ctx.author, (discord.utils.utcnow().replace(tzinfo=None)), reason)
+            await self.db.execute(query, member.id, True, ctx.author.id, (discord.utils.utcnow().replace(tzinfo=None)), reason)
         except asyncpg.exceptions.UniqueViolationError:
             raise commands.BadArgument(f"This user is already blacklisted.")
         self.blacklist[member.id] = True
 
         if silent is False:
-            await ctx.send(f"{self.check} Added **{member}** to the bot blacklist.")
+            await ctx.send(f"{self._check} Added **{member}** to the bot blacklist.")
 
     async def remove_from_blacklist(self, ctx : MyContext, member : Union[discord.Member, discord.User]):
         query = """
@@ -296,42 +303,39 @@ class MetroBot(commands.AutoShardedBot):
             await ctx.send(f"{self.emotes['cross']} **{member}** is not currently blacklisted.")
         else:
             self.blacklist[member.id] = False
-            await ctx.send(f"{self.check} Removed **{member}** from the bot blacklist.")
+            await ctx.send(f"{self._check} Removed **{member}** from the bot blacklist.")
 
-    async def setup_hook(self) -> None:    
-        pass
-    
-    async def on_ready(self):
-        await self.wait_until_ready()
+    async def setup_hook(self) -> None:
 
         user = self.get_user(BOT_OWNER_ID)
+        self.owner = user
+
         data = read_json("restart")
         if data:
             channel = self.get_channel(data['channel'])
-            message = channel.get_partial_message(data['id'])
+            if not channel:
+                return 
+            message = channel.get_partial_message(data['id']) # this can't be none
             dt = datetime.datetime.fromtimestamp(data['now'])
             
             try:
                 await message.edit(content=f'{self.emotes["check"]} Restart complete after {human_timedelta(dt, suffix=False)}')
             except discord.HTTPException:
-                pass # eh it's fine
+                pass
 
-        self.owner = user
-
-
-    def add_command(self, command):
+    def add_command(self, command: commands.Command):
         """Override `add_command` to make a default cooldown for every command"""
 
         super().add_command(command)
         command.cooldown_after_parsing = True
 
-    async def get_context(self, message, *, cls=MyContext):
+    async def get_context(self, message: Union[discord.Message, discord.Interaction], *, cls=MyContext):
         """Making our custom context"""
 
         return await super().get_context(message, cls=cls)
 
 
-    async def process_commands(self, message):
+    async def process_commands(self, message: discord.Message):
         """Override process_commands to check, and call typing every invoke."""
 
         if message.author.bot:
@@ -409,11 +413,19 @@ print(f"{cwd}\n-----")
 
 bot = MetroBot()
 
+@bot.check
+async def command_check(ctx: MyContext):
+    return True
+    if bot.premium_guilds.get(ctx.guild.id):
+        bucket = bot.premium_cd.get_bucket(ctx.message)
+    else:
+        bucket = bot.normal_cd.get_bucket(ctx.message)
+    retry_after = bucket.update_rate_limit()
 
-bot._check = "<:mCheck:819254444197019669>"
-bot.cross = "<:mCross:819254444217860116>"
-
-
+    if retry_after:
+        raise commands.CommandOnCooldown(bucket, retry_after, commands.BucketType.user)
+    return True
+    
 @bot.listen('on_message')
 async def mention_prefix(message: discord.Message):
     if re.fullmatch(rf"<@!?{bot.user.id}>", message.content):
@@ -464,7 +476,6 @@ async def on_guild_remove(guild: discord.Guild):
                             f"\n__**Owner:**__ {guild.owner} (ID: {guild.owner_id})"
     count = discord.Embed(color=discord.Colour.purple(), description="Guilds count: **%s**" % len(bot.guilds))
     await channel.send(embeds=[embed, count])
-
 
 async def main():
     async with aiohttp.ClientSession() as session:
