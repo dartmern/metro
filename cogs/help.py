@@ -379,16 +379,16 @@ class NewHelpView(discord.ui.View):
 
         to_join = []
         for command in cog.get_commands():
-            if len(command.name) < 15:
+            short_doc = command.short_doc or "No help provided..."
+            if len(command.name) < 20:
                 group_mark = '✅' if isinstance(command, commands.Group) else ''
-                empty_space = 15 - len(command.name)
+                empty_space = 20 - len(command.name)
                 if not group_mark == '':
                     empty_space = empty_space - 2
-                short_doc = command.short_doc or "No help provided..."
                 signature = f"`{command.name}{' '*empty_space}{group_mark}:` {short_doc if len(short_doc) < 58 else f'{short_doc[0:58]}...'}"
             else:
-                group_mark = '\✅' if isinstance(command, commands.Group) else ''
-                signature = f"`{command.name[0:12]}...{group_mark}` {short_doc if len(short_doc) < 58 else f'{short_doc[0:58]}...'}"
+                group_mark = '✅' if isinstance(command, commands.Group) else ''
+                signature = f"`{command.name[0:15]}...{group_mark}:` {short_doc if len(short_doc) < 58 else f'{short_doc[0:58]}...'}"
             to_join.append(signature)
 
         embed = Embed(color=self.ctx.color)
@@ -447,10 +447,6 @@ class NewHelpView(discord.ui.View):
         embed.add_field(name='Process', value=f'{memory_usage:.2f} MiB\n{cpu_usage:.2f}% CPU')
 
         embed.add_field(name='Guilds', value=guilds)
-
-        count = await self.bot.db.fetchval('SELECT COUNT(*) as c FROM messages')
-
-        embed.add_field(name='Messages', value=count)
         embed.add_field(name='Uptime', value=get_bot_uptime(self.bot, brief=True))
         return embed
 
@@ -934,8 +930,6 @@ class meta(commands.Cog, description='Get bot stats and information.'):
             'name' : 'help',
             'description' : 'Show bot help or help for a command',
             'aliases' : ['h','command'],
-            'slash_command' : True,
-            'message_command' : True,
             'extras' : {'examples' : "[p]help ban\n[p]help config enable\n[p]help invite"}
         }
 
