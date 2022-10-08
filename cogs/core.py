@@ -11,7 +11,6 @@ import pomice
 
 import datetime as dt
 from bot import MetroBot
-from cogs.stars import StarError
 from utils import errors
 from utils.constants import DEVELOPER_ROLE, ERROR_CHANNEL_ID
 
@@ -119,9 +118,6 @@ class core(commands.Cog, description="Core events."):
         elif ctx.interaction and not ctx.guild:
             embed.description = "This command isn't available in my messages."
             return await ctx.send(embed=embed)
-    
-        elif isinstance(error, StarError):
-            return await ctx.send(str(error))
 
         elif isinstance(error, errors.UserBlacklisted):
             if ctx.interaction:
