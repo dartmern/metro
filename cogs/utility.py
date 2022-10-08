@@ -86,7 +86,7 @@ class AddPrefixModal(discord.ui.Modal):
             await self.bot.db.execute(query, self.ctx.guild.id, self.prefix.value)
             self.bot.prefixes[self.ctx.guild.id] = await self.bot.fetch_prefixes(self.ctx.guild.id)
 
-            prefixes = ['`%s`' % prefix for prefix in self.bot.prefixes[self.ctx.guild.id]]
+            prefixes = ['`%s`' % prefix for prefix in self.bot.prefixes[self.ctx.guild.id]] if not None else self.bot.PRE
             embed = create_embed(f'Your current prefixes: {", ".join(prefixes)}', title='Prefix Configuration')
 
             await interaction.message.edit(embed=embed)
@@ -111,7 +111,7 @@ class RemovePrefixSelect(discord.ui.Select):
             await self.bot.db.execute(query, self.ctx.guild.id, prefix)
         self.bot.prefixes[self.ctx.guild.id] = new
 
-        prefixes = ['`%s`' % prefix for prefix in self.bot.prefixes[self.ctx.guild.id]]
+        prefixes = ['`%s`' % prefix for prefix in self.bot.prefixes[self.ctx.guild.id]] if not None else self.bot.PRE
         embed = create_embed(f'Your current prefixes: {", ".join(prefixes)}', title='Prefix Configuration')
 
         removed = ['`%s`' % prefix for prefix in self.values]
@@ -184,7 +184,7 @@ class PrefixView(discord.ui.View):
         await self.bot.db.execute('DELETE FROM prefixes WHERE guild_id = $1', self.ctx.guild.id)
         self.bot.prefixes[self.ctx.guild.id] = self.bot.PRE
         
-        prefixes = ['`%s`' % prefix for prefix in self.bot.prefixes[self.ctx.guild.id]]
+        prefixes = ['`%s`' % prefix for prefix in self.bot.prefixes[self.ctx.guild.id]] if not None else self.bot.PRE
         embed = create_embed(f'Your current prefixes: {", ".join(prefixes)}', title='Prefix Configuration')
 
         await self.message.edit(embed=embed)
@@ -476,7 +476,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
     async def prefix(self, ctx: MyContext):
         """Manage custom prefixes."""
 
-        prefixes = ['`%s`' % prefix for prefix in self.bot.prefixes[ctx.guild.id]]
+        prefixes = ['`%s`' % prefix for prefix in self.bot.prefixes[ctx.guild.id]] if not None else self.bot.PRE
         embed = create_embed(f'Your current prefixes: {", ".join(prefixes)}', title='Prefix Configuration')
         
         view = PrefixView(ctx)

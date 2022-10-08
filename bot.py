@@ -27,6 +27,7 @@ from utils.remind_utils import human_timedelta
 from utils.json_loader import read_json
 from utils.errors import UserBlacklisted
 from utils.custom_context import MyContext
+from utils.useful import ts_now
 
 os.environ["JISHAKU_NO_UNDERSCORE"] = "True"
 os.environ["JISHAKU_NO_DM_TRACEBACK"] = "True"
