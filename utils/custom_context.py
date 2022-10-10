@@ -153,7 +153,7 @@ class MyContext(commands.Context):
 
     
     async def help(self):
-        await self.send_help(self.command)
+        await self.get_help(self.command)
 
     async def get_message(self, id : int, channel : Optional[discord.TextChannel] = None):
         channel = channel or self.channel
@@ -183,9 +183,10 @@ class MyContext(commands.Context):
         channel = channel or self.channel
         await channel.send(f"{member.mention} {message if message else ''}", delete_after=0.1)
 
-    async def get_help(self, command: commands.Command) -> discord.Embed:
+    async def get_help(self, command: commands.Command, *, content: Optional[str] = None) -> discord.Embed:
         help_command = self.bot.help_command
 
+        self.invoked_with = 'help'
         cmd = help_command.copy()
         cmd.context = self
 
@@ -193,7 +194,7 @@ class MyContext(commands.Context):
             if hasattr(command, "__cog_commands__"):
                 return await cmd.send_cog_help(command)
             elif isinstance(command, Group):
-                return await cmd.send_group_help(command)
+                return await cmd.send_group_help(command, content=content)
             elif isinstance(command, Command):
                 return await cmd.get_command_help(command)
         except CommandError as e:

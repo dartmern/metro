@@ -412,7 +412,7 @@ class NewHelpView(discord.ui.View):
                 f'\n{self.ctx.bot.emotes["github"]} [Github]({self.ctx.bot.github})'\
                 f'\n{self.ctx.bot.emotes["docs"]} [Documentation]({self.ctx.bot.docs})' 
         
-        embed.set_author(name=f"Created by {self.ctx.bot.owner}", icon_url=self.ctx.bot.owner.display_avatar.url)
+        embed.set_author(name=f"Created by {self.ctx.bot.owner}", icon_url=self.ctx.bot.owner.display_avatar.url if self.ctx.bot.owner else None)
         embed.colour = self.ctx.guild.me.colour
 
         total_members = 0
@@ -631,13 +631,14 @@ class HelpMenu(OldRoboPages):
 
 
 class ButtonMenuSrc(menus.ListPageSource):
-    def __init__(self, group, commands, *, prefix, ctx : MyContext):
+    def __init__(self, group, commands, *, prefix: str, ctx : MyContext, content: Optional[str] = None):
         super().__init__(entries=commands, per_page=9)
         self.group = group
         self.prefix = prefix
         self.description = self.group.help  
         self.extras = self.group.extras
         self.ctx = ctx
+        self.content = content
         
 
     async def format_page(self, menu, commands):
@@ -704,7 +705,7 @@ class ButtonMenuSrc(menus.ListPageSource):
         embed.set_footer(
             text=footer
         )
-        return embed
+        return {'content': self.content, 'embed': embed}
 
 
 class MetroHelp(commands.HelpCommand):
@@ -850,7 +851,7 @@ class MetroHelp(commands.HelpCommand):
         view = View(self.context, command=command)
         view.message = await self.context.send(embed=await self.get_command_help(command),view=view, hide=True)
 
-    async def send_group_help(self, group):
+    async def send_group_help(self, group, *, content: Optional[str] = None):
         
         entries = await self.filter_commands(list((group.commands)))
         
@@ -859,7 +860,7 @@ class MetroHelp(commands.HelpCommand):
             view.message = await self.context.send(embed=await self.get_command_help(group),view=view, hide=True)
             return 
 
-        menu = SimplePages(ButtonMenuSrc(group, entries, prefix=self.context.clean_prefix, ctx=self.context),ctx=self.context, compact=True)
+        menu = SimplePages(ButtonMenuSrc(group, entries, prefix=self.context.clean_prefix, ctx=self.context, content=content),ctx=self.context, compact=True)
         await menu.start()
         
 
@@ -935,7 +936,7 @@ class meta(commands.Cog, description='Get bot stats and information.'):
 
         self.bot: MetroBot = bot
         self.old_help_command = bot.help_command
-        bot.help_command = MetroHelp(command_attrs=attrs)
+        bot.help_command = MetroHelp(command_attrs=attrs, verify_checks=True)
         bot.help_command.cog = self
 
     @property

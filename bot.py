@@ -182,11 +182,7 @@ class MetroBot(commands.AutoShardedBot):
         self.TEST_BOT_ID = TEST_BOT_ID
         self._check = "<:mCheck:819254444197019669>"
         self.cross = "<:mCross:819254444217860116>"
-
-        # cooldowns
-        self.normal_cd = commands.CooldownMapping.from_cooldown(3, 8, commands.BucketType.user)
-        self.premium_cd = commands.CooldownMapping.from_cooldown(3, 6, commands.BucketType.user)
-
+        
         # typechecking stuff
         self.session: aiohttp.ClientSession
         self.error_logger: discord.Webhook
@@ -412,20 +408,7 @@ cwd = str(cwd)
 print(f"{cwd}\n-----")
 
 bot = MetroBot()
-
-@bot.check
-async def command_check(ctx: MyContext):
-    return True
-    if bot.premium_guilds.get(ctx.guild.id):
-        bucket = bot.premium_cd.get_bucket(ctx.message)
-    else:
-        bucket = bot.normal_cd.get_bucket(ctx.message)
-    retry_after = bucket.update_rate_limit()
-
-    if retry_after:
-        raise commands.CommandOnCooldown(bucket, retry_after, commands.BucketType.user)
-    return True
-    
+  
 @bot.listen('on_message')
 async def mention_prefix(message: discord.Message):
     if re.fullmatch(rf"<@!?{bot.user.id}>", message.content):
