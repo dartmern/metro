@@ -1097,6 +1097,13 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         view = BulkRoleView(ctx=ctx, role=role)
         await view.start()
 
+    @_role.command(name='info')
+    async def _role_info_command(self, ctx: MyContext, *, role: RoleConverter):
+        """Display information on a role."""
+
+        view = RoleInfoView(ctx=ctx, role=role)
+        await view.start()
+
     @_role.command(name='list')
     async def _role_list_command(self, ctx: MyContext):
         """Displays the server's roles."""
