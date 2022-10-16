@@ -338,8 +338,9 @@ class tags(commands.Cog, description='Manage and create tags'):
                 INSERT INTO tag_lookup (name, content, guild_id, owner_id, is_alias, original, created_at)
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
                 """
+        old = content['original'] if content['original'] else old_name
         try:
-            await self.bot.db.execute(query, new_name, content['content'], ctx.guild.id, ctx.author.id, True, old_name, discord.utils.utcnow().replace(tzinfo=None))
+            await self.bot.db.execute(query, new_name, content['content'], ctx.guild.id, ctx.author.id, True, old, discord.utils.utcnow().replace(tzinfo=None))
         except Exception as e:
             return await ctx.send(f'Error adding alias: {e}')
 
