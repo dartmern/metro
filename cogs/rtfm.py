@@ -326,28 +326,40 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
     @rtfm.command(name="python",aliases=["py"])
     @commands.bot_has_permissions(send_messages=True)
     async def rtfm_py(self, ctx, *, object : str = None):
-        """Gives you a documentation link for a Python object."""
+        """Returns documentation for a Python object."""
 
         await self.do_rtfm(ctx, "python", object)
 
     @rtfm.command(name='aiohttp')
     @commands.bot_has_guild_permissions(send_messages=True)
     async def rtfm_aiohttp(self, ctx: MyContext, *, object: str = None):
-        """Gives you a documentation link for a aiohttp object."""
+        """Returns documentation for a aiohttp object."""
 
         await self.do_rtfm(ctx, 'aiohttp', object)
 
     @rtfm.command(name='twitchio')
     async def rtfm_twitchio(self, ctx: MyContext, *, object: str = None):
-        """Gives you a documentation link for a twitchio object."""
+        """Returns documentation for a twitchio object."""
 
         await self.do_rtfm(ctx, 'twitchio', object)
 
     @rtfm.command(name='mystbin', aliases=['mystbin.py'])
     async def rtfm_mystbin(self, ctx: MyContext, *, object: str = None):
-        """Gives you a documentation link for a mystbin.py object."""
+        """Returns documentation for a mystbin.py object."""
 
         await self.do_rtfm(ctx, 'mystbin.py', object)
+
+    @rtfm.command(name='master', aliases=['latest'])
+    async def rtfm_master(self, ctx: MyContext, *, object: str = None):
+        """Returns documentation for a discord.py object. (master)"""
+
+        await self.do_rtfm(ctx, 'discord.py (master)', object)
+
+    @rtfm.command(name='pomice')
+    async def rtfm_pomice(self, ctx: MyContext, *, object: str = None):
+        """Returns documentation for a pomice object."""
+
+        await self.do_rtfm(ctx, 'pomice', object)
 
     @rtfm.command(name='refresh', aliases=['reload'])
     @commands.is_owner()
