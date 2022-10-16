@@ -112,6 +112,11 @@ class support(commands.Cog, description='Support only commands.'):
             return
 
         else:
+            try:
+                await confirm.message.delete()
+            except discord.HTTPException:
+                pass
+            
             url = f'https://discord.com/oauth2/authorize?client_id={user.id}&scope=bot&guild_id={ctx.guild.id}'
             description = f"{reason}\n\n[Invite URL]({url})"
 
