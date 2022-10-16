@@ -380,8 +380,11 @@ class core(commands.Cog, description="Core events."):
             separator = (' ' * (len([item[::-1] for item in command[::-1].split(missing[::-1], 1)][::-1][0]) - 1)) + (8*' ')
             indicator = ('^' * (len(missing) + 2))
             message = (f"\n```yaml\nSyntax: {command}\n{separator}{indicator}\n{missing} is a required argument that is missing.\n```")
-                                    
-            return await ctx.send(embed=await ctx.get_help(ctx.command, content=message))
+            
+            if isinstance(ctx.command, commands.Group):
+                await ctx.get_help(ctx.command, content=message)
+            else:
+                await ctx.send(embed=await ctx.get_help(ctx.command, content=message))        
 
         elif isinstance(error, commands.TooManyArguments):
             return await ctx.send("Too many arguments were passed to this command!")
@@ -403,7 +406,7 @@ class core(commands.Cog, description="Core events."):
             return await ctx.send(str(error), embed=error.embed)
 
         elif isinstance(error, commands.BadArgument):
-            return await ctx.send(str(error))
+            return await ctx.send(str(error), hide=True)
 
         elif isinstance(error, commands.CommandError):
             return await ctx.send(str(error))
