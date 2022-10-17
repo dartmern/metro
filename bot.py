@@ -2,12 +2,14 @@ import asyncio
 import collections
 import datetime
 import re
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 import typing
 import asyncpixel
 import discord
 from discord.ext import commands
 from discord import app_commands
+from discord.app_commands import AppCommand
+from discord.abc import Snowflake
 
 from pathlib import Path
 import os
@@ -169,6 +171,7 @@ class MetroBot(commands.AutoShardedBot):
         self.prefixes = {}
         self.blacklist = {}
         self.guildblacklist = {}
+        self.app_commands: Dict[str, int] = {}
         
         #self.premium_users = {} --soon
         self.premium_guilds = {}
@@ -219,6 +222,33 @@ class MetroBot(commands.AutoShardedBot):
     @property
     def privacy_policy(self) -> str:
         return PRIVACY_POLICY
+
+    async def get_app_command(
+        self, value: Union[str, int]) -> Optional[Tuple[str, int]]:
+        """Get an app command as a tuple. (name, id)
+        
+        This is not an API call and it is from the cache."""
+
+        for name, _id in self.app_commands.items():
+            if value == name or value.isdigit() and int(value) == _id:
+                return name, _id
+        return None # not found in cache
+
+    async def update_app_commands_cache(
+        self,
+        *,
+        commands: Optional[List[AppCommand]] = None,
+        guild: Optional[Snowflake] = None
+    ) -> None:
+        """
+        Fill the cache of app commands.
+        This is not called on startup but manually through a sync.
+        
+        Calling this without the commands argument will result in a api fetch.
+        """
+        if not commands:
+            commands = await self.tree.fetch_commands(guild=guild.id if guild else None)
+        self.app_commands = {cmd.name: cmd.id for cmd in commands}
 
     async def on_shard_disconnect(self, shard_id: int):
         if self.user.id == self.TEST_BOT_ID:

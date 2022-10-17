@@ -3,7 +3,8 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 
-from typing import Literal, Optional, Union
+from typing import List, Literal, Optional, Union
+from discord.app_commands import AppCommand
 
 import traceback
 import time
@@ -231,6 +232,7 @@ class developer(commands.Cog, description="Developer commands."):
 
         You can sync multiple guilds like: [p]mod sync guild1 guild2
         """
+            
         if not guilds:
             if option == "~":
                 synced = await ctx.bot.tree.sync(guild=ctx.guild)
@@ -247,6 +249,7 @@ class developer(commands.Cog, description="Developer commands."):
             await ctx.send(
                 f"Synced {len(synced)} commands {'globally' if option is None else 'to the current guild.'}"
             )
+            await self.bot.update_app_commands_cache(synced)
             return
 
         ret = 0
