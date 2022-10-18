@@ -359,9 +359,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         self._current_timer = None
         self._task = bot.loop.create_task(self.dispatch_timers())
 
-        self.highlight = defaultdict(list)
-
-        bot.loop.create_task(self.load_highlight())
+        self.highlight_cache: dict[tuple[int, int], list[str]] = {}
 
         self.regex_pattern = re.compile('([^\s\w]|_)+')
         self.website_regex = re.compile("https?:\/\/[^\s]*")
@@ -1157,18 +1155,6 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             f"\n Jump URL: [Click here]({first_message.jump_url} \"Click here to jump to message\")"
         await ctx.send(embed=embed)
 
-    async def load_highlight(self):
-        await self.bot.wait_until_ready()
-        self.highlight = {}
-
-        query = """
-                SELECT * FROM highlight
-                """
-        records = await self.bot.db.fetch(query)
-        if records:
-            for record in records:
-                self.highlight[record['text']] = (record['guild_id'], record['author_id'])
-
     @commands.hybrid_group(name='highlight', invoke_without_command=True, case_insensitive=True, aliases=['hl'], fallback='help')
     @commands.guild_only()
     async def highlight(self, ctx: MyContext):
@@ -1192,7 +1178,10 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         data = await self.bot.db.fetchval("SELECT highlight FROM highlight WHERE author_id = $1 AND guild_id = $2 AND text = $3", ctx.author.id, ctx.guild.id, word)
         if not data:  
             await self.bot.db.execute("INSERT INTO highlight (author_id, text, guild_id) VALUES ($1, $2, $3)", ctx.author.id, word, ctx.guild.id)
-            self.highlight[word] = (ctx.guild.id, ctx.author.id)
+            if self.highlight_cache.get((ctx.guild.id, ctx.author.id)):
+                self.highlight_cache[(ctx.guild.id, ctx.author.id)].append(word)
+            else:
+                self.highlight_cache[(ctx.guild.id, ctx.author.id)] = [word]
 
         await ctx.send(f"{self.bot.emotes['check']} Updated your highlight list.", hide=True, delete_after=6)
         try:
@@ -1211,7 +1200,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         await self.bot.db.execute("DELETE FROM highlight WHERE author_id = $1 AND text = $2 AND guild_id = $3", ctx.author.id, word, ctx.guild.id)
 
         try:
-            del self.highlight[word]
+            self.highlight_cache[(ctx.guild.id, ctx.author.id)].remove(word)
         except KeyError:
             pass
         await ctx.send(f"{self.bot.emotes['check']} Updated your highlight list.", hide=True, delete_after=6)
@@ -1260,7 +1249,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
     @commands.guild_only()
     async def highlight_clear(self, ctx: MyContext):
         """Clear your highlights."""
-
+        
         data = await self.bot.db.fetch("SELECT * FROM highlight WHERE author_id = $1 AND guild_id = $2", ctx.author.id, ctx.guild.id)
         if not data:
             await ctx.send(f"{self.bot.emotes['cross']} You have no highlights to clear.", hide=True, delete_after=6)
@@ -1273,8 +1262,8 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             await confirm.message.edit(content='Timed out.', view=None, delete_after=6)
         else:
             await self.bot.db.execute("DELETE FROM highlight WHERE author_id = $1 AND guild_id = $2", ctx.author.id, ctx.guild.id)
-            await self.load_highlight() # whatever
-
+            self.highlight_cache.pop((ctx.guild.id, ctx.author.id), None)
+                
             await confirm.message.edit(content=f"{self.bot.emotes['check']} Cleared all your highlights.", delete_after=6, view=None)   
             
         try:
@@ -1282,21 +1271,18 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         except discord.HTTPException:
             pass
 
-    async def generate_context(self, msg, hl):
+    async def generate_context(self, msg: discord.Message, hl: str) -> discord.Embed:
         fmt = []
         async for m in msg.channel.history(limit=5):
-            time = m.created_at.strftime("%H:%M:%S")
-            fmt.append(f"**[{time}] {m.author.name}:** {m.content[:100]}")
+            time_fmt = discord.utils.format_dt(m.created_at, style='t')
+            fmt.append(f"**[{time_fmt}] {m.author.name}:** {m.content[:100]}")
         e = discord.Embed(title=f"**{hl}**", description='\n'.join(fmt[::-1]))
-        e.add_field(name='Jump to', value=f"[Jump!]({m.jump_url})")
         return e
 
     @commands.Cog.listener("on_message")
     async def highlight_core(self, message: discord.Message):
         """The core of highlight."""
         self.last_seen[message.author.id] = discord.utils.utcnow()
-
-        # If you wanna call this inefficient idc. it works fine for me
         
         if message.guild is None:
             return
@@ -1306,24 +1292,36 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         final_message = self.website_regex.sub('', message.content.lower())
         final_message = self.regex_pattern.sub('', final_message)
         
-        if self.highlight:
+        if self.highlight_cache:
             try:
-                for key, value in self.highlight.items(): 
-                    local_last_seen = self.last_seen.get(int(value[1]))
-                    if not local_last_seen or ((discord.utils.utcnow() - local_last_seen).total_seconds() < 300):
+                for key, value in self.highlight_cache.items(): 
+                    #local_last_seen = self.last_seen.get(int(value[1]))
+                    #if not local_last_seen or ((discord.utils.utcnow() - local_last_seen).total_seconds() < 300):
+                        #continue
+                    if message.guild.id != key[0]:
                         continue
-                    if message.guild.id != value[0]:
-                        continue
-                    if str(key).lower() in final_message and message.author.id != value[1]:
-                        e = await self.generate_context(message, key)
-                        user = message.guild.get_member(value[1])
-                        if user is not None and user in message.mentions:
-                            continue
-                        if user is not None and message.channel.permissions_for(user).read_messages:
-                            ctx = await self.bot.get_context(message)
-                            if ctx.prefix is not None:
+                    for word in value:
+                        if str(word).lower() in final_message and message.author.id != key[1]:
+                            embed = await self.generate_context(message, word)
+
+                            view = discord.ui.View()
+                            view.add_item(discord.ui.Button(label='Jump to message', url=message.jump_url))
+                            
+                            user = message.guild.get_member(key[1])
+                            if user is not None and user in message.mentions:
                                 continue
-                            await user.send(f"In {message.channel.mention}, you were mentioned with the highlighted word \"{key}\"", embed=e)
+
+                            if user is not None and message.channel.permissions_for(user).read_messages:
+                                ctx = await self.bot.get_context(message)
+                                if ctx.prefix is not None:
+                                    continue
+
+                                await user.send(
+                                    f"In {message.channel.mention}, you were mentioned with the highlighted word \"{word}\"", 
+                                    embed=embed, view=view)
+                                break
+                        continue
+
             except RuntimeError:
                 pass # Can't do shit really 
 

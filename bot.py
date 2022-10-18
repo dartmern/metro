@@ -62,59 +62,6 @@ async def create_db_pool(user, password, database, host, port) -> asyncpg.Pool:
     }
     return await asyncpg.create_pool(**details)
     
-async def execute_scripts():
-    await bot.wait_until_ready()
-
-    scripts = [x[:-4] for x in sorted(os.listdir("./database")) if x.endswith(".sql")]
-
-    for script in scripts:
-        with open(f"./database/{script}.sql", "r", encoding='utf-8') as script:
-            try:
-                await bot.db.execute(script.read())
-            except Exception as e:
-                etype = type(e)
-                trace = e.__traceback__
-
-                lines = traceback.format_exception(etype, e, trace)
-
-                to_p = ''.join(lines)
-                print(to_p)
-
-async def load_blacklist():
-    await bot.wait_until_ready()
-
-    query = """
-            SELECT member_id FROM blacklist WHERE is_blacklisted = True
-            """
-
-    records = await bot.db.fetch(query)
-    if records:
-        for record in records:
-            bot.blacklist[record["member_id"]] = True
-
-async def load_guildblacklist():
-    await bot.wait_until_ready()
-
-    query = """
-            SELECT guild FROM guild_blacklist WHERE verify = True
-            """
-    records = await bot.db.fetch(query)
-    if records:
-        for record in records:
-            bot.guildblacklist[record["guild"]] = True
-
-async def load_premiumguilds():
-    await bot.wait_until_ready()
-
-    query = """
-            SELECT server FROM premium_guilds WHERE is_premium = True
-            """
-    records = await bot.db.fetch(query)
-    if records:
-        for record in records:
-            bot.premium_guilds[record['server']] = True
-
-
 class MetroBot(commands.AutoShardedBot):
 #class MetroBot(commands.Bot):
     PRE: tuple = ('m.', 'm?')
@@ -250,6 +197,54 @@ class MetroBot(commands.AutoShardedBot):
             commands = await self.tree.fetch_commands(guild=guild.id if guild else None)
         self.app_commands = {cmd.name: cmd.id for cmd in commands}
 
+    async def fill_bot_cache(self):
+        """Fill the bot's utility cache."""
+
+        await self.wait_until_ready()
+
+        # premium guilds cache
+        query = """
+                SELECT server FROM premium_guilds WHERE is_premium = True
+                """
+        records = await self.db.fetch(query)
+        if records:
+            for record in records:
+                self.premium_guilds[record['server']] = True
+
+        # guild blacklist cache
+        query = """
+                SELECT guild FROM guild_blacklist WHERE verify = True
+                """
+        records = await self.db.fetch(query)
+        if records:
+            for record in records:
+                self.guildblacklist[record["guild"]] = True
+
+        # member blacklist cache
+        query = """
+                SELECT member_id FROM blacklist WHERE is_blacklisted = True
+                """
+
+        records = await self.db.fetch(query)
+        if records:
+            for record in records:
+                self.blacklist[record["member_id"]] = True
+        
+        # highlight cache
+        cog = self.get_cog('utility') # type: ignore
+        query = """
+                SELECT * FROM highlight
+                """
+        records = await self.db.fetch(query)
+        if records:
+            for record in records:
+                if cog.highlight_cache.get((record['guild_id'], record['author_id'])):
+                    cog.highlight_cache[(record['guild_id'], record['author_id'])].append(record['text'])
+                else:
+                    cog.highlight_cache[(record['guild_id'], record['author_id'])] = [record['text']]
+        
+        logging.info('Bot\'s cache was refreshed.')
+
     async def on_shard_disconnect(self, shard_id: int):
         if self.user.id == self.TEST_BOT_ID:
             return 
@@ -331,7 +326,8 @@ class MetroBot(commands.AutoShardedBot):
             self.blacklist[member.id] = False
             await ctx.send(f"{self._check} Removed **{member}** from the bot blacklist.")
 
-    async def setup_hook(self) -> None:
+    async def startup(self) -> None:
+        await self.wait_until_ready()
 
         user = self.get_user(BOT_OWNER_ID)
         self.owner = user
@@ -348,6 +344,9 @@ class MetroBot(commands.AutoShardedBot):
                 await message.edit(content=f'{self.emotes["check"]} Restart complete after {human_timedelta(dt, suffix=False)}')
             except discord.HTTPException:
                 pass
+
+        await self.fill_bot_cache()
+        # fill the bot cache
 
     def add_command(self, command: commands.Command):
         """Override `add_command` to make a default cooldown for every command"""
@@ -495,10 +494,7 @@ async def main():
         async with bot:
             bot.session = session
             bot.db = await create_db_pool(user, password, database, host, port)
-            bot.loop.create_task(load_blacklist())
-            bot.loop.create_task(load_guildblacklist())
-            bot.loop.create_task(load_premiumguilds())
-            bot.loop.create_task(execute_scripts())
+            bot.loop.create_task(bot.startup())
 
             bot.error_logger = discord.Webhook.from_url(webhooks['error_handler'], session=bot.session)
             bot.status_logger = discord.Webhook.from_url(webhooks['status_logger'], session=bot.session)

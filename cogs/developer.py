@@ -263,6 +263,17 @@ class developer(commands.Cog, description="Developer commands."):
 
         await ctx.send(f"Synced the tree to {ret}/{len(guilds)}.")
 
+    @moderator.command(name='fillcache')
+    @is_support()
+    async def moderator_fillcache(self, ctx: MyContext):
+        """Fill the bot's cache again. 
+        
+        This is already called upon startup but can be manually called through this command"""
+
+        await ctx.typing()
+        
+        await self.bot.fill_bot_cache()
+        await ctx.check()
 
     @moderator.command(name='whatown')
     @is_support()
