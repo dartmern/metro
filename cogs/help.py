@@ -58,7 +58,7 @@ class BotInfoExtended(discord.ui.View):
         p = pathlib.Path('./')
         cm = cr = fn = cl = ls = fc = 0
         for f in p.rglob('*.py'):
-            if str(f).startswith("venv"):
+            if str(f) in ('venv', 'bin', 'etc', 'include', 'lib', '__pycache__', 'share'):
                 continue
             fc += 1
             with f.open(encoding='utf8',errors='ignore') as of:
@@ -723,7 +723,7 @@ class MetroHelp(commands.HelpCommand):
         _help = command.help or "This command has no description"
         return _help
 
-    async def command_callback(self, ctx: MyContext[MetroBot], *, command: Optional[str] = None) -> None:
+    async def command_callback(self, ctx: MyContext, *, command: Optional[str] = None) -> None:
         await self.prepare_help_command(ctx, command)
         bot: MetroBot = ctx.bot
 
