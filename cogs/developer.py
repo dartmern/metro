@@ -3,7 +3,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 
-from typing import List, Literal, Optional, Union
+from typing import Any, List, Literal, Optional, Union
 from discord.app_commands import AppCommand
 
 import traceback
@@ -140,9 +140,9 @@ async def setup(bot: MetroBot):
     await bot.add_cog(developer(bot))
 
 class plural:
-    def __init__(self, value):
+    def __init__(self, value: int):
         self.value = value
-    def __format__(self, format_spec):
+    def __format__(self, format_spec: str):
         v = self.value
         singular, sep, plural = format_spec.partition('|')
         plural = plural or f'{singular}s'
@@ -154,13 +154,13 @@ class plural:
 class developer(commands.Cog, description="Developer commands."):
     def __init__(self, bot: MetroBot):
         self.bot = bot
-        self._last_result = None
+        self._last_result: Any = None
 
     @property
     def emoji(self) -> str:
         return ''
 
-    def cleanup_code(self, content):
+    def cleanup_code(self, content: str):
         """Automatically removes code blocks from the code."""
         # remove ```py\n```
         if content.startswith('```') and content.endswith('```'):
@@ -170,7 +170,7 @@ class developer(commands.Cog, description="Developer commands."):
         return content.strip('` \n')
 
     @commands.Cog.listener()
-    async def on_message_edit(self, before, after):
+    async def on_message_edit(self, before: discord.Message, after: discord.Message):
         if before.author.id != 525843819850104842:
             return
         await self.bot.process_commands(after)
@@ -638,7 +638,7 @@ class developer(commands.Cog, description="Developer commands."):
         else:
             await ctx.send(fmt, view=StopView(ctx))
 
-    def do_restart(self, message: discord.Message):
+    def do_restart(self, message: discord.Message) -> None:
         write_json(
             {
                 "id": message.id, 

@@ -1,7 +1,7 @@
 import inspect
 import itertools
 import os
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Mapping, Optional
 
 from discord.ext.commands.help import HelpCommand
 from bot import MetroBot
@@ -10,9 +10,11 @@ from utils.constants import TESTING_GUILD
 from utils.embeds import create_embed
 from utils.new_pages import SimplePages
 import discord
+from discord import app_commands
 import pathlib
 
 import discord.ext
+from discord.ext.commands import Cog, Command
 
 from discord.ext import commands, menus
 import contextlib
@@ -546,6 +548,7 @@ class View(discord.ui.View):
         super().__init__(timeout=60)
         self.ctx = ctx
         self.command = command
+        self.message: discord.Message
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if self.ctx.author == interaction.user:
@@ -560,11 +563,11 @@ class View(discord.ui.View):
         await interaction.message.delete()
 
 class HelpSource(menus.ListPageSource):
-    def __init__(self, data, *, prefix):
+    def __init__(self, data: list[commands.Command], *, prefix: str):
         super().__init__(data, per_page=10)
         self.prefix = prefix
 
-    async def format_page(self, menu, commands):
+    async def format_page(self, menu, commands: list[commands.Command]):
         maximum = self.get_max_pages()
 
         embed = Embed()
@@ -590,6 +593,7 @@ class HelpSource(menus.ListPageSource):
 class HelpMenu(OldRoboPages):
     def __init__(self, source):
         super().__init__(source)
+        self.bot: MetroBot
 
     @menus.button("\N{WHITE QUESTION MARK ORNAMENT}", position=menus.Last(5))
     async def show_bot_help(self, payload):
@@ -631,7 +635,11 @@ class HelpMenu(OldRoboPages):
 
 
 class ButtonMenuSrc(menus.ListPageSource):
-    def __init__(self, group, commands, *, prefix: str, ctx : MyContext, content: Optional[str] = None):
+    def __init__(
+        self, group: commands.Group, 
+        commands: List[commands.Command], *, 
+        prefix: str, ctx : MyContext, content: Optional[str] = None):
+
         super().__init__(entries=commands, per_page=9)
         self.group = group
         self.prefix = prefix
@@ -641,7 +649,7 @@ class ButtonMenuSrc(menus.ListPageSource):
         self.content = content
         
 
-    async def format_page(self, menu, commands):
+    async def format_page(self, menu: menus.Menu, commands: List[commands.Command]):
 
         maximum = self.get_max_pages()
         if maximum > 1:
@@ -693,7 +701,7 @@ class ButtonMenuSrc(menus.ListPageSource):
                 pass
 
             try:
-                perms: Dict = self.extras['perms']
+                perms: dict = self.extras['perms']
                 clean_perms = [f"`{perm.replace('_', ' ').replace('guild', 'server').title()}`" for perm in perms.keys()]
                 embed.add_field(
                     name='Permissions',
@@ -715,9 +723,9 @@ class MetroHelp(commands.HelpCommand):
         _help = command.help or "This command has no description"
         return _help
 
-    async def command_callback(self, ctx : MyContext, *, command : str =None):
+    async def command_callback(self, ctx: MyContext[MetroBot], *, command: Optional[str] = None) -> None:
         await self.prepare_help_command(ctx, command)
-        bot = ctx.bot
+        bot: MetroBot = ctx.bot
 
         if command is None:
             mapping = self.get_bot_mapping()
@@ -735,7 +743,7 @@ class MetroHelp(commands.HelpCommand):
         # passes an invalid subcommand, we need to walk through
         # the command group chain ourselves.
         keys = command.split(' ')
-        cmd = bot.all_commands.get(keys[0])
+        cmd: commands.Group = bot.all_commands.get(keys[0])
         if cmd is None:
             string = await maybe_coro(self.command_not_found, self.remove_mentions(keys[0]))
             return await self.send_error_message(ctx, string)
@@ -757,7 +765,7 @@ class MetroHelp(commands.HelpCommand):
         else:
             return await self.send_command_help(cmd)
 
-    async def get_command_help(self, command : commands.Command) -> Embed:
+    async def get_command_help(self, command: commands.Command) -> Embed:
 
         command_extras = command.extras
         # Base
@@ -802,8 +810,6 @@ class MetroHelp(commands.HelpCommand):
             except KeyError:
                 pass
 
-
-
         if not isinstance(command, commands.Group):
             return em
 
@@ -824,12 +830,12 @@ class MetroHelp(commands.HelpCommand):
 
         return em
 
-    async def send_bot_help(self, mapping):
+    async def send_bot_help(self, mapping: Mapping[Optional[Cog], List[Command[Any, ..., Any]]], /) -> None:
 
         #This is a very bad implantation of the base help command but it works
 
-        def get_category(command, *, no_category='No Category'):
-            cog = command.cog
+        def get_category(command: commands.Command, *, no_category='No Category'):
+            cog: commands.Cog = command.cog
             if cog is None: return [no_category, 'Commands that do not have a category.']
             try:
                 to_return = [cog.qualified_name, cog.description.split('\n')[0], cog.emoji]
@@ -846,12 +852,11 @@ class MetroHelp(commands.HelpCommand):
         view = NewHelpView(self.context, to_iterate, self)
         await view.start()
 
-    
-    async def send_command_help(self, command):
+    async def send_command_help(self, command: Command[Any, ..., Any], /) -> None:
         view = View(self.context, command=command)
         view.message = await self.context.send(embed=await self.get_command_help(command),view=view, hide=True)
 
-    async def send_group_help(self, group, *, content: Optional[str] = None):
+    async def send_group_help(self, group: commands.Group, *, content: Optional[str] = None):
         
         entries = await self.filter_commands(list((group.commands)))
         
@@ -894,7 +899,7 @@ class MetroHelp(commands.HelpCommand):
         
         return await self.context.send(embed=embed)
 
-    async def command_not_found(self, command):
+    async def command_not_found(self, command: str):
         if command.lower() == "all":
             commands = await self.filter_commands(self.context.bot.commands)
             
@@ -903,12 +908,10 @@ class MetroHelp(commands.HelpCommand):
 
         return f"No command/category called `{command}` found."
 
-    async def send_error_message(self, ctx, error):
+    async def send_error_message(self, ctx: MyContext, error: Exception):
         if error is None:
             return
         return await ctx.send(error, hide=True)
-
-from discord import app_commands
 
 @app_commands.context_menu(name='Invite Bot')
 async def invite_bot_context_menu(interaction: discord.Interaction, member: discord.Member):
@@ -925,7 +928,7 @@ async def setup(bot: MetroBot):
     await bot.add_cog(meta(bot))
 
 class meta(commands.Cog, description='Get bot stats and information.'):
-    def __init__(self, bot):
+    def __init__(self, bot: MetroBot):
 
         attrs = {
             'name' : 'help',
@@ -934,7 +937,7 @@ class meta(commands.Cog, description='Get bot stats and information.'):
             'extras' : {'examples' : "[p]help ban\n[p]help config enable\n[p]help invite"}
         }
 
-        self.bot: MetroBot = bot
+        self.bot = bot
         self.old_help_command = bot.help_command
         bot.help_command = MetroHelp(command_attrs=attrs, verify_checks=True)
         bot.help_command.cog = self
@@ -943,6 +946,8 @@ class meta(commands.Cog, description='Get bot stats and information.'):
     def emoji(self) -> str:
         return 'ℹ️'
 
+    def cog_unload(self) -> None:
+        self.bot.help_command = self.old_help_command
 
     @commands.hybrid_command()
     @commands.bot_has_permissions(send_messages=True)

@@ -115,16 +115,15 @@ class MetroBot(commands.AutoShardedBot):
         self.uptime = discord.utils.utcnow()
 
         #Cache
-        self.prefixes = {}
-        self.blacklist = {}
-        self.guildblacklist = {}
-        self.app_commands: Dict[str, int] = {}
+        self.prefixes: dict[int, list[str]] = {}
+        self.blacklist: dict[int, bool] = {}
+        self.guildblacklist: dict[int, bool] = {}
+        self.app_commands: dict[str, int] = {}
         
         #self.premium_users = {} --soon
-        self.premium_guilds = {}
+        self.premium_guilds: dict[int, bool] = {}
 
         #Tracking
-        self.message_stats = collections.Counter()
         self.command_stats = {}
         
         #Emojis
@@ -198,7 +197,9 @@ class MetroBot(commands.AutoShardedBot):
         self.app_commands = {cmd.name: cmd.id for cmd in commands}
 
     async def fill_bot_cache(self):
-        """Fill the bot's utility cache."""
+        """Fill the bot's utility cache.
+        
+        This is called upon startup or through a manual command."""
 
         await self.wait_until_ready()
 
@@ -245,31 +246,11 @@ class MetroBot(commands.AutoShardedBot):
         
         logging.info('Bot\'s cache was refreshed.')
 
-    async def on_shard_disconnect(self, shard_id: int):
-        if self.user.id == self.TEST_BOT_ID:
-            return 
-        embed = discord.Embed(color=discord.Color.red(), description=f"{self.emotes['dnd']} Shard #{shard_id} has disconnected.")
-        await self.status_logger.send(embed=embed)
+    async def add_to_guildblacklist(
+        self, guild: int, *, reason: Optional[str] = None, 
+        ctx: MyContext, silent: bool = False) -> discord.Message:
+        """Add a guild to the blacklist."""
 
-    async def on_shard_ready(self, shard_id: int):
-        if self.user.id == self.TEST_BOT_ID:
-            return 
-        embed = discord.Embed(color=discord.Color.green(), description=f"{self.emotes['online']} Shard #{shard_id} is ready.")
-        await self.status_logger.send(embed=embed)
-
-    async def on_shard_resumed(self, shard_id: int):
-        if self.user.id == self.TEST_BOT_ID:
-            return 
-        embed = discord.Embed(color=discord.Color.green(), description=f"{self.emotes['online']} Shard #{shard_id} has resumed.")
-        await self.status_logger.send(embed=embed)
-
-    async def on_shard_connect(self, shard_id: int):
-        if self.user.id == self.TEST_BOT_ID:
-            return 
-        embed = discord.Embed(color=discord.Color.orange(), description=f"{self.emotes['idle']} Shard #{shard_id} has connected.")
-        await self.status_logger.send(embed=embed)
-
-    async def add_to_guildblacklist(self, guild: int, *, reason: Optional[str] = None, ctx: MyContext, silent: bool = False):
         if guild == SUPPORT_GUILD:
             return await ctx.send("I have been hard configurated to not blacklist this guild.", reply=False)
 
@@ -286,22 +267,28 @@ class MetroBot(commands.AutoShardedBot):
         if silent is False:
             return await ctx.send(f"{self.emotes['check']} Added **{guild}** to blacklist.")
 
-    async def remove_from_guildblacklist(self, guild: int, *, ctx: MyContext):
+    async def remove_from_guildblacklist(self, guild: int, *, ctx: MyContext) -> discord.Message:
+        """Remove a guild from the blacklist."""
+
         query = """
                 DELETE FROM guild_blacklist WHERE guild = $1
                 """
         status = await self.db.execute(query, guild)
         if status == "DELETE 0":
-            await ctx.send(f"{self.emotes['cross']} **{guild}** is not currently blacklisted.")
+            return await ctx.send(f"{self.emotes['cross']} **{guild}** is not currently blacklisted.")
         else:
             self.guildblacklist[guild] = False
-            await ctx.send(f"{self.emotes['check']} Removed **{guild}** from the blacklist.")
+            return await ctx.send(f"{self.emotes['check']} Removed **{guild}** from the blacklist.")
 
-    async def add_to_blacklist(self, ctx : MyContext, member : Union[discord.Member, discord.User], reason : str = None, *, silent : bool = False):
+    async def add_to_blacklist(
+        self, ctx: MyContext, member: Union[discord.Member, discord.User], 
+        reason : str = None, *, silent : bool = False) -> discord.Message:
+        """Add a user to the global blacklist."""
+
         if check_dev(self, member):
             if silent is True:
                 return
-            raise commands.BadArgument("I have been hard configured to not blacklist this user.")
+            return await ctx.send("I have been hard configured to not blacklist this user.")
 
         query = """
                 INSERT INTO blacklist(member_id, is_blacklisted, moderator, added_time, reason) VALUES ($1, $2, $3, $4, $5) 
@@ -309,24 +296,29 @@ class MetroBot(commands.AutoShardedBot):
         try:
             await self.db.execute(query, member.id, True, ctx.author.id, (discord.utils.utcnow().replace(tzinfo=None)), reason)
         except asyncpg.exceptions.UniqueViolationError:
-            raise commands.BadArgument(f"This user is already blacklisted.")
+            return await ctx.send(f"This user is already blacklisted.")
         self.blacklist[member.id] = True
 
         if silent is False:
-            await ctx.send(f"{self._check} Added **{member}** to the bot blacklist.")
+            return await ctx.send(f"{self._check} Added **{member}** to the bot blacklist.")
 
-    async def remove_from_blacklist(self, ctx : MyContext, member : Union[discord.Member, discord.User]):
+    async def remove_from_blacklist(
+        self, ctx: MyContext, member : Union[discord.Member, discord.User]) -> discord.Message:
+        """Remove a user from the global blacklist."""
+
         query = """
                 DELETE FROM blacklist WHERE member_id = $1
                 """
         status = await self.db.execute(query, member.id)
         if status == "DELETE 0":
-            await ctx.send(f"{self.emotes['cross']} **{member}** is not currently blacklisted.")
+            return await ctx.send(f"{self.emotes['cross']} **{member}** is not currently blacklisted.")
         else:
             self.blacklist[member.id] = False
-            await ctx.send(f"{self._check} Removed **{member}** from the bot blacklist.")
+            return await ctx.send(f"{self._check} Removed **{member}** from the bot blacklist.")
 
     async def startup(self) -> None:
+        """Startup the bot. This is called at startup and not manually."""
+
         await self.wait_until_ready()
 
         user = self.get_user(BOT_OWNER_ID)
@@ -360,7 +352,7 @@ class MetroBot(commands.AutoShardedBot):
         return await super().get_context(message, cls=cls)
 
 
-    async def process_commands(self, message: discord.Message):
+    async def process_commands(self, message: discord.Message) -> None:
         """Override process_commands to check, and call typing every invoke."""
 
         if message.author.bot:
@@ -392,25 +384,23 @@ class MetroBot(commands.AutoShardedBot):
         
         if check_dev(bot, message.author) and self.noprefix is True:
             return commands.when_mentioned_or(*prefix, "")(bot, message) if not raw_prefix else prefix
-        return commands.when_mentioned_or(*prefix)(bot, message) if not raw_prefix else prefix
-         
+        return commands.when_mentioned_or(*prefix)(bot, message) if not raw_prefix else prefix 
 
     async def fetch_prefixes(self, guild_id: int):
         return tuple([x['prefix'] for x in
             await self.db.fetch('SELECT prefix from prefixes WHERE guild_id = $1', guild_id)]) or self.PRE
 
-
-    async def get_or_fetch_member(self, guild, member_id) -> Optional[discord.Member]:
+    async def get_or_fetch_member(self, guild: discord.Guild, member_id: int) -> Optional[discord.Member]:
         """Looks up a member in cache or fetches if not found.
         Parameters
         -----------
-        guild: Guild
+        guild: discord.Guild
             The guild to look in.
         member_id: int
             The member ID to search for.
         Returns
         ---------
-        Optional[Member]
+        Optional[discord.Member]
             The member or None if not found.
         """
 
@@ -499,7 +489,7 @@ async def main():
             bot.error_logger = discord.Webhook.from_url(webhooks['error_handler'], session=bot.session)
             bot.status_logger = discord.Webhook.from_url(webhooks['status_logger'], session=bot.session)
 
-            folders = ['hypixel', 'context_menu', 'giveaway_rewrite']
+            folders = ['giveaway_rewrite', 'tags']
 
             bot.owner = bot.get_user(BOT_OWNER_ID)
 
@@ -511,8 +501,7 @@ async def main():
 
             await bot.load_extension('jishaku') # jishaku
 
-
-            await bot.tree.set_translator(app_commands.Translator())
+            await bot.tree.set_translator(app_commands.Translator()) # translator
 
             await bot.start(token)
 

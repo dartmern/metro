@@ -35,7 +35,7 @@ class WebhookConverter(commands.Converter):
 
 class CodeBlock:
     missing_error = 'Missing code block. Please use the following markdown\n\\`\\`\\`language\ncode here\n\\`\\`\\`'
-    def __init__(self, argument):
+    def __init__(self, argument: str):
         try:
             block, code = argument.split('\n', 1)
         except ValueError:
@@ -142,7 +142,7 @@ class extras(commands.Cog, description='Extra commands for your use.'):
         await ctx.send(embed=embed)
 
 
-    def read_tags(self, ctx : MyContext):
+    def read_tags(self, ctx: MyContext) -> list[str]:
         ids, tags = [], []
         
         guild = ctx.bot.get_guild(336642139381301249)
@@ -218,4 +218,3 @@ class extras(commands.Cog, description='Extra commands for your use.'):
                 embed.add_field(name=result.title, value=f'{result.url}\n{result.description}', inline=False)
             embed.set_footer(text=f'Queried in {round(ping, 2)} milliseconds. | Safe Search: Disabled')
             return await ctx.send(embed=embed)
-
