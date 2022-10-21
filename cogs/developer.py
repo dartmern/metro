@@ -249,7 +249,7 @@ class developer(commands.Cog, description="Developer commands."):
             await ctx.send(
                 f"Synced {len(synced)} commands {'globally' if option is None else 'to the current guild.'}"
             )
-            await self.bot.update_app_commands_cache(synced)
+            await self.bot.update_app_commands_cache(commands=synced)
             return
 
         ret = 0
