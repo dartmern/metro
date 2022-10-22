@@ -1039,12 +1039,34 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
 
         fmt = [
             f"`{role.position}` - {role.id} - `{role.color}` - {role.mention}" 
-            for role in ctx.guild.roles]
+            for role in list(ctx.guild.roles)[::-1]]
 
         source = SimplePageSource(entries=list(fmt), per_page=9)
         menu = SimplePages(source=source, ctx=ctx, compact=True)
         
         await menu.start()
+
+    async def _role_delete(self, ctx: MyContext, role: discord.Role) -> None:
+        if not (await can_execute_role_edit(ctx, role)):
+            return 
+        if not (await can_bot_execute_role_action(ctx, role)):
+            return 
+
+        confirm = await ctx.confirm(
+            f'Are you sure you want to delete {role.mention}?',
+            delete_after=False,
+            interaction=ctx.interaction if ctx.interaction else None)
+        if not confirm.value:
+            await confirm.message.edit(content='Canceled.', view=None)
+            return 
+
+        try:
+            await role.delete(reason=f'Role delete command invoked by: {ctx.author.id} (ID: {ctx.author.id})')
+        except discord.HTTPException as e:
+            await confirm.message.edit(content=f'Error deleting role: {e}')
+            return 
+
+        await confirm.message.edit(content=f'{self.bot._check} Deleted the role **{role.name}**', view=None)
 
     @commands.group(invoke_without_command=True, name='role')
     @role_check()
@@ -1082,6 +1104,8 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
 
         if not (await can_execute_role_edit(ctx, role)):
             return 
+        if not (await can_bot_execute_role_action(ctx, role)):
+            return 
 
         view = CreateRoleView(ctx=ctx, role=role)
         await view.start()
@@ -1109,6 +1133,12 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         """Displays the server's roles."""
 
         await self._role_list(ctx)
+
+    @_role.command(name='delete')
+    async def _role_delete_command(self, ctx: MyContext, *, role: RoleConverter):
+        """Delete a role."""
+
+        await self._role_delete(ctx, role)
 
     @role_group.command(name='toggle')
     @role_check_interaction()
@@ -1192,6 +1222,15 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
 
         ctx = await self.bot.get_context(inter)
         await self._role_list(ctx)
+
+    @role_group.command(name='delete')
+    @role_check_interaction()
+    @app_commands.describe(role='The role you want to delete.')
+    async def role_delete_slash(self, inter: discord.Interaction, role: discord.Role):
+        """Delete a role."""
+
+        ctx = await self.bot.get_context(inter)
+        await self._role_delete(ctx, role)
 
     @commands.Cog.listener()
     async def on_temprole_timer_complete(self, timer: Timer):
@@ -1378,7 +1417,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
 
         confirm = await ctx.confirm(f'Are you sure you want to nuke {channel.mention}', timeout=30.0, delete_after=False)
         if not confirm.value:
-            await confirm.message.edit(content='Canceled/Timed out.')
+            await confirm.message.edit(content='Canceled/Timed out.', view=None)
             return
 
         new_channel = await channel.clone(name=channel.name)
