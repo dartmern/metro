@@ -1814,18 +1814,6 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
 
         message = await self.bot.db.fetchval("SELECT (message, pingrole) FROM bumpreminder WHERE guild_id = $1", guild_id)
         await channel.send(f"{f'<@&{message[1]}>:' if message[1] else ''} {message[0]}", allowed_mentions=discord.AllowedMentions(roles=True))
-        
-    async def load_afkusers(self):
-        await self.bot.wait_until_ready()
-
-        query = """
-                SELECT _user FROM afk WHERE is_afk = True
-                """
-
-        records = await self.bot.db.fetch(query)
-        if records:
-            for record in records:
-                self.afk_users[record['_user']] = True
 
     @commands.command(name='afk')
     async def _afk(self, ctx: MyContext, *, message: Optional[commands.clean_content] = None):

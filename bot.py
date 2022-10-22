@@ -232,17 +232,28 @@ class MetroBot(commands.AutoShardedBot):
                 self.blacklist[record["member_id"]] = True
         
         # highlight cache
-        cog = self.get_cog('utility') # type: ignore
+        utility_cog = self.get_cog('utility') # type: ignore
         query = """
                 SELECT * FROM highlight
                 """
         records = await self.db.fetch(query)
         if records:
             for record in records:
-                if cog.highlight_cache.get((record['guild_id'], record['author_id'])):
-                    cog.highlight_cache[(record['guild_id'], record['author_id'])].append(record['text'])
+                if utility_cog.highlight_cache.get((record['guild_id'], record['author_id'])):
+                    utility_cog.highlight_cache[(record['guild_id'], record['author_id'])].append(record['text'])
                 else:
-                    cog.highlight_cache[(record['guild_id'], record['author_id'])] = [record['text']]
+                    utility_cog.highlight_cache[(record['guild_id'], record['author_id'])] = [record['text']]
+
+        # afk cache
+        serverutils_cog = self.get_cog('serverutils')
+        query = """
+                SELECT _user FROM afk WHERE is_afk = True
+                """
+
+        records = await self.db.fetch(query)
+        if records:
+            for record in records:
+                serverutils_cog.afk_users[record['_user']] = True
         
         logging.info('Bot\'s cache was refreshed.')
 
