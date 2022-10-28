@@ -8,6 +8,7 @@ from typing import Dict, List, Literal, Optional
 
 from bot import MetroBot
 from utils.constants import TESTING_GUILD
+from utils.converters import ChannelOrMember
 
 from utils.json_loader import read_json
 from utils.custom_context import MyContext
@@ -31,6 +32,24 @@ import unicodedata
 
 from utils.pages import StopView
 from utils.embeds import create_embed
+
+class HighlightIgnoreUnignoreView(discord.ui.View):
+    def __init__(self, ctx: MyContext):
+        super().__init__(timeout=300)
+        self.ctx = ctx
+        self.message: discord.Message
+
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
+
+        await self.message.edit(view=self)  
+
+    @discord.ui.select(cls=discord.ui.UserSelect, min_values=1, max_values=25)
+    async def select_users(self, interaction: discord.Interaction, select: discord.ui.UserSelect):
+        
+        query = """"""
+        await interaction.response.send_message(f'Added `{len(select.values)}` users to your block list.')
 
 class WhichStyleTimestampButton(discord.ui.Button):
     def __init__(self, *, option: str, time: datetime.datetime, style: discord.ButtonStyle):
@@ -535,7 +554,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         interaction: discord.Interaction,
         current: str
     ) -> List[app_commands.Choice[str]]:
-            
+        
         new = []
         for command in interaction.client.commands:
             if isinstance(command, commands.Group):
@@ -1271,6 +1290,21 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         except discord.HTTPException:
             pass
 
+    @highlight.command(name='ignore', aliases=['block'])
+    @commands.guild_only()
+    async def highlight_ignore(self, ctx: MyContext):
+        """Ignore and entity from highlighting you."""
+        view = HighlightIgnoreUnignoreView(ctx)
+        view.message = await ctx.send('Select the users you want to block/unblock.', view=view)
+        # use user and channel selects perhaps???
+        
+    @highlight.command(name='unignore', aliases=['unblock'])
+    @commands.guild_only()
+    async def highlight_unignore(self, ctx: MyContext, *, entity: ChannelOrMember):
+        """Unignore an entity from highlighting you."""
+
+        # same applies here for those selects maybe even share the same code
+
     async def generate_context(self, msg: discord.Message, hl: str) -> discord.Embed:
         fmt = []
         async for m in msg.channel.history(limit=5):
@@ -1336,5 +1370,5 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         view = WhichStyleTimestampView(ctx=ctx, time=timestamp)
         await view.start()
 
-async def setup(bot):
+async def setup(bot: MetroBot):
     await bot.add_cog(utility(bot))

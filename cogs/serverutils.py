@@ -639,9 +639,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         self.default_message = "It's been 2 hours since the last successful bump, may someone run `!d bump`?"
         self.default_thankyou = "Thank you for bumping the server! Come back in 2 hours to bump again."
 
-        self.afk_users = {}
-
-        bot.loop.create_task(self.load_afkusers())
+        self.afk_users: dict[int, bool] = {}
 
     role_group = app_commands.Group(name='role', description='Base command for managing role related things.')
 

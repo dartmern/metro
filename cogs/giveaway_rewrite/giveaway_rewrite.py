@@ -272,7 +272,7 @@ class giveaways(commands.Cog, description='The giveaways rewrite including butto
         
         channel = self.bot.get_channel(data[3]) # data[3] is the channel id
         if not channel:
-            return await ctx.send("It seems liske the giveaway's channel was deleted.", hide=True)
+            return await ctx.send("It seems like the giveaway's channel was deleted.", hide=True)
 
         try:
             message = await channel.fetch_message(message_id)

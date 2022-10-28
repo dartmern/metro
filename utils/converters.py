@@ -147,7 +147,7 @@ class ChannelOrRoleOrMember(commands.Converter):
             return await commands.TextChannelConverter().convert(ctx, argument)
         except commands.ChannelNotFound:
             try:
-                return await commands.RoleConverter.convert(ctx, argument)
+                return await commands.RoleConverter().convert(ctx, argument)
             except Exception:
                 try:
                     return await commands.MemberConverter().convert(ctx, argument)
@@ -155,6 +155,18 @@ class ChannelOrRoleOrMember(commands.Converter):
                     raise commands.BadArgument(
                         f"Entity `{await prettify(ctx, argument)}` is an invalid input. Please specify a channel, role, or user."
                     )
+
+class ChannelOrMember(commands.Converter):
+    """Converter for messageable of TextChannel and Member."""
+
+    async def convert(self, ctx: MyContext, argument: str):
+        try:
+            return await commands.TextChannelConverter().convert(ctx, argument)
+        except commands.ChannelNotFound:
+            try:
+                return await commands.MemberConverter().convert(ctx, argument)
+            except commands.MemberNotFound:
+                raise commands.MemberNotFound(argument)
 
 class DiscordGuild(commands.Converter):
     """Match guild_id, or guild name exact, only if author is in the guild."""
