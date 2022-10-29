@@ -537,7 +537,8 @@ class developer(commands.Cog, description="Developer commands."):
     @is_dev()
     @commands.bot_has_permissions(send_messages=True, embed_links=True)
     async def reloadall(self, ctx, *extensions: jishaku.modules.ExtensionConverter):
-        self.bot.last_rall = datetime.datetime.utcnow()
+        await self.bot.fill_bot_cache() # fill cache 
+        
         pages = WrappedPaginator(prefix='', suffix='')
         first_reload_failed_extensions = []
 
