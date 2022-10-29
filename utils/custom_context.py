@@ -132,7 +132,8 @@ class MyContext(commands.Context):
         *,
         per_page: int = 8,
         hide: bool = False,
-        compact: bool = False
+        compact: bool = False,
+        delete_after: float = None
     ):
 
         source = SimplePageSource(
@@ -141,7 +142,7 @@ class MyContext(commands.Context):
             )
 
         menu = SimplePages(
-            source=source, ctx=self, hide=hide, compact=compact)
+            source=source, ctx=self, hide=hide, compact=compact, delete_after=delete_after)
         await menu.start()
 
     @discord.utils.cached_property

@@ -33,6 +33,7 @@ class RoboPages(discord.ui.View):
         *,
         ctx,
         hide: bool = False,
+        delete_after: float = None,
         interaction: discord.Interaction = None,
         check_embeds: bool = True,
         compact: bool = False,
@@ -42,6 +43,7 @@ class RoboPages(discord.ui.View):
         self.check_embeds: bool = check_embeds
         self.ctx = ctx
         self.hide: bool = hide
+        self.delete_after = delete_after
         self.interaction: discord.Interaction = interaction
         self.message: Optional[discord.Message] = None
         self.current_page: int = 0
@@ -161,7 +163,7 @@ class RoboPages(discord.ui.View):
         kwargs = await self._get_kwargs_from_page(page)
         self._update_labels(0)
         if not self.interaction:
-            self.message = await self.ctx.send(**kwargs, view=self, hide=self.hide)
+            self.message = await self.ctx.send(**kwargs, view=self, hide=self.hide, delete_after=self.delete_after)
         else:
             self.message = await self.interaction.followup.send(view=self, **kwargs)
 
@@ -238,8 +240,8 @@ class SimplePages(RoboPages):
     Basically an embed with some normal formatting.
     """
 
-    def __init__(self, source : menus.ListPageSource, *, ctx: commands.Context, hide : bool = False, compact: bool = False):
-        super().__init__(source, ctx=ctx, hide=hide, compact=compact)
+    def __init__(self, source : menus.ListPageSource, *, ctx: commands.Context, hide : bool = False, compact: bool = False, delete_after: float = None):
+        super().__init__(source, ctx=ctx, hide=hide, compact=compact, delete_after=delete_after)
         self.embed = discord.Embed(colour=ctx.color)
 
 class SimplePageSource(menus.ListPageSource):
