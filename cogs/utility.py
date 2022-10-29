@@ -1,10 +1,12 @@
 from collections import defaultdict
+import logging
 import re
+import traceback
 import discord
 from discord.ext import commands, menus
 from discord import app_commands
 
-from typing import Dict, List, Literal, Optional
+from typing import Dict, List, Literal, Optional, Union
 
 from bot import MetroBot
 from utils.constants import TESTING_GUILD
@@ -33,23 +35,173 @@ import unicodedata
 from utils.pages import StopView
 from utils.embeds import create_embed
 
-class HighlightIgnoreUnignoreView(discord.ui.View):
+class UserSelect(discord.ui.UserSelect):
+    def __init__(self) -> None:
+        super().__init__(
+            min_values=1, max_values=25, 
+            placeholder='Select the users you want to block.')
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
+class ChannelSelect(discord.ui.ChannelSelect):
+    def __init__(self) -> None:
+        super().__init__(
+            min_values=1, max_values=25, 
+            placeholder='Select the channels you want to block.', 
+            channel_types=[discord.ChannelType.text, discord.ChannelType.public_thread, discord.ChannelType.voice])
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
+class UnignoreSelect(discord.ui.Select):
+    def __init__(self, *, options: List[discord.SelectOption], ctx: MyContext) -> None:
+        super().__init__(options=options, max_values=len(options))
+        self.ctx = ctx
+        self.bot: MetroBot = ctx.bot
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
+        to_join: list[Union[discord.TextChannel, discord.User]] = []
+        for item in self.values:   
+            await self.bot.db.execute('DELETE FROM highlight_ignored WHERE (user_id, guild_id, entity_id) = ($1, $2, $3)',
+            self.ctx.author.id, self.ctx.guild.id, int(item))
+        
+            object = self.bot.get_channel(int(item)) or self.bot.get_user(int(item))
+            to_join.append(object)
+       
+        ops = ', '.join(map(lambda x: x.mention, to_join))
+        em = create_embed(f'{self.bot._check} Removed {ops} from your ignored list.', color=discord.Color.green())
+        await interaction.edit_original_response(embed=em, view=None)
+
+class HighlightUnIgnoreView(discord.ui.View):
     def __init__(self, ctx: MyContext):
         super().__init__(timeout=300)
         self.ctx = ctx
+        self.bot: MetroBot = ctx.bot
         self.message: discord.Message
 
     async def on_timeout(self):
         for item in self.children:
             item.disabled = True
 
-        await self.message.edit(view=self)  
+        await self.message.edit(view=self)
 
-    @discord.ui.select(cls=discord.ui.UserSelect, min_values=1, max_values=25)
-    async def select_users(self, interaction: discord.Interaction, select: discord.ui.UserSelect):
+    def embed(self):
+        return create_embed(
+            'Select the **users/channels** you want to unignore.', 
+            color=discord.Color.red())
+
+    def get_channel_or_member(
+        self, 
+        object: int, *, ctx: MyContext) -> Union[discord.TextChannel, discord.VoiceChannel, discord.User, discord.Member]:
+        """Get a channel or member."""
+
+        to_return = self.bot.get_channel(object) or self.bot.get_user(object) or ctx.guild.get_member(object)
+        return to_return
+
+    async def start(self):
+        rows = await self.bot.db.fetch('SELECT entity_id FROM highlight_ignored WHERE user_id = $1 AND guild_id = $2',
+        self.ctx.author.id, self.ctx.guild.id)
+
+        if not rows:
+            self.message = await self.ctx.send('You have no ignored entities that you have blocked.', hide=True)
+
+        options = []
+        for row in rows:
+            object = self.get_channel_or_member(row['entity_id'], ctx=self.ctx)
+            smb = '@' if isinstance(object, (discord.User, discord.Member, discord.ClientUser)) else '#'
+            label = f'{smb}{str(object)}'
+            options.append(discord.SelectOption(label=label, value=row['entity_id']))
         
-        query = """"""
-        await interaction.response.send_message(f'Added `{len(select.values)}` users to your block list.')
+        select = UnignoreSelect(options=options, ctx=self.ctx)
+        self.add_item(select)
+
+        self.message = await self.ctx.send(embed=self.embed(), view=self)
+
+class HighlightIgnoreUnignoreView(discord.ui.View):
+    def __init__(self, ctx: MyContext):
+        super().__init__(timeout=300)
+        self.ctx = ctx
+        self.bot: MetroBot = ctx.bot
+        self.message: discord.Message
+
+        self.user_select = UserSelect()
+        self.channel_select = ChannelSelect()
+        self.add_item(self.user_select)
+        self.add_item(self.channel_select)
+
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
+
+        await self.message.edit(content='Canceled due to timeout. Run the command again.', view=None, embed=None)  
+
+    def embed(self):
+        """Generate the embed for starter message."""
+        return create_embed(
+            'Select the **users/channels** you want to block then click **Confirm**', 
+            color=discord.Color.green())
+
+    async def interaction_check(self, interaction: discord.Interaction):
+        if self.ctx.author.id == interaction.user.id:
+            return True
+        else:
+            await interaction.response.send_message(
+                "Only the command invoker can use this button.", ephemeral=True
+            )
+
+    @discord.ui.button(label='Confirm', style=discord.ButtonStyle.green)
+    async def confirm_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Confirm the selected items."""
+
+        await interaction.response.defer()
+
+        blocked = self.user_select.values + self.channel_select.values
+        for user in blocked:
+            # for ux reasons I feel like this is the best option
+            # to do this task and is better to take this inefficiency
+
+            returned = await self.bot.db.fetchval(
+                'SELECT 1 FROM highlight_ignored WHERE user_id = $1 AND guild_id = $2 AND entity_id = $3',
+                interaction.user.id, interaction.guild_id, user.id)
+            
+            if returned:
+                blocked.remove(user)
+                continue
+
+            try:
+                await self.bot.db.execute(
+                    'INSERT INTO highlight_ignored (user_id, guild_id, entity_id) VALUES ($1, $2, $3)',
+                    interaction.user.id, interaction.guild_id, user.id)
+            except Exception as e:
+                traceback.print_exception(e)
+                logging.error('Error in highlight ignore unignore view.')
+                return 
+
+        joined = '\n'.join(map(lambda x: x.mention, blocked))
+        if not joined:
+            await interaction.followup.send('Select some users/channels before confirming.', ephemeral=True)
+            return 
+
+        em = discord.Embed(color=discord.Color.green())
+        em.add_field(name='Added to your block list.', value=joined)
+
+        response = await interaction.original_response()
+        await response.edit(embed=em, view=None)
+        if not self.ctx.interaction:
+            try:
+                await response.delete(delay=8)
+            except discord.HTTPException:
+                pass
+
+    @discord.ui.button(label='Cancel', style=discord.ButtonStyle.red)
+    async def cancel_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Cancel the ignore request."""
+
+        await interaction.response.defer()
+        await interaction.edit_original_response(content='Canceled.', embed=None, view=None)
 
 class WhichStyleTimestampButton(discord.ui.Button):
     def __init__(self, *, option: str, time: datetime.datetime, style: discord.ButtonStyle):
@@ -1290,20 +1442,42 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         except discord.HTTPException:
             pass
 
-    @highlight.command(name='ignore', aliases=['block'])
+    @highlight.group(name='ignore', aliases=['block'], fallback='add')
     @commands.guild_only()
     async def highlight_ignore(self, ctx: MyContext):
         """Ignore and entity from highlighting you."""
-        view = HighlightIgnoreUnignoreView(ctx)
-        view.message = await ctx.send('Select the users you want to block/unblock.', view=view)
-        # use user and channel selects perhaps???
-        
-    @highlight.command(name='unignore', aliases=['unblock'])
-    @commands.guild_only()
-    async def highlight_unignore(self, ctx: MyContext, *, entity: ChannelOrMember):
-        """Unignore an entity from highlighting you."""
 
-        # same applies here for those selects maybe even share the same code
+        view = HighlightIgnoreUnignoreView(ctx)
+        em = view.embed()
+        view.message = await ctx.send(embed=em, view=view, hide=True)
+
+    @highlight_ignore.command(name='list', aliases=['show'])
+    @commands.guild_only()
+    async def highlight_ignore_list(self, ctx: MyContext):
+        """List the entities you have on your highlight ignore list."""
+
+        rows = await self.bot.db.fetch('SELECT entity_id FROM highlight_ignored WHERE user_id = $1 AND guild_id = $2',
+        ctx.author.id, ctx.guild.id)
+        if not rows:
+            await ctx.send('You have no ignored entities that you have blocked.', hide=True)
+            return 
+
+        to_paginate = []
+        for row in rows:
+            entity = self.bot.get_channel(row['entity_id'])
+            if not entity:
+                entity = ctx.guild.get_member(row['entity_id'])
+            to_paginate.append(entity.mention)
+
+        await ctx.paginate(to_paginate, compact=True, delete_after=8)
+
+    @highlight_ignore.command(name='remove')
+    @commands.guild_only()
+    async def highlight_ignore_remove(self, ctx: MyContext):
+        """Remove an entity from your highlight ignore list."""
+
+        view = HighlightUnIgnoreView(ctx)
+        await view.start()
 
     async def generate_context(self, msg: discord.Message, hl: str) -> discord.Embed:
         fmt = []
@@ -1336,6 +1510,12 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
                         continue
                     for word in value:
                         if str(word).lower() in final_message and message.author.id != key[1]:
+
+                            check = await self.bot.db.fetchval('SELECT 1 FROM highlight_ignored WHERE user_id = $1 AND guild_id = $2 AND entity_id = $3',
+                            key[1], message.guild.id, message.author.id)
+                            if check:
+                                continue # ignore list
+
                             embed = await self.generate_context(message, word)
 
                             view = discord.ui.View()
