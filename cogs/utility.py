@@ -106,7 +106,8 @@ class HighlightUnIgnoreView(discord.ui.View):
         self.ctx.author.id, self.ctx.guild.id)
 
         if not rows:
-            self.message = await self.ctx.send('You have no ignored entities that you have blocked.', hide=True)
+            await self.ctx.send('You have no ignored entities that you have blocked.', hide=True)
+            return 
 
         options = []
         for row in rows:
