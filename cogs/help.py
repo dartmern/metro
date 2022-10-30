@@ -1028,3 +1028,37 @@ class meta(commands.Cog, description='Get bot stats and information.'):
 
         await ctx.reply(embed=embed, view=BotInfoExtended())
 
+    @app_commands.command(name='help')
+    @app_commands.describe(command='The command/group/category\'s help you wish to see.')
+    async def help_command_slash(self, interaction: discord.Interaction, command: Optional[str]):
+        """Show the bot's help."""
+
+        ctx = await self.bot.get_context(interaction, cls=MyContext)
+        if not command:
+            await ctx.send_help()
+        else:
+            await ctx.send_help(command)
+
+    @help_command_slash.autocomplete('command')
+    async def help_command_slash_autocomplete(
+        self,
+        interaction: discord.Interaction,
+        current: str
+    ) -> list[app_commands.Choice[str]]:
+        assert self.bot.help_command
+        ctx = await self.bot.get_context(interaction)
+        help_command = self.bot.help_command.copy()
+        help_command.context = ctx
+
+        if not current:
+            return [
+                app_commands.Choice(name=cog_name.title(), value=cog_name)
+                for cog_name, cog in self.bot.cogs.items()
+                if (await help_command.filter_commands(cog.get_commands()))
+            ][:25]
+        current = current.lower()
+        return [
+            app_commands.Choice(name=command.qualified_name, value=command.qualified_name)
+            for command in (await help_command.filter_commands(self.bot.walk_commands(), sort=True))
+            if current in command.qualified_name
+        ][:25]
