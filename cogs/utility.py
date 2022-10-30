@@ -367,6 +367,7 @@ class SourceView(discord.ui.View):
         super().__init__(timeout=180)
         self.ctx = ctx
         self.code = code
+        self.url: str = None
 
     async def interaction_check(self, interaction: discord.Interaction):
         if self.ctx.author.id == interaction.user.id:
@@ -382,26 +383,19 @@ class SourceView(discord.ui.View):
         if len(self.code) >= 1500:
             file = discord.File(io.StringIO(self.code), filename='code.py')
             await interaction.response.defer()
-            await self.ctx.message.reply(file=file, view=StopView(self.ctx))
+            await interaction.followup.send(file=file, view=StopView(self.ctx), ephemeral=True)
         else:
-            await interaction.response.send_message(f"```py\n{self.code}\n```", view=StopView(self.ctx))
-
-        button.style = discord.ButtonStyle.gray
-        button.disabled = True
-        await interaction.message.edit(view=self)
+            await interaction.response.send_message(f"```py\n{self.code}\n```", view=StopView(self.ctx), ephemeral=True)
 
     @discord.ui.button(label='Post Source', emoji='\U0001f587', style=discord.ButtonStyle.blurple)
     async def bar(self, interaction : discord.Interaction, button : discord.ui.Button):
 
-        async with self.ctx.bot.session.post(f"https://mystb.in/documents", data=self.code) as s:
-            res = await s.json()
-            url_key = res['key']
+        await interaction.response.defer()
         
-        await interaction.response.send_message(f"Output: https://mystb.in/{url_key}.python", view=StopView(self.ctx))
-
-        button.style = discord.ButtonStyle.gray
-        button.disabled = True
-        await interaction.message.edit(view=self)
+        if not self.url:
+            paste = await self.ctx.bot.mystbin_client.create_paste(content=self.code, filename='code.py')
+            self.url = f'https://mystb.in/{paste.id}'
+        await interaction.followup.send(f"Output: {self.url}", view=StopView(self.ctx))
 
     @discord.ui.button(emoji='\U0001f5d1', style=discord.ButtonStyle.red)
     async def stop_view(self, interaction : discord.Interaction, button : discord.ui.Button):
@@ -651,85 +645,16 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         view = PrefixView(ctx)
         view.message = await ctx.send(embed=embed, view=view)
 
-    @app_commands.command(name='source')
-    @app_commands.describe(command='The command\'s source you wish to search for.')
-    async def source_app_command(self, interaction: discord.Interaction, command: Optional[str]):
-        """Get the bot's source code or a specific command's."""
-
-        source_url = 'https://github.com/dartmern/metro'
-        license_url = 'https://github.com/dartmern/metro/blob/master/LICENSE'
-        branch = 'master'
-
-        if command is None:
-            embed = Embed(color=interaction.client.user.color)
-            embed.set_author(name='Here is my source code:')
-            embed.description = str(f"My code is under the [**MPL**]({license_url}) license\n → {source_url}")
-            return await interaction.response.send_message(embed=embed, view=StopView(interaction))
-
-        if command == 'help':
-            src = type(self.bot.help_command)
-            module = src.__module__
-            filename = inspect.getsourcefile(src)
-            obj = 'help'
-        else:
-            obj = self.bot.get_command(command.replace('.', ' '))
-            if obj is None:
-                embed = Embed(description=f"Could not find that command. Take the [**entire reposoitory**]({source_url})", color=interaction.client.user.color)
-                embed.set_footer(text='Please make sure you follow the license.')
-                return await interaction.response.send_message(embed=embed, view=StopView(interaction))
-
-            src = obj.callback.__code__
-            module = obj.callback.__module__
-            filename = src.co_filename
-
-        lines, firstlineno = inspect.getsourcelines(src)
-        code_lines = inspect.getsource(src)
-        if not module.startswith('discord'):
-            # not a built-in command
-            location = os.path.relpath(filename).replace('\\', '/')
-        else:
-            location = module.replace('.', '/') + '.py'
-            source_url = 'https://github.com/Rapptz/discord.py'
-            branch = 'master'
-
-        
-        final_url = f'<{source_url}/blob/{branch}/{location}#L{firstlineno}-L{firstlineno + len(lines) - 1}>'
-        embed = Embed(color=interaction.client.user.color)
-        embed.description = f"**__My source code for `{str(obj)}` is located at:__**\n{final_url}"\
-                f"\n\nMy code is under licensed under the [**Mozilla Public License**]({license_url})."
-
-        await interaction.response.send_message(embed=embed, view=StopView(interaction))#, view=SourceView(ctx, code_lines))
-
-    @source_app_command.autocomplete('command')
-    async def source_app_command_autocomplete(
-        self,
-        interaction: discord.Interaction,
-        current: str
-    ) -> List[app_commands.Choice[str]]:
-        
-        new = []
-        for command in interaction.client.commands:
-            if isinstance(command, commands.Group):
-                new.append(command.name)
-                for subcommand in command.commands:
-                    new.append(command.name + " " + subcommand.name)
-            else:
-                new.append(command.name)
-
-        return [
-            app_commands.Choice(name=item, value=item)
-            for item in new if current.lower() in item.lower()
-        ][:8]
-
-    @commands.command(aliases=['sourcecode', 'code', 'src'])
+    @commands.hybrid_command(aliases=['sourcecode', 'code', 'src'])
     @commands.bot_has_permissions(send_messages=True, embed_links=True)
-    async def source(self, ctx, *, command: str = None):
+    @app_commands.describe(command='The command\'s source you want to view.')
+    async def source(self, ctx: MyContext, *, command: str = None):
         """
         Links to the bot's source code, or a specific command's
         """
         
-        source_url = 'https://github.com/dartmern/metro'
-        license_url = 'https://github.com/dartmern/metro/blob/master/LICENSE'
+        source_url = 'https://github.com/dartmern/metro/'
+        license_url = source_url + 'LICENSE'
         branch = 'master'
 
         if command is None:
@@ -763,7 +688,6 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             location = module.replace('.', '/') + '.py'
             source_url = 'https://github.com/Rapptz/discord.py'
             branch = 'master'
-
         
         final_url = f'<{source_url}/blob/{branch}/{location}#L{firstlineno}-L{firstlineno + len(lines) - 1}>'
         embed = Embed(color=ctx.color)
@@ -771,6 +695,27 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
                 f"\n\nMy code is under licensed under the [**Mozilla Public License**]({license_url})."
 
         await ctx.send(embed=embed, view=SourceView(ctx, code_lines))
+
+    @source.autocomplete('command')
+    async def source_app_command_autocomplete(
+        self,
+        interaction: discord.Interaction,
+        current: str
+    ) -> List[app_commands.Choice[str]]:
+        
+        new = []
+        for command in interaction.client.commands:
+            if isinstance(command, commands.Group):
+                new.append(command.name)
+                for subcommand in command.commands:
+                    new.append(command.name + " " + subcommand.name)
+            else:
+                new.append(command.name)
+
+        return [
+            app_commands.Choice(name=item, value=item)
+            for item in new if current.lower() in item.lower()
+        ][:8]
 
     async def github_request(self, method, url, *, params=None, data=None, headers=None):
         hdrs = {
