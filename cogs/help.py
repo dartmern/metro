@@ -769,15 +769,18 @@ class MetroHelp(commands.HelpCommand):
 
         command_extras = command.extras
         # Base
+        bot: MetroBot = self.context.bot
+        app_command = bot.get_app_command(command.name)
+        mention = f'(</{app_command[0]}:{app_command[1]}>)' if app_command else ''
         if command.signature == "":
             em = Embed(
-                title=f"`{command.qualified_name}`",
+                title=f"`{command.qualified_name}` {mention}",
                 description=self.get_doc(command).replace('[p]', self.context.prefix),
                 color=self.context.color
             )
         else:
             em = Embed(
-                title=f"`{command.qualified_name}` `{command.signature}`",
+                title=f"`{command.qualified_name}` `{command.signature}` {mention}",
                 description=self.get_doc(command).replace('[p]', self.context.prefix),
                 color=self.context.color
             )

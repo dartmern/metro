@@ -169,7 +169,7 @@ class MetroBot(commands.AutoShardedBot):
     def privacy_policy(self) -> str:
         return PRIVACY_POLICY
 
-    async def get_app_command(
+    def get_app_command(
         self, value: Union[str, int]) -> Optional[Tuple[str, int]]:
         """Get an app command as a tuple. (name, id)
         
