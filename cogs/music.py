@@ -1,7 +1,7 @@
 import contextlib
 import logging
 import traceback
-from typing import Any, Optional
+from typing import Any, Optional, Union
 from urllib.parse import quote_plus
 from aiohttp import ClientConnectorError
 import discord
@@ -228,7 +228,7 @@ class Player(pomice.Player):
         super().__init__(*args, **kwargs)
 
         self.queue = asyncio.Queue()
-        self.controller: discord.Message = None
+        self.controller: Union[discord.Message, discord.WebhookMessage] = None
         self.context: MyContext = None
         self.dj: discord.Member = None
 
@@ -395,8 +395,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
         if not (player := ctx.voice_client) or ctx.author.voice.channel != ctx.voice_client.channel:
             await ctx.invoke(self.join)  
         
-        player = ctx.voice_client
-
+        player: Player = ctx.voice_client
         results = await player.get_tracks(query, ctx=ctx)
 
         if not results:
@@ -406,8 +405,9 @@ class music(commands.Cog, description='Play high quality music in a voice channe
             await player.queue.put(results[0])
             return await player.do_next()
 
-        if player.controller and ctx.channel != player.controller.channel:
-            return await ctx.send("The player is currently being played in %s head there to use commands." % player.controller.channel.mention, hide=True)
+        if player.controller and ctx.channel != player.controller.channel:           
+            channel = f'<#{player.controller.channel.id}>'
+            return await ctx.send(f"The player is currently being played in {channel} head there to use commands.", hide=True)
 
         if isinstance(results, pomice.Playlist):
             for track in results.tracks:
