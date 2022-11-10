@@ -318,7 +318,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
                 traceback.print_exception(e)
                 logging.info('The music server cannot be connected at this time.')
 
-    async def required(self, ctx: commands.Context):
+    def required(self, ctx: commands.Context):
         """Method which returns required votes based on amount of members in a channel."""
         player: Player = ctx.voice_client
         channel = self.bot.get_channel(int(player.channel.id))
@@ -405,7 +405,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
             await player.queue.put(results[0])
             return await player.do_next()
 
-        if player.controller and ctx.channel != player.controller.channel:           
+        if player.controller and (ctx.channel.id != player.controller.channel.id):           
             channel = f'<#{player.controller.channel.id}>'
             return await ctx.send(f"The player is currently being played in {channel} head there to use commands.", hide=True)
 
