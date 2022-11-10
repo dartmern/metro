@@ -1,6 +1,6 @@
+from typing import List
 import discord
 from discord.ext import commands
-
 
 import re
 from rapidfuzz import process
@@ -9,11 +9,11 @@ from unidecode import unidecode
 from utils.checks import can_execute_action
 from utils.custom_context import MyContext
 
-async def prettify(ctx, arg):
+async def prettify(ctx: MyContext, arg):
     pretty_arg = await commands.clean_content().convert(ctx, str(arg))
     return pretty_arg
 
-def is_admin(ctx):
+def is_admin(ctx: MyContext):
     if (
         ctx.author.id in ctx.bot.constants.admins
         or ctx.author.id in ctx.bot.constants.owners
@@ -24,7 +24,7 @@ def is_admin(ctx):
 SNOWFLAKE_REGEX = re.compile(r"([0-9]{15,21})$")
   
 class BoolConverter(commands.Converter):
-    async def convert(self, ctx, argument):
+    async def convert(self, ctx: MyContext, argument: str):
         lookup = {
                   True:  ('yes', 'y', 'true', 't', '1', 'enable', 'on'),
                   False: ('no', 'n', 'false', 'f', '0', 'disable', 'off')
@@ -37,7 +37,7 @@ class BoolConverter(commands.Converter):
         raise commands.BadArgument('whetever')
 
 class MemberConverter(commands.Converter):
-    async def convert(self, ctx, argument):
+    async def convert(self, ctx: MyContext, argument):
         try:
             m = await commands.MemberConverter().convert(ctx, argument)
         except commands.BadArgument:
@@ -49,14 +49,14 @@ class MemberConverter(commands.Converter):
 
         if not can_execute_action(ctx, ctx.author, m):
             raise commands.BadArgument(
-                f"{self.bot.cross} You cannot do this action on this user due to role hierarchy."
+                f"{ctx.bot.cross} You cannot do this action on this user due to role hierarchy."
             )
         return m
 
 
 #for multiban (only takes ids and turns into all members)
 class MemberID(commands.Converter):
-    async def convert(self, ctx, argument) -> discord.Member:
+    async def convert(self, ctx: MyContext, argument) -> discord.Member:
         try:
             m = await commands.MemberConverter().convert(ctx, argument)
         except commands.BadArgument:
@@ -75,7 +75,7 @@ class MemberID(commands.Converter):
         return m
 
 class ActionReason(commands.Converter):
-    async def convert(self, ctx, argument) -> str:
+    async def convert(self, ctx: MyContext, argument) -> str:
         ret = f'Action requested by {ctx.author} (ID: {ctx.author.id})\nReason: {argument}'
 
         if len(ret) > 512:
@@ -97,7 +97,7 @@ class RoleConverter(commands.RoleConverter):
         self.response = response
         super().__init__()
 
-    async def convert(self, ctx: commands.Context, argument: str) -> discord.Role:
+    async def convert(self, ctx: MyContext, argument: str) -> discord.Role:
         try:
             basic_role = await super().convert(ctx, argument)
         except commands.BadArgument:
@@ -125,7 +125,7 @@ class DiscordCommand(commands.Converter):
     Basic command converter.
     """
 
-    async def convert(self, ctx, argument):
+    async def convert(self, ctx: MyContext, argument):
         command = ctx.bot.get_command(argument.lower())
         if not command:
             raise commands.BadArgument(
@@ -138,7 +138,7 @@ class ChannelOrRoleOrMember(commands.Converter):
     Converter for config command group
     """
 
-    async def convert(self, ctx, argument):
+    async def convert(self, ctx: MyContext, argument):
 
         if argument.lower() == '~':
             return ctx.guild
@@ -171,7 +171,7 @@ class ChannelOrMember(commands.Converter):
 class DiscordGuild(commands.Converter):
     """Match guild_id, or guild name exact, only if author is in the guild."""
 
-    def get_by_name(self, ctx, guild_name):
+    def get_by_name(self, ctx: MyContext, guild_name: str) -> List[discord.Guild]:
         """Lookup by name.
         Returns list of possible matches.
         Try doing an exact match.
@@ -179,7 +179,7 @@ class DiscordGuild(commands.Converter):
         Will only return matches if ctx.author is in the guild.
         """
         if is_admin(ctx):
-            result = discord.utils.find(lambda g: g.name == guild_name, ctx.bot.guilds)
+            result: List[discord.Guild] = discord.utils.find(lambda g: g.name == guild_name, ctx.bot.guilds)
             if result:
                 return [result]
 
@@ -202,7 +202,7 @@ class DiscordGuild(commands.Converter):
                 if g.name.lower() == guild_name and g.get_member(ctx.author.id)
             ]
 
-    async def find_match(self, ctx, argument):
+    async def find_match(self, ctx: MyContext, argument):
         """Get a match...
         If we have a number, try lookup by id.
         Fallback to lookup by name.
@@ -233,10 +233,8 @@ class DiscordGuild(commands.Converter):
             )
         return match
 
-
-
 class BotUser(commands.Converter):
-    async def convert(self, ctx, argument):
+    async def convert(self, ctx: MyContext, argument):
         if not argument.isdigit():
             raise commands.BadArgument('Not a valid bot user ID.')
         try:
@@ -257,8 +255,7 @@ class BotUserObject(commands.MemberConverter):
             raise commands.BadArgument("This is not a bot.")
         else:
             return user
-        
-        
+         
 class ImageConverter(commands.Converter):
     async def convert(self, ctx: MyContext, argument: str):
         
@@ -319,3 +316,4 @@ class ImageConverter(commands.Converter):
             return ctx.message.reference.resolved.author.avatar.url
 
         return None
+        

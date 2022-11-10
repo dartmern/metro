@@ -1,21 +1,13 @@
-import asyncio
-import re
 import discord
 from discord.ext import commands
-from discord import app_commands
 
 from bot import MetroBot
-from utils.constants import FEEDBACK_CHANNEL, SUPPORT_CATEGORY, SUPPORT_CHANNEL, SUPPORT_GUILD, SUPPORT_ROLE, BOTS_ROLE, BOT_REQUESTS_CHANNEL, TESTING_GUILD
+from utils.constants import SUPPORT_GUILD, BOTS_ROLE, BOT_REQUESTS_CHANNEL
 from utils.custom_context import MyContext
 from utils.converters import BotUser
-from utils.embeds import create_embed
-from utils.useful import Embed, dynamic_cooldown, ts_now
+from utils.useful import Embed, dynamic_cooldown
 from utils.decos import in_support
 
-from config.view import SupportView
-
-
-        
 class support(commands.Cog, description='Support only commands.'):
     def __init__(self, bot : MetroBot):
         self.bot = bot

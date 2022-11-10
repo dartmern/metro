@@ -3,7 +3,7 @@ import discord
 
 from utils.custom_context import MyContext
 
-def check_support(ctx):
+def check_support(ctx: MyContext):
     return (
         ctx.author.id in ctx.bot.support
     )
@@ -65,3 +65,4 @@ def check_dev(bot, user : Union[discord.Member, discord.User]):
     return(
         user.id in bot.owner_ids
     )
+    

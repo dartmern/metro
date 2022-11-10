@@ -1,6 +1,6 @@
 import discord
+
 import tagformatter
-import discord
 
 RoleParser = tagformatter.Parser()
 
@@ -63,3 +63,4 @@ def _role_name(env):
 @_role.tag('position')
 def _role_position(env):
     return env.role.position
+    

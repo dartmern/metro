@@ -1,3 +1,5 @@
+# this is fuzzy.py from r danny's code
+
 """
 This Source Code Form is subject to the terms of the Mozilla Public
 License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -5,7 +7,6 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 """
 
 # help with: http://chairnerd.seatgeek.com/fuzzywuzzy-fuzzy-string-matching-in-python/
-
 
 from __future__ import annotations
 

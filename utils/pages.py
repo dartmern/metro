@@ -1,9 +1,7 @@
-import asyncio
-from typing import Union
 import discord
 from discord.ext import menus
 
-from utils.useful import Embed
+import asyncio
 
 class StopView(discord.ui.View):
     def __init__(self, ctx):

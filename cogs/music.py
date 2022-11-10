@@ -1,24 +1,22 @@
+import discord
+from discord.ext import commands, menus
+from discord import app_commands
+
 import contextlib
 import logging
 import traceback
 from typing import Any, Optional, Union
 from urllib.parse import quote_plus
 from aiohttp import ClientConnectorError
-import discord
 import pomice
 import asyncio
 import math
 import random
 
-from discord.ext import commands, menus
-from discord import app_commands
-
 from bot import MetroBot
 from utils.custom_context import MyContext
 from utils.json_loader import read_json
 from utils.new_pages import RoboPages, SimplePages
-from utils.useful import traceback_maker
-from utils.constants import TESTING_GUILD
 
 _info = read_json('info')
 

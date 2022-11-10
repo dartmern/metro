@@ -1,25 +1,8 @@
-from collections import defaultdict
-import logging
-import re
-import traceback
 import discord
 from discord.ext import commands, menus
 from discord import app_commands
 
-from typing import Dict, List, Literal, Optional, Union
-
-from bot import MetroBot
-from utils.constants import TESTING_GUILD
-from utils.converters import ChannelOrMember
-
-from utils.json_loader import read_json
-from utils.custom_context import MyContext
-from utils.remind_utils import human_timedelta
-from utils.useful import Embed, delete_silent, dynamic_cooldown
-from utils.useful import Embed
-from utils.new_pages import SimplePages
-from utils.remind_utils import UserFriendlyTime
-
+from typing import List, Optional, Union
 from datetime import timedelta
 import json
 import io
@@ -31,9 +14,20 @@ import asyncpg
 import yarl
 import inspect
 import unicodedata
+import logging
+import re
+import traceback
 
+from bot import MetroBot
 from utils.pages import StopView
 from utils.embeds import create_embed
+from utils.json_loader import read_json
+from utils.custom_context import MyContext
+from utils.remind_utils import human_timedelta
+from utils.useful import Embed, dynamic_cooldown
+from utils.useful import Embed
+from utils.new_pages import SimplePages
+from utils.remind_utils import UserFriendlyTime
 
 class UserSelect(discord.ui.UserSelect):
     def __init__(self) -> None:

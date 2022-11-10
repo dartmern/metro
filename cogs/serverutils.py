@@ -1,8 +1,11 @@
+import discord
+from discord.ext import commands
+from discord import app_commands
+
 import datetime
 import io
 import json
 from typing import Optional, Union
-import discord
 import re
 import pytz
 import unicodedata
@@ -10,9 +13,6 @@ import asyncpg
 import unidecode
 import stringcase
 import humanize
-
-from discord.ext import commands
-from discord import app_commands
 
 from bot import MetroBot
 from utils.checks import can_bot_execute_role_action, can_execute_action, can_execute_role_action, can_execute_role_edit

@@ -1,31 +1,25 @@
-import asyncio
-import collections
-import datetime
-import re
-from typing import Dict, List, Optional, Tuple, Union
-import typing
-import asyncpixel
 import discord
 from discord.ext import commands
 from discord import app_commands
 from discord.app_commands import AppCommand
 from discord.abc import Snowflake
 
+import asyncio
+import datetime
+import re
+from typing import List, Optional, Tuple, Union
+import asyncpixel
 from pathlib import Path
 import os
 import async_cse
 import asyncpg
-import traceback
-
 import mystbin
 import aiohttp
 import logging
-from config.view import SupportView
 
 from utils.checks import check_dev
-from utils.constants import BOT_LOGGER_CHANNEL, BOT_OWNER_ID, DEFAULT_INVITE, DEVELOPER_IDS, DOCUMENTATION, EMOTES, GITHUB_URL, PATREON_URL, PRIVACY_POLICY, SLASH_GUILDS, SUPPORT_GUILD, SUPPORT_STAFF, SUPPORT_URL, TEST_BOT_ID
+from utils.constants import BOT_LOGGER_CHANNEL, BOT_OWNER_ID, DEFAULT_INVITE, DEVELOPER_IDS, DOCUMENTATION, EMOTES, GITHUB_URL, PATREON_URL, PRIVACY_POLICY, SUPPORT_GUILD, SUPPORT_STAFF, SUPPORT_URL, TEST_BOT_ID
 from utils.remind_utils import human_timedelta
-
 from utils.json_loader import read_json
 from utils.errors import UserBlacklisted
 from utils.custom_context import MyContext

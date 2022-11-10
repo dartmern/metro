@@ -2,16 +2,10 @@ import discord
 from discord.ext import commands
 
 import asyncpg
-
-
 from collections import defaultdict
-
 from typing import Optional
 
 from bot import MetroBot
-
-#Arg parsing stuff
-import shlex
 from utils.checks import check_dev
 
 from utils.converters import ChannelOrRoleOrMember, DiscordCommand

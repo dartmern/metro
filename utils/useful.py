@@ -1,19 +1,11 @@
 import discord
 from discord.ext import commands, menus
-from discord.ext.menus import First, Last
 
-from discord.ext.commands.cooldowns import BucketType
-
+from typing import Optional
 import re
 import asyncio
 
-import utils.checks
-
-
-from typing import Dict, Any, Optional
 from utils.custom_context import MyContext
-
-
 from utils.remind_utils import human_timedelta
 
 PAGE_REGEX = r'(Page)?(\s)?((\[)?((?P<current>\d+)/(?P<last>\d+))(\])?)'

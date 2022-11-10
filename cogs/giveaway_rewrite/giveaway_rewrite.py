@@ -1,24 +1,22 @@
-import ast
-import asyncio
-from typing import Optional
-
-from mee6_py_api import API
-
 import discord
-import datetime # needs to be imported (ast.literal_eval)
-import pytz
 from discord.ext import commands
 from discord import app_commands
 
+import ast
+import asyncio
+from typing import Optional
+from mee6_py_api import API
+import pytz
+
 from bot import MetroBot
-from cogs.giveaway_rewrite.modals.giveaway_create import GiveawayCreate
 from cogs.utility import Timer, utility
 from utils.custom_context import MyContext
 from utils.embeds import create_embed
-from utils.remind_utils import FutureTime, human_timedelta
-from utils.constants import EMOTES, TESTING_GUILD
+from utils.remind_utils import FutureTime
+from utils.constants import EMOTES
 from utils.useful import MessageID
-from .views import ConfirmationEmojisView, GiveawayEntryView, UnenterGiveawayView
+
+from .views import GiveawayEntryView, UnenterGiveawayView
 
 from .core.get_giveaway import get_giveaway
 from .core.get_entry import get_entry
@@ -32,9 +30,10 @@ from .converters.requirements import Requirements
 
 from .settings.show_settings import show_settings   
 from .settings.add_setting import add_setting
-from .settings.get_setting import get_setting
 
-from .checks.manager_check import giveaway_manager_check, giveaway_manager_check_interaction
+from .checks.manager_check import giveaway_manager_check
+
+from .modals.giveaway_create import GiveawayCreate
 
 class giveaways(commands.Cog, description='The giveaways rewrite including buttons.'):
     def __init__(self, bot: MetroBot):

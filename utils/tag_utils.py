@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
 
-
 class TagName(commands.clean_content):
     def __init__(self, *, lower=False):
         self.lower = lower
@@ -25,3 +24,4 @@ class TagName(commands.clean_content):
             raise commands.BadArgument('This tag name starts with a reserved word.')
 
         return converted if not self.lower else lower
+        

@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional
 import discord
 
 def create_embed(
@@ -10,3 +10,4 @@ def create_embed(
     color = color or discord.Color.blurple()
     embed = discord.Embed(color=color, description=text, title=title)
     return embed
+    

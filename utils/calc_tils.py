@@ -157,3 +157,4 @@ class NumericStringParser(object):
         results = self.bnf.parseString(num_string, parseAll)
         val = self.evaluateStack(self.exprStack[:])
         return val
+        

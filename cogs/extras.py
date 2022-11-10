@@ -1,24 +1,16 @@
-from asyncore import write
-import json
-import random
-from typing import Dict, Optional
-import aiohttp
 import discord
 from discord.ext import commands
 from discord import app_commands
 
+import json
 import time
 import re
-import async_cse
-import yarl # google
 
 from bot import MetroBot
-from utils.constants import TESTING_GUILD
 from utils.custom_context import MyContext
-from utils.converters import DiscordCommand, ImageConverter
-from utils.useful import Embed, chunkIt, dynamic_cooldown
+from utils.useful import Embed, dynamic_cooldown
 from utils.calc_tils import NumericStringParser
-from utils.json_loader import get_path, read_json, write_json
+from utils.json_loader import get_path, read_json
 
 data = read_json("info")
 or_api_token = data['openrobot_api_key']

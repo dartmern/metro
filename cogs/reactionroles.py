@@ -1,6 +1,7 @@
-from typing import Optional, Union
 import discord
 from discord.ext import commands
+
+from typing import Optional, Union
 
 from bot import MetroBot
 from utils.custom_context import MyContext

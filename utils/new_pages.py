@@ -3,7 +3,11 @@
 
 # Credits to Danny for making this
 
-
+"""
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this
+file, You can obtain one at http://mozilla.org/MPL/2.0/.
+"""
 
 import discord
 from discord.ext import commands, menus
@@ -24,7 +28,6 @@ class NumberedPageModal(discord.ui.Modal, title='Go to page'):
     async def on_submit(self, interaction: discord.Interaction) -> None:
         self.interaction = interaction
         self.stop()
-
 
 class RoboPages(discord.ui.View):
     def __init__(

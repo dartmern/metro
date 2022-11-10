@@ -1,36 +1,31 @@
-import asyncio
 import discord
 from discord.ext import commands
 from discord import app_commands
 
-from typing import Any, List, Literal, Optional, Union
-from discord.app_commands import AppCommand
-
+from typing import Any, Literal, Optional, Union
+import asyncio
 import traceback
 import time
 import os
 import pytz
 import asyncpg
 import io
-import datetime
 import sys
 import itertools
 import copy
 import os
-import textwrap
-from contextlib import redirect_stdout
 
 import jishaku 
 from jishaku.paginators import WrappedPaginator
 from jishaku.codeblocks import codeblock_converter
+
 from bot import MetroBot
 from cogs.serverutils import serverutils
-from utils.constants import TESTING_GUILD, TESTING_GUILD_ID
-
+from utils.constants import TESTING_GUILD
 from utils.decos import in_support, is_dev, is_support
 from utils.custom_context import MyContext
 from utils.pages import StopView
-from utils.useful import Embed, fuzzy, pages, get_bot_uptime
+from utils.useful import Embed, fuzzy
 from utils.json_loader import write_json
 
 class Input(discord.ui.Modal):

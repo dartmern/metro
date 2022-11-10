@@ -1,16 +1,11 @@
-from ast import Delete
-import asyncio
 import discord
-from discord.ext import commands, menus
+from discord.ext import commands
+from discord.ext.commands.core import Command, Group
+from discord.ext.commands.errors import CommandError
 
 from typing import Any, List, Optional, Union
 
-from discord.ext.commands.core import Command, Group
-from discord.ext.commands.errors import CommandError, CommandInvokeError
-
 from utils.new_pages import SimplePageSource, SimplePages
-
-import functools
 
 class ConfirmationView(discord.ui.View):
     def __init__(self, *, timeout: float, author_id: int, ctx, delete_after: bool) -> None:
@@ -209,3 +204,4 @@ class MyContext(commands.Context):
     @property
     def colour(self):
         return self.color
+        

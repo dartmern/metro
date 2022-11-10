@@ -1,25 +1,21 @@
-import asyncio
-from typing import Dict, List, Literal, Optional
 import discord
 from discord.ext import commands
 from discord import app_commands
-from bot import MetroBot
-from utils.constants import TESTING_GUILD, TESTING_GUILD_ID
 
-from utils.useful import Embed, dynamic_cooldown, fuzzy
-
+from typing import Dict, List, Literal, Optional
 import io
 import re
 import os
 import zlib
 import yarl
+import lxml.etree as etree
 
+from bot import MetroBot
+from utils.useful import Embed, dynamic_cooldown, fuzzy
 from utils.custom_context import MyContext
 from utils.json_loader import read_json
 from utils.embeds import create_embed
 import utils.fuzzy as fuzzy_
-
-import lxml.etree as etree
 
 data = read_json('info')
 id_token = data['id_token']

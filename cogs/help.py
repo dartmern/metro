@@ -1,44 +1,23 @@
-import inspect
-import itertools
-import os
-from typing import Any, Dict, List, Mapping, Optional
-
-from discord.ext.commands.help import HelpCommand
-from bot import MetroBot
-from cogs.utility import StopView
-from utils.constants import TESTING_GUILD
-from utils.embeds import create_embed
-from utils.new_pages import SimplePages
 import discord
 from discord import app_commands
-import pathlib
-
+from discord.ext.commands.help import HelpCommand
 import discord.ext
 from discord.ext.commands import Cog, Command
-
 from discord.ext import commands, menus
-import contextlib
 
+import itertools
+from typing import Any, Dict, List, Mapping, Optional
+import pathlib
 import asyncio
 import psutil
-import speedtest
 import time
 
-from difflib import get_close_matches
-
+from bot import MetroBot
+from utils.new_pages import SimplePages
 from utils.custom_context import MyContext
 from utils.remind_utils import UserFriendlyTime
 from utils.useful import Embed, OldRoboPages, dynamic_cooldown, get_bot_uptime
-from utils.converters import BotUserObject, DiscordCommand
-
-"""
-Hey, I highly discourage you taking code from this cog
-mainly because of the bad practices I use that don't
-always mean efficiency. Parts of it just isn't smart
-but just me being lazy like the cog description and emojis
-for the help command. If you have questions please ping
-dartmern#7563 in my support server or in discord.py #playground.
-"""
+from utils.converters import BotUserObject
 
 class BotInfoExtended(discord.ui.View):
     def __init__(self):
