@@ -12,6 +12,7 @@ import pomice
 import asyncio
 import math
 import random
+import yarl
 
 from bot import MetroBot
 from utils.custom_context import MyContext
@@ -91,17 +92,12 @@ class PlayerView(discord.ui.View):
 
         await interaction.response.defer(ephemeral=True) # Might as well defer since the api usually takes longer than 3 seconds
 
-        headers = {'Authorization' : auth}
-        async with self.ctx.bot.session.get(
-            f"https://api.openrobot.xyz/api/lyrics/{quote_plus(self.track.title)}", headers=headers) as res:
-
-            if res.status != 200:
-                return await interaction.followup.send(
-                    "Openrobot API returned a bad response."\
-                    "\nThis may be due to the API being down or the song is invaild.",
-                    ephemeral=True)
+        url = yarl.URL('https://api.yodabot.xyz/api/lyrics/search').with_query({'q': quote_plus(self.track.title)})
+        async with self.ctx.bot.session.get(url) as res:
 
             js = await res.json()
+            if js['title'] is None:
+                return await interaction.followup.send('Could not find song lyrics.', hide=True)
 
         new_view = RoboPages(source=PlayerViewLyrics(js['lyrics'].split("\n"), js, ctx=self.ctx), ctx=self.ctx, interaction=interaction, compact=True)
         await new_view.start()
@@ -351,15 +347,13 @@ class music(commands.Cog, description='Play high quality music in a voice channe
     async def lyrics(self, ctx: MyContext, *, song: str):
         """Get the lyrics of a song."""
         
+        url = yarl.URL('https://api.yodabot.xyz/api/lyrics/search').with_query({'q': quote_plus(song)})
         async with ctx.typing():
-            headers = {'Authorization' : auth}
-            async with self.bot.session.get(
-                f"https://api.openrobot.xyz/api/lyrics/{quote_plus(song)}", headers=headers) as res:
-
-                if res.status != 200:
-                    raise commands.BadArgument("Openrobot API returned a bad response.")
+            async with self.bot.session.get(url) as res:
 
                 js = await res.json()
+                if js['title'] is None:
+                    return await ctx.send('Song not found.', hide=True)
 
             menu = SimplePages(source=LyricsSource(js['lyrics'].split("\n"), js), ctx=ctx, compact=True)
             await menu.start()
