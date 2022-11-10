@@ -63,6 +63,9 @@ class core(commands.Cog, description="Core events."):
         if ctx.invoked_with.lower() in ['help', 'h', 'command']:
             return True
 
+        if not ctx.guild:
+            return True
+
         if self.bot.premium_guilds.get(ctx.guild.id) is True:
             bucket = self.premium_cd.get_bucket(ctx.message)
         else:
