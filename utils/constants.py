@@ -41,7 +41,8 @@ EMOTES = {
             'text': '<:text:928390522182193232>',
             'voice': '<:voice:928389079266127972>',
             'category': '<:category:928391020859772968>',
-            'stage': '<:stage:928391073091432458>'
+            'stage': '<:stage:928391073091432458>',
+            'disconnect': '<:disconnect:1040449193753464942>'
         }
 
 BOOST_BADGES = {

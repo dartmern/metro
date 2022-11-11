@@ -46,176 +46,120 @@ class PlayerViewLyrics(menus.ListPageSource):
         return embed
 
 class PlayerView(discord.ui.View):
-    def __init__(self, ctx: MyContext, *, track: pomice.Track, player: pomice.Player):
+    def __init__(self, ctx: MyContext, *, track: pomice.Track, player):
         super().__init__(timeout=None)
         self.ctx: MyContext = ctx
         self.track: pomice.Track = track
-        self.player: pomice.Player = player
+        self.player: Player = player
         self.controller: Optional[discord.Message] = None # will be added in start function dw
+        self.lyrics_dict: dict = None # the lyrics dict that gets added upon request
 
     async def start(self) -> discord.Message:
         embed = discord.Embed(
             title='Now Playing', 
-            description=f"{'🔴 **LIVE**' if self.track.is_stream else ''} [{self.track.title}]({self.track.uri}) [{self.track.requester.mention}]",
+            description=f"{'🔴 **LIVE**' if self.track.is_stream else ''} [{self.track.title}]({self.track.uri})\n"\
+                        f"Requested by: {self.track.requester.mention}",
             color=self.ctx.color if self.ctx else discord.Colour.yellow()
         )
-        self.controller = await self.ctx.send(embed=embed, view=self, reply=False)
+        self.controller = await self.ctx.send(embed=embed, view=self)
         return self.controller
 
     def is_privileged(self, interaction: discord.Interaction):
         """Check whether the user is an Admin or DJ."""
-        player = self.ctx.voice_client
+        player: Player = self.ctx.voice_client
 
-        return player.dj == interaction.user or interaction.user.guild_permissions.mute_members
+        return player.dj == interaction.user or interaction.user.guild_permissions.mute_members or interaction.user == self.player.current.requester
 
     def required(self, ctx: commands.Context):
         """Method which returns required votes based on amount of members in a channel."""
         player: Player = ctx.voice_client
-        channel = ctx.bot.get_channel(int(player.channel.id))
+        channel: discord.VoiceChannel = ctx.bot.get_channel(int(player.channel.id))
         required = math.ceil((len(channel.members) - 1) / 2.5)
 
         return required
 
     async def interaction_check(self, interaction: discord.Interaction):
-        if not interaction.user.voice:
-            return await interaction.response.send_message(f"You must be in my voice channel to interact with the player.", ephemeral=True)
-        if interaction.user.voice.channel != self.player.channel:
+        if not interaction.user.voice or (interaction.user.voice.channel != self.player.channel):
             return await interaction.response.send_message(f"You must be in my voice channel to interact with the player.", ephemeral=True)
         else:
             return True
 
     @discord.ui.button(label='Lyrics', emoji='\U0001f4da', style=discord.ButtonStyle.blurple)
     async def lyrics(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
-        button.disabled = True
-        button.style = discord.ButtonStyle.gray
-        await self.controller.edit(view=self) # disable this shit
 
-        await interaction.response.defer(ephemeral=True) # Might as well defer since the api usually takes longer than 3 seconds
+        await interaction.response.defer(ephemeral=True)
 
-        url = yarl.URL('https://api.yodabot.xyz/api/lyrics/search').with_query({'q': quote_plus(self.track.title)})
-        async with self.ctx.bot.session.get(url) as res:
+        # this way only 1 request can be made per song and can be viewed by anyone upon request
+        if not self.lyrics_dict:
+            url = yarl.URL('https://api.yodabot.xyz/api/lyrics/search').with_query({'q': quote_plus(self.track.title)})
+            async with self.ctx.bot.session.get(url) as res:
 
-            js = await res.json()
-            if js['title'] is None:
-                return await interaction.followup.send('Could not find song lyrics.', hide=True)
+                self.lyrics_dict = await res.json()
+                if self.lyrics_dict['title'] is None:
+                    return await interaction.followup.send('Could not find song lyrics.', ephemeral=True)
 
-        new_view = RoboPages(source=PlayerViewLyrics(js['lyrics'].split("\n"), js, ctx=self.ctx), ctx=self.ctx, interaction=interaction, compact=True)
-        await new_view.start()
+        if self.lyrics_dict['title'] is None:
+            return await interaction.followup.send('Could not find song lyrics.', ephemeral=True)
+
+        source = PlayerViewLyrics(self.lyrics_dict['lyrics'].split('\n'), self.lyrics_dict, ctx=self.ctx)
+        view = RoboPages(source=source, ctx=self.ctx, interaction=interaction, compact=True, hide=True)
+        await view.start()
         
     @discord.ui.button(label='Pause', emoji='\U000023f8', style=discord.ButtonStyle.blurple)
     async def pause(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
-
-        if self.player.is_paused or not self.player.is_connected:
-            return await interaction.response.send_message("The player is already paused or not playing.", ephemeral=True)
+        await interaction.response.defer()
 
         if self.is_privileged(interaction):
-            await interaction.response.defer()
-            self.player.pause_votes.clear()
-            await self.player.set_pause(True)
-
-            button.disabled = True
-            button.style = discord.ButtonStyle.gray
-            self.play.disabled = False
-            self.play.style = discord.ButtonStyle.blurple
-            return await self.controller.edit(view=self)
-
-        required = self.required(self.ctx)
-        self.player.pause_votes.add(interaction.user) 
-
-        if len(self.player.pause_votes) >= required:
-            await interaction.response.send_message(f"⏸️ Vote to pause the player passed. Pausing player...")
-            self.player.pause_votes.clear()
-            await self.player.set_pause(True)
-            button.disabled = True
-            button.style = discord.ButtonStyle.gray
-            self.play.disabled = False
-            self.play.style = discord.ButtonStyle.blurple
-            return await self.controller.edit(view=self)
-        else:
-            await interaction.response.send_message(f"{interaction.user} has voted to pause the player. Votes: {len(self.player.pause_votes)}/{required}")
-
-    @discord.ui.button(label='Play', emoji='\U000023ef', style=discord.ButtonStyle.gray, disabled=True)
-    async def play(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
-
-        if not self.player.is_paused or not self.player.is_connected:
-            return await interaction.response.send_message("The player is already playing or not connected.", ephemeral=True)
-
-        if self.is_privileged(interaction):
-            await interaction.response.defer()
-            self.player.resume_votes.clear()
-            await self.player.set_pause(False)
-
-            button.disabled = True
-            button.style = discord.ButtonStyle.gray
-            self.pause.disabled = False
-            self.pause.style = discord.ButtonStyle.blurple
-            return await self.controller.edit(view=self)
-
-        required = self.required(self.ctx)
-        self.player.resume_votes.add(interaction.user) 
-
-        if len(self.player.resume_votes) >= required:
-            await interaction.response.send_message(f"⏯️ Vote to resume the player passed. Resuming player...")
-            self.player.resume_votes.clear()
-            await self.player.set_pause(False)
-            button.disabled = True
-            button.style = discord.ButtonStyle.gray
-            self.pause.disabled = False
-            self.pause.style = discord.ButtonStyle.blurple
-            return await self.controller.edit(view=self)
-        else:
-            await interaction.response.send_message(f"{interaction.user} has voted to resume the player. Votes: {len(self.player.resume_votes)}/{required}")
+            embed = self.controller.embeds[0].copy()
+            if self.player.is_paused:
+                # the user wants to play
+                await self.player.set_pause(False)
+                button.label, button.emoji = 'Pause', '\U000023f8'
+            else:
+                # the user wants to pause
+                await self.player.set_pause(True)
+                button.label, button.emoji = 'Play', '\U000025b6'
+                embed.set_footer(text='Player is currently paused.')
+            await self.controller.edit(view=self, embed=embed)
+            return 
 
     @discord.ui.button(label='Skip', emoji='\U000023ed', style=discord.ButtonStyle.blurple)
     async def skip(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
-        if not self.player.is_connected:
-            return await interaction.response.send_message("The player is currently not connected.", ephemeral=True)
+        await interaction.response.defer()
 
-        if self.is_privileged(interaction) or interaction.user == self.player.current.requester:
+        if self.is_privileged(interaction):
             await self.player.stop()
-            self.player.skip_votes.clear()
-            await self.controller.delete()
-            await interaction.response.defer()
-            return await self.controller.channel.send(f"\U000023ed Skipped the current song.")
-
+            return 
+            
         required = self.required(self.ctx)
         self.player.skip_votes.add(interaction.user)
 
         if len(self.player.skip_votes) >= required:
-            await interaction.response.send_message(f"\U000023ed Voted to skip the song.")
+            await interaction.followup.send(f"\U000023ed Voted to skip the song.")
             self.player.skip_votes.clear()
             await self.player.stop()
-            await self.controller.delete()
+            
         else:
-            await interaction.response.send(f"{interaction.user} has voted to skip this song. Votes: {len(self.player.skip_votes)}/{required}")
+            await interaction.followup.send(f"{interaction.user} has voted to skip this song. Votes: {len(self.player.skip_votes)}/{required}\n> Click the **Skip** button to vote to skip.")
 
-    @discord.ui.button(emoji='\U0001f6d1', style=discord.ButtonStyle.danger)
+    @discord.ui.button(emoji='<:disconnect:1040449193753464942>', style=discord.ButtonStyle.danger)
     async def stop_player(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
-
-        if not self.player.is_connected:
-            return await interaction.response.send_message("The player is currently not connected.", ephemeral=True)
+        
+        await interaction.response.defer()
 
         if self.is_privileged(interaction):
-            await interaction.response.send_message("\U0001f6d1 Stopped the player.")
-            for item in self.children:
-                if isinstance(item, discord.ui.Button):
-                    item.disabled = True
-            await self.controller.edit(view=self)
-            return await self.player.teardown(view=self)
+            await self.player.teardown()
+            return 
 
         required = self.required(self.ctx)
         self.player.stop_votes.add(interaction.user)
 
         if len(self.player.stop_votes) >= required:
-            await interaction.response.send_message("\U0001f6d1 Vote to stop the player passed. Stopping...")
-            for item in self.children:
-                if isinstance(item, discord.ui.Button):
-                    item.disabled = True
-            await self.controller.edit(view=self)
-            return await self.player.teardown(view=self)
+            await interaction.followup.send("\U0001f6d1 Vote to stop the player passed. Stopping...")
+            await self.player.teardown(view=self)
+            return 
         else:
-            await interaction.response.send_message(f"{interaction.user} has voted to stop the player. Votes: {len(self.player.stop_votes)}/{required}")
-    
+            await interaction.followup.send(f"{interaction.user} has voted to stop the player. Votes: {len(self.player.stop_votes)}/{required}\n> Click the {self.ctx.bot.emojis['disconnect']} emoji to vote to stop.")
 
 class Player(pomice.Player):
     def __init__(self, *args, **kwargs):
@@ -226,16 +170,13 @@ class Player(pomice.Player):
         self.context: MyContext = None
         self.dj: discord.Member = None
 
-        self.pause_votes = set()
-        self.resume_votes = set()
         self.skip_votes = set()
         self.shuffle_votes = set()
         self.stop_votes = set()
 
     async def do_next(self) -> None:
         # Clear the votes for a new song
-        self.pause_votes.clear()
-        self.resume_votes.clear()
+
         self.skip_votes.clear()
         self.shuffle_votes.clear()
         self.stop_votes.clear()
@@ -248,20 +189,16 @@ class Player(pomice.Player):
 
         await self.play(track)
         if self.controller:
-            await self.controller.delete()
+            await self.controller.edit(view=None)
             
         view = PlayerView(self.context, track=track, player=self)
         self.controller = await view.start()
 
-    async def teardown(self, *, view: Optional[PlayerView] = None):
+    async def teardown(self):
         """Clear internal states, remove player controller and disconnect."""
         with contextlib.suppress((discord.HTTPException), (KeyError)):
             await self.destroy()
-            if view:
-                for item in view.children:
-                    if isinstance(item, discord.ui.Button):
-                        item.disabled = True
-                await self.controller.edit(view=view)
+            await self.controller.edit(view=None)
 
     async def set_context(self, ctx: commands.Context):
         """Set context for the player"""
@@ -302,7 +239,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
                     identifier="MAIN",
                     session=self.bot.session
             )
-            print("Music node created.")
+            logging.info("Music node created.")
         except Exception as e:
             if isinstance(e, ClientConnectorError):
                 pass
@@ -360,7 +297,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
 
     @commands.hybrid_command(name='join', aliases=['summon', 'connect'])
     @app_commands.describe(channel='The voice channel you want me to join.')
-    async def join(self, ctx: MyContext, *, channel: Optional[discord.VoiceChannel]=None):
+    async def join(self, ctx: MyContext, *, channel: Optional[discord.VoiceChannel] = None):
         """Join a voice channel."""
 
         if not channel:
@@ -373,9 +310,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
         await player.set_context(ctx=ctx)
     
         await ctx.guild.change_voice_state(channel=channel, self_deaf=True) 
-
-        await ctx.send(f"Joined the voice channel {channel.mention}", reply=False)
-
+        await ctx.send(f"Joined the voice channel {channel.mention}")
 
     @commands.hybrid_command(name='play', aliases=['p'])
     @app_commands.describe(query='The song query you want me to play.')
@@ -384,7 +319,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
         if not ctx.author.voice:
             return await ctx.send("You aren't connected to a voice channel.", hide=True)
 
-        if not (player := ctx.voice_client) or ctx.author.voice.channel != ctx.voice_client.channel:
+        if not ctx.voice_client or ctx.author.voice.channel != ctx.voice_client.channel:
             await ctx.invoke(self.join)  
         
         player: Player = ctx.voice_client
@@ -414,28 +349,30 @@ class music(commands.Cog, description='Play high quality music in a voice channe
     @commands.hybrid_command(aliases=['disconnect', 'leave'])
     async def stop(self, ctx: MyContext):
         """Stop the player."""
+
         if not ctx.author.voice:
             raise commands.BadArgument("You aren't connected to a voice channel.")
 
-        if not (player := ctx.voice_client) or ctx.author.voice.channel != ctx.voice_client.channel:
-            return await ctx.send("You must have the bot in a channel in order to use this command", reply=False)
+        if not ctx.voice_client or ctx.author.voice.channel != ctx.voice_client.channel:
+            return await ctx.send("You must have the bot in a channel in order to use this command")
+        player: Player = ctx.voice_client
 
         if not player.is_connected:
             return
 
         if await self.is_privileged(ctx):
-            await ctx.send('An admin or DJ has stopped the player.', reply=False)
-            return await player.teardown(view=None)
+            await ctx.send('An admin or DJ has stopped the player.')
+            await player.teardown()
+            return
 
         required = self.required(ctx)
         player.stop_votes.add(ctx.author)
 
         if len(player.stop_votes) >= required:
-            await ctx.send('Vote to stop passed. Stopping the player.', reply=False)
-            await player.teardown(view=None)
+            await ctx.send('Vote to stop passed. Stopping the player.')
+            await player.teardown()
         else:
-            await ctx.send(f'{ctx.author.mention} has voted to stop the player. Votes: {len(player.stop_votes)}/{required}', reply=False)
-
+            await ctx.send(f'{ctx.author.mention} has voted to stop the player. Votes: {len(player.stop_votes)}/{required}')
 
     @commands.hybrid_command()
     @app_commands.describe(volume='The volume you want to change. Must be 1-100')
@@ -445,9 +382,10 @@ class music(commands.Cog, description='Play high quality music in a voice channe
         if not ctx.author.voice:
             raise commands.BadArgument("You aren't connected to a voice channel.")
 
-        if not (player := ctx.voice_client) or ctx.author.voice.channel != ctx.voice_client.channel:
+        if not ctx.voice_client or ctx.author.voice.channel != ctx.voice_client.channel:
             return await ctx.send("You must have the bot in a channel in order to use this command", reply=False)
 
+        player: Player = ctx.voice_client
         if not player.is_connected:
             return
 
@@ -455,40 +393,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
             return await ctx.send('Only the DJ or admins may change the volume.')
 
         if not 0 < volume < 101:
-            return await ctx.send('Please enter a value between 1 and 100.')
+            return await ctx.send('Volume should be a number in between 1 and 100.')
 
         await player.set_volume(volume*5)
         await ctx.send(f'Set the volume to **{volume}**%', reply=False)
-
-    @commands.hybrid_command()
-    async def shuffle(self, ctx: MyContext):
-        """Shuffle the queue."""
-
-        if not ctx.author.voice:
-            raise commands.BadArgument("You aren't connected to a voice channel.")
-
-        if not (player := ctx.voice_client) or ctx.author.voice.channel != ctx.voice_client.channel:
-            return await ctx.send("You must have the bot in a channel in order to use this command", reply=False)
-
-        if not player.is_connected:
-            raise commands.BadArgument("The player is not connected.")
-
-        if player.queue.qsize() < 3:
-            return await ctx.send('The queue is empty. Add some songs to shuffle the queue.', reply=False)
-
-        if await self.is_privileged(ctx):
-            await ctx.send("An admin or DJ has shuffled the queue.", reply=False)
-            player.shuffle_votes.clear()
-            return random.shuffle(player.queue._queue)
-
-        required = self.required(ctx)
-        player.shuffle_votes.add(ctx.author)
-
-        if len(player.shuffle_votes) >= required:
-            await ctx.send("Vote to shuffle passed. Shuffling queue.", reply=False)
-            player.shuffle_votes.clear()
-            return random.shuffle(player.queue._queue)
-        else:
-            await ctx.send(f"{ctx.author.mention} has shuffled the queue. Votes: {len(self.player.shuffle_votes)}/{required}")
-
-
