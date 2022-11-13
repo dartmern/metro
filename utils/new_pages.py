@@ -73,7 +73,8 @@ class RoboPages(discord.ui.View):
                 self.add_item(self.go_to_last_page)  # type: ignore
             if not self.compact:
                 self.add_item(self.numbered_page)  # type: ignore
-            self.add_item(self.stop_pages)  # type: ignore
+            if not self.hide: # don't add stop button if ephemeral
+                self.add_item(self.stop_pages)  # type: ignore
 
     async def _get_kwargs_from_page(self, page: int) -> Dict[str, Any]:
         value = await discord.utils.maybe_coroutine(self.source.format_page, self, page)
@@ -168,7 +169,11 @@ class RoboPages(discord.ui.View):
         if not self.interaction:
             self.message = await self.ctx.send(**kwargs, view=self, hide=self.hide, delete_after=self.delete_after)
         else:
-            self.message = await self.interaction.followup.send(view=self, **kwargs)
+            if self.hide:
+                ephemeral = True
+            else:
+                ephemeral = False
+            self.message = await self.interaction.followup.send(view=self, ephemeral=ephemeral, **kwargs)
 
     @discord.ui.button(label='≪', style=discord.ButtonStyle.grey)
     async def go_to_first_page(self, interaction: discord.Interaction, button: discord.ui.Button):

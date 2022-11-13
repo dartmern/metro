@@ -13,6 +13,7 @@ import asyncio
 import math
 import random
 import yarl
+from pomice.exceptions import TrackLoadError
 
 from bot import MetroBot
 from utils.custom_context import MyContext
@@ -102,12 +103,12 @@ class PlayerView(discord.ui.View):
             return await interaction.followup.send('Could not find song lyrics.', ephemeral=True)
 
         source = PlayerViewLyrics(self.lyrics_dict['lyrics'].split('\n'), self.lyrics_dict, ctx=self.ctx)
+        self.ctx.author = interaction.user # to make the inter_check work
         view = RoboPages(source=source, ctx=self.ctx, interaction=interaction, compact=True, hide=True)
         await view.start()
         
     @discord.ui.button(label='Pause', emoji='\U000023f8', style=discord.ButtonStyle.blurple)
     async def pause(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
-        await interaction.response.defer()
 
         if self.is_privileged(interaction):
             embed = self.controller.embeds[0].copy()
@@ -120,7 +121,7 @@ class PlayerView(discord.ui.View):
                 await self.player.set_pause(True)
                 button.label, button.emoji = 'Play', '\U000025b6'
                 embed.set_footer(text='Player is currently paused.')
-            await self.controller.edit(view=self, embed=embed)
+            await interaction.response.edit_message(view=self, embed=embed)
             return 
 
     @discord.ui.button(label='Skip', emoji='\U000023ed', style=discord.ButtonStyle.blurple)
@@ -323,7 +324,11 @@ class music(commands.Cog, description='Play high quality music in a voice channe
             await ctx.invoke(self.join)  
         
         player: Player = ctx.voice_client
-        results = await player.get_tracks(query, ctx=ctx)
+        try:
+            results = await player.get_tracks(query, ctx=ctx)
+        except TrackLoadError as e:
+            await ctx.send(str(e))
+            return
 
         if not results:
             return await ctx.send("No results were found with that search query.", hide=True)
