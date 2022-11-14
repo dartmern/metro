@@ -28,6 +28,24 @@ auth = _info['openrobot_api_key']
 spotify_id = _info['spotify']['client_id']
 spotify_secret = _info['spotify']['client_secret']
 
+def format_time(milliseconds: Union[float, int]) -> str:
+    """Convert milliseconds to something readable."""
+    hours, rem = divmod(int(milliseconds // 1000), 3600)
+    minutes, seconds = divmod(rem, 60)
+    
+    hr = f"{hours:02d}:" if hours else ''
+    mi = f"{minutes:02d}:" if minutes else ''
+    se = f"{seconds:02d}" if seconds else ''
+    return hr + mi + se
+
+def in_voice():
+    async def predicate(ctx: MyContext):
+        if not ctx.author.voice:
+            raise commands.BadArgument('You are not connected to a voice channel.')
+        if not ctx.voice_client or ctx.author.voice.channel != ctx.voice_client.channel:
+            raise commands.BadArgument("You must have the bot in a channel in order to use this command.")
+        return True
+    return commands.check(predicate)
 
 async def setup(bot: MetroBot):
     await bot.add_cog(music(bot))
@@ -45,6 +63,29 @@ class PlayerViewLyrics(menus.ListPageSource):
 
         embed.description = "\n".join(entries)
         return embed
+
+class VolumeModal(discord.ui.Modal, title='Volume'):
+    def __init__(self, default: str, *, view, player) -> None:
+        super().__init__()
+        self._children = [
+            discord.ui.TextInput(
+                label='Volume',
+                max_length=3,
+                placeholder='Enter a number 1-100.',
+                default=default
+            )
+        ]
+        self.view: PlayerView = view
+        self.player: Player = player
+    
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+        volume: discord.ui.TextInput = self.children[0]
+        if not volume.value.isdigit() or not 0 < int(volume.value) < 101:
+            await interaction.response.send_message('Invalid input. Enter an integer 1-100.', ephemeral=True)
+            return 
+
+        await self.player.set_volume(int(volume.value))
+        await interaction.response.send_message(f'Changed the volume to **{volume.value}%**', ephemeral=True)
 
 class PlayerView(discord.ui.View):
     def __init__(self, ctx: MyContext, *, track: pomice.Track, player):
@@ -162,11 +203,17 @@ class PlayerView(discord.ui.View):
         else:
             await interaction.followup.send(f"{interaction.user} has voted to stop the player. Votes: {len(self.player.stop_votes)}/{required}\n> Click the {self.ctx.bot.emojis['disconnect']} emoji to vote to stop.")
 
+    @discord.ui.button(label='Volume', style=discord.ButtonStyle.green)
+    async def volume_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+        modal = VolumeModal(self.player.volume, view=self, player=self.player)
+        await interaction.response.send_modal(modal)
+
 class Player(pomice.Player):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.queue = asyncio.Queue()
+        self.queue = pomice.Queue()
         self.controller: Union[discord.Message, discord.WebhookMessage] = None
         self.context: MyContext = None
         self.dj: discord.Member = None
@@ -184,7 +231,7 @@ class Player(pomice.Player):
 
        # Queue up the next track, else teardown the player
         try:
-            track: pomice.Track = self.queue.get_nowait()
+            track: pomice.Track = self.queue.get()
         except asyncio.queues.QueueEmpty:  
             return await self.teardown()
 
@@ -199,7 +246,8 @@ class Player(pomice.Player):
         """Clear internal states, remove player controller and disconnect."""
         with contextlib.suppress((discord.HTTPException), (KeyError)):
             await self.destroy()
-            await self.controller.edit(view=None)
+            if self.controller:
+                await self.controller.edit(view=None)
 
     async def set_context(self, ctx: commands.Context):
         """Set context for the player"""
@@ -242,13 +290,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
             )
             logging.info("Music node created.")
         except Exception as e:
-            if isinstance(e, ClientConnectorError):
-                pass
-            elif str(e) == "A node with identifier 'MAIN' already exists.":
-                pass
-            else:
-                traceback.print_exception(e)
-                logging.info('The music server cannot be connected at this time.')
+            logging.info('The music server cannot be connected at this time.')
 
     def required(self, ctx: commands.Context):
         """Method which returns required votes based on amount of members in a channel."""
@@ -304,7 +346,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
         if not channel:
             channel = getattr(ctx.author.voice, "channel", None)
             if not channel:
-                raise commands.BadArgument(f"{self.bot.emotes['cross']} You are not in a voice channel!")
+                raise commands.BadArgument(f"You are not connected to a voice channel.")
 
         await channel.connect(cls=Player)
         player: Player = ctx.voice_client
@@ -334,7 +376,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
             return await ctx.send("No results were found with that search query.", hide=True)
 
         if not player.is_playing and not isinstance(results, pomice.Playlist):
-            await player.queue.put(results[0])
+            player.queue.put(results[0])
             return await player.do_next()
 
         if player.controller and (ctx.channel.id != player.controller.channel.id):           
@@ -343,27 +385,20 @@ class music(commands.Cog, description='Play high quality music in a voice channe
 
         if isinstance(results, pomice.Playlist):
             for track in results.tracks:
-                await player.queue.put(track)
+                player.queue.put(track)
             await ctx.send(f"📚 Enqueued `{', '.join(map(lambda x: x.title, results.tracks))}`", hide=True)
             await player.do_next()
         else:
             track = results[0]
-            await player.queue.put(track)
+            player.queue.put(track)
             await ctx.send(f"📚 Enqueued `{results[0]}`", hide=True)
 
     @commands.hybrid_command(aliases=['disconnect', 'leave'])
+    @in_voice()
     async def stop(self, ctx: MyContext):
         """Stop the player."""
 
-        if not ctx.author.voice:
-            raise commands.BadArgument("You aren't connected to a voice channel.")
-
-        if not ctx.voice_client or ctx.author.voice.channel != ctx.voice_client.channel:
-            return await ctx.send("You must have the bot in a channel in order to use this command")
         player: Player = ctx.voice_client
-
-        if not player.is_connected:
-            return
 
         if await self.is_privileged(ctx):
             await ctx.send('An admin or DJ has stopped the player.')
@@ -380,19 +415,12 @@ class music(commands.Cog, description='Play high quality music in a voice channe
             await ctx.send(f'{ctx.author.mention} has voted to stop the player. Votes: {len(player.stop_votes)}/{required}')
 
     @commands.hybrid_command()
+    @in_voice()
     @app_commands.describe(volume='The volume you want to change. Must be 1-100')
     async def volume(self, ctx: MyContext, *, volume: commands.Range[int, 1, 100]):
         """Change the volume of the music being played."""
 
-        if not ctx.author.voice:
-            raise commands.BadArgument("You aren't connected to a voice channel.")
-
-        if not ctx.voice_client or ctx.author.voice.channel != ctx.voice_client.channel:
-            return await ctx.send("You must have the bot in a channel in order to use this command", reply=False)
-
         player: Player = ctx.voice_client
-        if not player.is_connected:
-            return
 
         if not await self.is_privileged(ctx):
             return await ctx.send('Only the DJ or admins may change the volume.')
@@ -400,5 +428,26 @@ class music(commands.Cog, description='Play high quality music in a voice channe
         if not 0 < volume < 101:
             return await ctx.send('Volume should be a number in between 1 and 100.')
 
-        await player.set_volume(volume*5)
-        await ctx.send(f'Set the volume to **{volume}**%', reply=False)
+        await player.set_volume(volume)
+        await ctx.send(f'Set the volume to **{volume}**%')
+
+    @commands.hybrid_command(name='queue')
+    @in_voice()
+    async def _queue(self, ctx: MyContext):
+        """View the song queue."""
+
+        player: Player = ctx.voice_client
+
+        if player.queue.is_empty:
+            return await ctx.send('There\'s nothing in the queue.', hide=True)
+
+        to_paginate = []
+        for num, track in enumerate(player.queue):
+            track: pomice.Track
+            to_paginate.append(
+                f"**{num + 1}.** [`{track.title}`]({track.uri}) - {format_time(track.length)}"\
+                f"\nRequested by: {track.requester.mention}\n"
+                )
+
+        await ctx.paginate(to_paginate, compact=True)
+            
