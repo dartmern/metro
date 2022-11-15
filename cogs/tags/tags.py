@@ -85,6 +85,21 @@ class TagMakeModal(discord.ui.Modal, title='Create a new tag.'):
         else:
             await self.cog.create_tag(interaction, name, content)
 
+class TagEditModal(discord.ui.Modal, title='Edit tag.'):
+
+    content = discord.ui.TextInput(
+        label='New Tag Content', style=discord.TextStyle.paragraph, min_length=1, max_length=2000
+    )
+
+    def __init__(self, old_content: str) -> None:
+        super().__init__()
+        self.content.default = old_content
+
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+
+        self.interaction = interaction
+        self.text = self.content.value
+        self.stop()
 
 class tags(commands.Cog, description='Manage and create tags'):
     def __init__(self, bot: MetroBot):
@@ -437,6 +452,40 @@ class tags(commands.Cog, description='Manage and create tags'):
 
         content = discord.utils.escape_markdown(tag['content'])
         await ctx.send(content.replace("<", "\\<"))
+
+    @_tag.command(name='edit', usage='<name> <content>')
+    @app_commands.describe(name='The tag you want to edit.')
+    @app_commands.describe(content='The new content of the tag.')
+    @app_commands.autocomplete(name=owned_aliased_tag_autocomplete)
+    async def _tag_edit(
+        self, ctx: MyContext, 
+        name: Annotated[str, commands.clean_content], *, 
+        content: Annotated[Optional[str], TagName] = None):
+        """Edit a tag's content."""
+
+        if content is None:
+            if not ctx.interaction:
+                await ctx.help()
+                return
+
+            else:
+                query = "SELECT content FROM tag_lookup WHERE LOWER(name) = $1 AND guild_id = $2 AND owner_id = $3 AND is_alias = $4"
+                row = await self.bot.db.fetchrow(query, name, ctx.guild.id, ctx.author.id, False)
+                if not row:
+                    raise commands.BadArgument('Could not find tag. Are you sure it exists and you own it?')
+
+                modal = TagEditModal(row[0])
+                await ctx.interaction.response.send_modal(modal)
+                await modal.wait()
+                ctx.interaction = modal.interaction
+                content = modal.text
+
+        query = "UPDATE tag_lookup SET content = $1 WHERE LOWER(name) = $2 AND guild_id = $3 AND owner_id = $4 AND is_alias = $5"
+        returned = await self.bot.db.execute(query, content, name, ctx.guild.id, ctx.author.id, False)
+
+        if returned[-1] == '0':
+            raise commands.BadArgument('Could not edit tag. Are yousure it exists and you own it?')
+        await ctx.send('Successfully edited tag.', hide=True)
 
     @_tag.command(name='remove', aliases=['delete'])
     @app_commands.describe(name='The tag you want to remove.')
