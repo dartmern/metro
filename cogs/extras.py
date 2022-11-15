@@ -1,3 +1,6 @@
+import asyncio
+import io
+from typing import NamedTuple
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -5,8 +8,10 @@ from discord import app_commands
 import json
 import time
 import re
+from collections import Counter, defaultdict
 
 from bot import MetroBot
+from utils.constants import DPY_GUILD_ID, SUPPORT_GUILD
 from utils.custom_context import MyContext
 from utils.useful import Embed, dynamic_cooldown
 from utils.calc_tils import NumericStringParser
@@ -16,6 +21,19 @@ data = read_json("info")
 or_api_token = data['openrobot_api_key']
 google_token = data['google_token']
 hypixel_api_key = data['hypixel_api_key']
+
+class Tag(NamedTuple):
+    tag: str
+    owner_id: int
+    uses: int
+    can_delete: bool
+    is_alias: bool
+    match: str
+
+TAG_FILE_REGEX = re.compile(
+    r"^\|\s*\d+\s*\|\s*(?P<tag>.*)\s*\|\s*(?P<owner_id>\d+)\s*\|\s*(?P<uses>\d+)\s*\|\s*(?P<can_delete>(?:True)|(?:False))\s*\|\s*(?P<is_alias>(?:True)|(?:False))\s*\|$",
+    re.MULTILINE,
+)
 
 class WebhookConverter(commands.Converter):
   async def convert(self, ctx: commands.Context, argument: str) -> discord.Webhook:
@@ -134,39 +152,114 @@ class extras(commands.Cog, description='Extra commands for your use.'):
         await ctx.send(embed=embed)
 
 
-    def read_tags(self, ctx: MyContext) -> list[str]:
-        ids, tags = [], []
-        
-        guild = ctx.bot.get_guild(336642139381301249)
-        humans = [hum for hum in guild.members if not hum.bot]
+    @commands.command()
+    @commands.bot_has_permissions(send_messages=True)
+    async def cleanup(self, ctx: MyContext, amount: int = 5):
+        """
+        Cleans up the bot's messages. 
+        Defaults to 25 messages. If you or the bot does not have the Manage Messages permission, the search will be limited to 25 messages.
+        """
+        if amount > 25:
+            if not ctx.channel.permissions_for(ctx.author).manage_messages:
+                await ctx.send("You must have `manage_messages` permission to perform a search greater than 25")
+                return
+            if not ctx.channel.permissions_for(ctx.me).manage_messages:
+                await ctx.send("I need the `manage_messages` permission to perform a search greater than 25")
+                return
 
-        for member in humans:
-            ids.append(member.id)
-        
-        cwd = get_path()
-        with open(cwd+'/config/'+'tags.txt', 'r', encoding='utf8') as file:
-            for line in file.read().split("\n"):
-    
-                id = line[-52:-32]
-  
-                try:
-                    if int(id) not in ids:
-                        tag = line[10:112]
-                        
-                        tags.append(str(tag))
-                except:
-                    continue
-        
-        return tags
+        def check(msg):
+            return msg.author == ctx.me
+        if ctx.channel.permissions_for(ctx.me).manage_messages:
+            deleted = await ctx.channel.purge(limit=amount, check=check)
+        else:
+            deleted = await ctx.channel.purge(limit=amount, check=check, bulk = False)
+        spammers = Counter(m.author.display_name for m in deleted)
+        deleted = len(deleted)
+        messages = [f'{deleted} message{" was" if deleted == 1 else "s were"} removed.']
+        if deleted:
+            messages.append('')
+            spammers = sorted(spammers.items(), key=lambda t: t[1], reverse=True)
+            messages.extend(f'**{name}**: {count}' for name, count in spammers)
 
-    @commands.command(hidden=True)
-    @commands.is_owner()  
-    @commands.bot_has_permissions(send_messages=True)  
-    async def tags(self, ctx : MyContext, per_page : int = 16):
-        await ctx.check()
-        result = await self.bot.loop.run_in_executor(None, self.read_tags, ctx)
-        await ctx.paginate(result, per_page=per_page)
+        to_send = '\n'.join(messages)
+        if len(to_send) > 2000:
+            await ctx.send(f'Successfully removed {deleted} messages.', delete_after=5)
+        else:
+            await ctx.send(to_send, delete_after=10)
 
+    @commands.command(name='tag_check')
+    @commands.is_owner()
+    async def tags(self, ctx: MyContext, *, claim: bool):
+        """Owner reserved command."""
+
+        def check(message: discord.Message):
+            if message.guild.id != SUPPORT_GUILD:
+                return False
+            if len(message.attachments) != 1 or message.attachments[0].filename != "tags.txt":
+                return False
+            return True
+
+        m = await ctx.send('Input a file to parse.')
+        try:
+            message = await self.bot.wait_for('message', check=check, timeout=60)
+        except asyncio.TimeoutError:
+            try:
+                await m.delete()
+            except discord.HTTPException:
+                pass
+        
+        await m.edit(content='Parsing...')
+
+        async with ctx.typing():
+            contents = await message.attachments[0].read()
+            contents = contents.decode("utf-8")
+            sep, contents = contents.split("\n", 1)
+            key, contents = contents.split("\n", 1)
+
+            all_tags: dict[str, Tag] = {}
+            tag_owners: dict[int, list[str]] = defaultdict(list)
+
+            for match in TAG_FILE_REGEX.finditer(contents):
+                tag, owner_id, uses, can_delete, is_alias = match.groups()
+                tag = tag.rstrip()
+                owner_id = int(owner_id)
+                uses = int(uses)
+                can_delete = can_delete == "True"
+                is_alias = is_alias == "True"
+
+                all_tags[tag] = Tag(tag, owner_id, uses, can_delete, is_alias, match.group())
+                tag_owners[owner_id].append(tag)
+
+            orphaned_tags: list[str] = []
+
+            guild = self.bot.get_guild(DPY_GUILD_ID)
+            if not guild:
+                await m.edit(content='Guild wasn\'t found...')
+                return
+
+            for user_id, tags in tag_owners.items():
+                if guild.get_member(user_id) is None:
+                    orphaned_tags.extend(tags)
+
+            tag_file = io.BytesIO()
+
+            if claim:
+                for tag in sorted(orphaned_tags, key=lambda t: all_tags[t].uses, reverse=True):
+                    tag_file.write((f"?tag claim {tag}\n").encode("utf-8"))
+            else:
+                tag_file.write((sep + "\n").encode("utf-8"))
+                tag_file.write((key + "\n").encode("utf-8"))
+                tag_file.write((sep + "\n").encode("utf-8"))
+
+                for tag in sorted(orphaned_tags, key=lambda t: all_tags[t].uses, reverse=True):
+                    tag_file.write((all_tags[tag].match + "\n").encode("utf-8"))
+
+                tag_file.write((sep + "\n").encode("utf-8"))
+            tag_file.seek(0)
+
+        await m.edit(content='Sending file...')
+        await ctx.author.send(file=discord.File(tag_file, "available_tags.txt"))
+            
     @commands.command(name='repl', aliases=['coliru'])
     @commands.dynamic_cooldown(dynamic_cooldown, type=commands.BucketType.user)
     async def coliru(self, ctx: MyContext, *, code: CodeBlock):
