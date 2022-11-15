@@ -649,7 +649,7 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
         """
         
         source_url = 'https://github.com/dartmern/metro/'
-        license_url = source_url + 'LICENSE'
+        license_url = source_url + 'blob/master/LICENSE'
         branch = 'master'
 
         if command is None:
