@@ -167,41 +167,55 @@ class PlayerView(discord.ui.View):
 
     @discord.ui.button(label='Skip', emoji='\U000023ed', style=discord.ButtonStyle.blurple)
     async def skip(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
-        await interaction.response.defer()
 
         if self.is_privileged(interaction):
+            await interaction.response.defer()
             await self.player.stop()
-            return 
-            
-        required = self.required(self.ctx)
-        self.player.skip_votes.add(interaction.user)
+        else:          
+            required = self.required(self.ctx)
+            self.player.skip_votes.add(interaction.user)
 
-        if len(self.player.skip_votes) >= required:
-            await interaction.followup.send(f"\U000023ed Voted to skip the song.")
-            self.player.skip_votes.clear()
-            await self.player.stop()
-            
-        else:
-            await interaction.followup.send(f"{interaction.user} has voted to skip this song. Votes: {len(self.player.skip_votes)}/{required}\n> Click the **Skip** button to vote to skip.")
+            if len(self.player.skip_votes) >= required:
+                await interaction.response.send_message(f"\U000023ed Voted to skip the song.")
+                self.player.skip_votes.clear()
+                await self.player.stop()
+                
+            else:
+                await interaction.response.send_message(f"{interaction.user} has voted to skip this song. Votes: {len(self.player.skip_votes)}/{required}\n> Click the **Skip** button to vote to skip.")
+                return
+        
+        for item in self.children:
+            item.disabled = True
+
+        embed = self.player.controller.embeds[0]
+        extra = discord.Embed(color=discord.Color.orange())
+        extra.set_author(name='Song was skipped.')
+        await self.controller.edit(embeds=[embed, extra], view=self)
 
     @discord.ui.button(emoji='<:disconnect:1040449193753464942>', style=discord.ButtonStyle.danger)
     async def stop_player(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         
-        await interaction.response.defer()
-
         if self.is_privileged(interaction):
+            await interaction.response.defer()
             await self.player.teardown()
-            return 
-
-        required = self.required(self.ctx)
-        self.player.stop_votes.add(interaction.user)
-
-        if len(self.player.stop_votes) >= required:
-            await interaction.followup.send("\U0001f6d1 Vote to stop the player passed. Stopping...")
-            await self.player.teardown(view=self)
-            return 
         else:
-            await interaction.followup.send(f"{interaction.user} has voted to stop the player. Votes: {len(self.player.stop_votes)}/{required}\n> Click the {self.ctx.bot.emojis['disconnect']} emoji to vote to stop.")
+            required = self.required(self.ctx)
+            self.player.stop_votes.add(interaction.user)
+
+            if len(self.player.stop_votes) >= required:
+                await interaction.response.send_message("\U0001f6d1 Vote to stop the player passed. Stopping...")
+                await self.player.teardown() 
+            else:
+                await interaction.response.send_message(f"{interaction.user} has voted to stop the player. Votes: {len(self.player.stop_votes)}/{required}\n> Click the {self.ctx.bot.emojis['disconnect']} emoji to vote to stop.")
+                return
+
+        for item in self.children:
+            item.disabled = True
+        
+        embed = self.player.controller.embeds[0]
+        extra = discord.Embed(color=discord.Color.red())
+        extra.set_author(name='Disconnected.')
+        await self.controller.edit(embeds=[embed, extra], view=self)
 
     @discord.ui.button(label='Volume', style=discord.ButtonStyle.green)
     async def volume_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -232,7 +246,7 @@ class Player(pomice.Player):
        # Queue up the next track, else teardown the player
         try:
             track: pomice.Track = self.queue.get()
-        except asyncio.queues.QueueEmpty:  
+        except pomice.exceptions.QueueEmpty:
             return await self.teardown()
 
         await self.play(track)
@@ -246,8 +260,6 @@ class Player(pomice.Player):
         """Clear internal states, remove player controller and disconnect."""
         with contextlib.suppress((discord.HTTPException), (KeyError)):
             await self.destroy()
-            if self.controller:
-                await self.controller.edit(view=None)
 
     async def set_context(self, ctx: commands.Context):
         """Set context for the player"""
