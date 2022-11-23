@@ -16,6 +16,7 @@ import asyncpg
 import mystbin
 import aiohttp
 import logging
+import topgg
 
 from utils.checks import check_dev
 from utils.constants import BOT_LOGGER_CHANNEL, BOT_OWNER_ID, DEFAULT_INVITE, DEVELOPER_IDS, DOCUMENTATION, EMOTES, GITHUB_URL, PATREON_URL, PRIVACY_POLICY, SUPPORT_GUILD, SUPPORT_STAFF, SUPPORT_URL, TEST_BOT_ID
@@ -45,6 +46,8 @@ token = info_file['bot_token']
 google_token = info_file['google_token']
 
 webhooks = info_file['webhooks']
+
+topgg_token = info_file['topgg_token']
 
 async def create_db_pool(user, password, database, host, port) -> asyncpg.Pool:
     details = {
@@ -130,6 +133,7 @@ class MetroBot(commands.AutoShardedBot):
         self.session: aiohttp.ClientSession
         self.error_logger: discord.Webhook
         self.status_logger: discord.Webhook
+        self.topgg_client: topgg.DBLClient
 
     @property
     def donate(self) -> str:
@@ -484,12 +488,32 @@ async def on_guild_remove(guild: discord.Guild):
     count = discord.Embed(color=discord.Colour.purple(), description="Guilds count: **%s**" % len(bot.guilds))
     await channel.send(embeds=[embed, count])
 
+@bot.event
+async def on_dbl_vote(data: topgg.types.BotVoteData):
+    
+    next_vote = discord.utils.utcnow() + datetime.timedelta(hours=12)
+    votes = await bot.db.fetchval("SELECT votes FROM votes WHERE user_id = $1", data.user)
+    if votes:
+        query = """
+                UPDATE votes
+                SET votes = $1, has_voted = True, next_vote = $2
+                """
+        await bot.db.execute(query, votes + 1, next_vote)
+    else:
+        query = """
+                INSERT INTO votes (user_id, votes, has_voted, next_vote)
+                VALUES ($1, $2, $3, $4)
+                """
+        await bot.db.execute(query, data.user, 1, True, next_vote)
+
 async def main():
     async with aiohttp.ClientSession() as session:
         async with bot:
             bot.session = session
             bot.db = await create_db_pool(user, password, database, host, port)
             bot.loop.create_task(bot.startup())
+
+            bot.topgg_client = topgg.DBLClient(bot, token=topgg_token, session=session)
 
             bot.error_logger = discord.Webhook.from_url(webhooks['error_handler'], session=bot.session)
             bot.status_logger = discord.Webhook.from_url(webhooks['status_logger'], session=bot.session)
