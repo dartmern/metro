@@ -23,23 +23,24 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
     @property
     def emoji(self) -> str:
         return '\U0001f4c8'
-        
+
     @commands.Cog.listener()
     async def on_dbl_vote(self, data: topgg.types.BotVoteData):
         print('Voted', data)
         next_vote = discord.utils.utcnow() + datetime.timedelta(hours=12)
-        votes = await self.bot.db.fetchval("SELECT votes FROM votes WHERE user_id = $1", data.user)
+        votes = await self.bot.db.fetchval("SELECT votes FROM votes WHERE user_id = $1", int(data.user))
         if votes:
             query = """
                     UPDATE votes
                     SET votes = $1, has_voted = True, next_vote = $2
+                    WHERE user_id = $3
                     """
-            await self.bot.db.execute(query, votes + 1, next_vote)
+            await self.bot.db.execute(query, votes + 1, next_vote, int(data.user))
         else:
             query = """
                     INSERT INTO votes (user_id, votes, has_voted, next_vote)
                     VALUES ($1, $2, $3, $4)
                     """
-            await self.bot.db.execute(query, data.user, 1, True, next_vote)
+            await self.bot.db.execute(query, int(data.user), 1, True, next_vote)
 
 
