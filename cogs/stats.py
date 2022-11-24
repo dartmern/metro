@@ -27,7 +27,7 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
     @commands.Cog.listener()
     async def on_dbl_vote(self, data: topgg.types.BotVoteData):
         print('Voted', data)
-        next_vote = discord.utils.utcnow() + datetime.timedelta(hours=12)
+        next_vote = (discord.utils.utcnow() + datetime.timedelta(hours=12)).replace(tzinfo=None)
         votes = await self.bot.db.fetchval("SELECT votes FROM votes WHERE user_id = $1", int(data.user))
         if votes:
             query = """
