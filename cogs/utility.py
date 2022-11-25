@@ -198,45 +198,6 @@ class HighlightIgnoreUnignoreView(discord.ui.View):
         await interaction.response.defer()
         await interaction.edit_original_response(content='Canceled.', embed=None, view=None)
 
-class WhichStyleTimestampButton(discord.ui.Button):
-    def __init__(self, *, option: str, time: datetime.datetime, style: discord.ButtonStyle):
-        super().__init__(label=option, style=style)
-        self.option = option
-        self.time = time
-
-    async def callback(self, interaction: discord.Interaction):
-        timestamp = discord.utils.format_dt(self.time, style=self.option)
-        await interaction.response.send_message(f"\{timestamp} {timestamp}", ephemeral=True) 
-
-class WhichStyleTimestampView(discord.ui.View):
-    def __init__(self, *, ctx: MyContext, time: datetime.datetime):
-        super().__init__(timeout=300)
-
-        self.message: discord.Message
-        self.ctx = ctx
-
-        options = ['t', 'T', 'd', 'D', 'f', 'F', 'R']
-        for option in options:
-            button = WhichStyleTimestampButton(option=option, time=time.dt, style=discord.ButtonStyle.blurple if option == 'f' else discord.ButtonStyle.gray)
-            if option in options[4:]:
-                button.row = 1
-            self.add_item(button)
-
-    async def start(self):
-        
-        embed = discord.Embed()
-        embed.set_author(name='Which style of timestamp do you want?')
-        embed.description = f"You can see [this table](https://discord.com/developers/docs/reference#message-formatting-timestamp-styles)"\
-                            " for the different styles and how they look."
-
-        self.message = await self.ctx.send(embed=embed, view=self)
-
-    async def on_timeout(self):
-        for item in self.children:
-            item.disabled = True
-
-        await self.message.edit(view=self) 
-
 class AddPrefixModal(discord.ui.Modal):
     def __init__(self, ctx: MyContext):
         super().__init__(title='Add a prefix.')
@@ -1478,17 +1439,6 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
             except RuntimeError:
                 pass # Can't do shit really 
-
-    @commands.hybrid_command(name='timestamp', aliases=['ts'])
-    @app_commands.describe(timestamp='The time you want me to convert.')
-    async def _timestamp_command(
-        self, 
-        ctx: MyContext, *, 
-        timestamp: UserFriendlyTime(commands.clean_content, default='\u2026')):
-        """Generate a timestamp from a human readable offset."""
-
-        view = WhichStyleTimestampView(ctx=ctx, time=timestamp)
-        await view.start()
 
 async def setup(bot: MetroBot):
     await bot.add_cog(utility(bot))
