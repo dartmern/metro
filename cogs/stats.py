@@ -120,6 +120,7 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
         
         ctx = await self.bot.get_context(message)
         ctx.author = user
+        ctx.channel = user.dm_channel
         view = VoteView('12 hours', ctx=ctx)
 
         try:
