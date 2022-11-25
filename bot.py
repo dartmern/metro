@@ -75,7 +75,18 @@ class MetroBot(commands.AutoShardedBot):
             raise UserBlacklisted
 
     def __init__(self):
-        intents = discord.Intents.all()
+        intents = discord.Intents(
+            emojis=True,
+            guild_messages=True,
+            guild_reactions=True,
+            guilds=True,
+            members=True,
+            message_content=True,
+            messages=True,
+            presences=True,
+            voice_states=True,
+            webhooks=True)
+            
         allowed_mentions = discord.AllowedMentions(
             roles=False, users=True, everyone=False, replied_user=False)
 
@@ -494,7 +505,6 @@ async def main():
             bot.loop.create_task(bot.startup())
 
             bot.error_logger = discord.Webhook.from_url(webhooks['error_handler'], session=bot.session)
-            bot.status_logger = discord.Webhook.from_url(webhooks['status_logger'], session=bot.session)
 
             folders = ['giveaway_rewrite', 'tags']
 
