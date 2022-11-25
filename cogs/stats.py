@@ -118,7 +118,7 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
                             f'This is also a way to support the bot for completely free!\n\n'\
                             f'> You can click the button below to set a reminder to vote.'
         
-        ctx = self.bot.get_context(message)
+        ctx = await self.bot.get_context(message)
         view = VoteView('12 hours', ctx=ctx)
 
         try:
