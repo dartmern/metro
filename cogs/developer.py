@@ -428,7 +428,7 @@ class developer(commands.Cog, description="Developer commands."):
 
 
     @commands.group(name='premium', aliases=['pm'], invoke_without_command=True, case_insensitive=True)
-    #@is_support()
+    @is_support()
     async def premium(self, ctx: MyContext):
         """Manage bot premium."""
         

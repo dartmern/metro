@@ -293,7 +293,7 @@ class NewHelpView(discord.ui.View):
         self.select_category.add_option(emoji='📙', label='All commands', value='all_commands')
 
         for category, command in self.data:
-            if category[0] == 'Jishaku':
+            if category[0] in ['Jishaku', 'developer', 'support']:
                 continue
 
             try:
@@ -302,10 +302,11 @@ class NewHelpView(discord.ui.View):
                 _emoji = None
             self.select_category.add_option(emoji=_emoji, label=category[0].capitalize(), description=category[1])
 
-    def category_embed(self, cog : commands.Cog) -> discord.Embed:
+    async def category_embed(self, cog : commands.Cog) -> discord.Embed:
 
         to_join = []
-        for command in cog.get_commands():
+        cmds = await self.help_command.filter_commands(cog.get_commands())
+        for command in cmds:
             short_doc = command.short_doc or "No help provided..."
             if len(command.name) < 20:
                 group_mark = '✅' if isinstance(command, commands.Group) else ''
@@ -427,7 +428,7 @@ class NewHelpView(discord.ui.View):
             cog = self.bot.get_cog(select.values[0].lower())
             if not cog:
                 return await interaction.response.send_message(f"That category was somehow not found. Try using `{self.ctx.clean_prefix}help {select.values[0]}`", ephemeral=True)
-            await interaction.response.edit_message(embed=self.category_embed(cog))
+            await interaction.response.edit_message(embed=await self.category_embed(cog))
 
     @discord.ui.button(label='Need help', emoji='❓', style=discord.ButtonStyle.green)
     async def help_button(self, interaction : discord.Interaction, button : discord.ui.Button):
@@ -799,7 +800,8 @@ class MetroHelp(commands.HelpCommand):
 
     async def send_cog_help(self, cog: commands.Cog):
         to_join = []
-        for command in cog.get_commands():
+        cmds = await self.filter_commands(cog.get_commands())
+        for command in cmds:
             short_doc = command.short_doc or "No help provided..."
             if len(command.name) < 20:
                 group_mark = '✅' if isinstance(command, commands.Group) else ''
