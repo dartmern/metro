@@ -101,7 +101,7 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
             await self.bot.error_logger.send('Vote log channel could not be found.')
             return 
 
-        message = await self.vote_webhook.send(
+        message = await channel.send(
             f"<@{data.user}> voted for {self.bot.user.name} on **Top.GG**! Thanks for your support. \n"\
             f"To vote click below: \n"\
             f"<https://top.gg/bot/{self.bot.user.id}/vote> \n"\
