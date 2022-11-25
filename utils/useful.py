@@ -143,7 +143,7 @@ class Embed(discord.Embed):
 def dynamic_cooldown(ctx: MyContext):
     """Dyanmic cooldown for premium users."""
 
-    if ctx.bot.premium_guilds.get(ctx.guild.id):
+    if ctx.bot.premium_guilds.get(ctx.guild.id) or ctx.bot.premium_users.get(ctx.author.id):
         return commands.Cooldown(3, 6)
     return commands.Cooldown(3, 8)
 

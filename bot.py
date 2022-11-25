@@ -17,6 +17,7 @@ import mystbin
 import aiohttp
 import logging
 import topgg
+import waifuim
 
 from utils.checks import check_dev
 from utils.constants import BOT_LOGGER_CHANNEL, BOT_OWNER_ID, DEFAULT_INVITE, DEVELOPER_IDS, DOCUMENTATION, EMOTES, GITHUB_URL, PATREON_URL, PRIVACY_POLICY, SUPPORT_GUILD, SUPPORT_STAFF, SUPPORT_URL, TEST_BOT_ID
@@ -143,6 +144,7 @@ class MetroBot(commands.AutoShardedBot):
         self.error_logger: discord.Webhook
         self.status_logger: discord.Webhook
         self.topgg_webhook: topgg.WebhookManager
+        self.wf: waifuim.WaifuAioClient
 
     @property
     def donate(self) -> str:
@@ -512,6 +514,8 @@ async def main():
             bot.session = session
             bot.db = await create_db_pool(user, password, database, host, port)
             bot.loop.create_task(bot.startup())
+
+            bot.wf = waifuim.WaifuAioClient(session=session, appname='metrodiscordbot')
 
             bot.error_logger = discord.Webhook.from_url(webhooks['error_handler'], session=bot.session)
 
