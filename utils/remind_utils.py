@@ -98,7 +98,7 @@ def human_timedelta(dt, *, source=None, accuracy=3, brief=False, suffix=True):
         if not brief:
             return human_join(output, final="and") + suffix
         else:
-            return " ".join(output) + suffix
+            return "".join(output) + suffix
 
 
 

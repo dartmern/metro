@@ -66,7 +66,7 @@ class core(commands.Cog, description="Core events."):
         if not ctx.guild:
             return True
 
-        if self.bot.premium_guilds.get(ctx.guild.id) is True:
+        if self.bot.premium_guilds.get(ctx.guild.id) or self.bot.premium_users.get(ctx.author.id):
             bucket = self.premium_cd.get_bucket(ctx.message)
         else:
             bucket = self.premium_cd.get_bucket(ctx.message)

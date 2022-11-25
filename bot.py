@@ -86,7 +86,7 @@ class MetroBot(commands.AutoShardedBot):
             presences=True,
             voice_states=True,
             webhooks=True)
-            
+
         allowed_mentions = discord.AllowedMentions(
             roles=False, users=True, everyone=False, replied_user=False)
 
@@ -126,7 +126,7 @@ class MetroBot(commands.AutoShardedBot):
         self.guildblacklist: dict[int, bool] = {}
         self.app_commands: dict[str, int] = {}
         
-        #self.premium_users = {} --soon
+        self.premium_users: dict[int, bool] = {}
         self.premium_guilds: dict[int, bool] = {}
 
         #Tracking
@@ -218,6 +218,15 @@ class MetroBot(commands.AutoShardedBot):
         if records:
             for record in records:
                 self.premium_guilds[record['server']] = True
+
+        # premium users cache
+        query = """
+                SELECT user_id FROM votes WHERE has_voted = True
+                """
+        records = await self.db.fetch(query)
+        if records:
+            for record in records:
+                self.premium_guilds[record['user_id']] = True
 
         # guild blacklist cache
         query = """
