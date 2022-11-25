@@ -151,7 +151,7 @@ class RoboPages(discord.ui.View):
             except discord.errors.NotFound:
                 pass
 
-    async def on_error(self, error: Exception, item: discord.ui.Item, interaction: discord.Interaction) -> None:
+    async def on_error(self, error: Exception, interaction: discord.Interaction, item: discord.ui.Item) -> None:
         if interaction.response.is_done():
             await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
         else:
