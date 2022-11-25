@@ -112,6 +112,7 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
         if not user:
             return 
 
+        next_vote = pytz.utc.localize(next_vote)
         embed = discord.Embed(title='Thank you for voting!', color=discord.Color.purple())
         embed.description = f'Enjoy your premium perks. They will expire {discord.utils.format_dt(next_vote, "R")} unless you vote again. \n'\
                             f'Voting helps {self.bot.user.name} grow and be able to reach more users.'\
@@ -120,7 +121,7 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
         
         ctx = await self.bot.get_context(message)
         ctx.author = user
-        ctx.channel = user.dm_channel
+        ctx.channel = await user.create_dm()
         view = VoteView('12 hours', ctx=ctx)
 
         try:
