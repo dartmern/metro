@@ -113,12 +113,13 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
             return 
 
         embed = discord.Embed(title='Thank you for voting!', color=discord.Color.purple())
-        embed.description = f'Enjoy your premium perks. They will expire {discord.utils.format_dt(next_vote)} unless you vote again. \n'\
+        embed.description = f'Enjoy your premium perks. They will expire {discord.utils.format_dt(next_vote), "R"} unless you vote again. \n'\
                             f'Voting helps {self.bot.user.name} grow and be able to reach more users.'\
                             f'This is also a way to support the bot for completely free!\n\n'\
                             f'> You can click the button below to set a reminder to vote.'
         
         ctx = await self.bot.get_context(message)
+        ctx.author = user
         view = VoteView('12 hours', ctx=ctx)
 
         try:
