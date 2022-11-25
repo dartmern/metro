@@ -515,7 +515,7 @@ async def main():
 
             bot.error_logger = discord.Webhook.from_url(webhooks['error_handler'], session=bot.session)
 
-            folders = ['giveaway_rewrite', 'tags']
+            folders = ['giveaway_rewrite', 'tags', 'nsfw']
 
             bot.owner = bot.get_user(BOT_OWNER_ID)
 

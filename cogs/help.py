@@ -305,7 +305,12 @@ class NewHelpView(discord.ui.View):
     async def category_embed(self, cog : commands.Cog) -> discord.Embed:
 
         to_join = []
-        cmds = await self.help_command.filter_commands(cog.get_commands())
+        if not cog.qualified_name == 'nsfw':
+            cmds = await self.help_command.filter_commands(cog.get_commands())
+            notice = ""
+        else:
+            cmds = cog.get_commands()
+            notice = "\n> \U000026a0 **These commands may only be used in a NSFW marked channel.**\n"
         for command in cmds:
             short_doc = command.short_doc or "No help provided..."
             if len(command.name) < 20:
@@ -325,7 +330,7 @@ class NewHelpView(discord.ui.View):
             icon_url=self.ctx.author.display_avatar.url,
         )
 
-        description = f"{cog.emoji if cog.emoji != '' else ''} __**{cog.qualified_name.capitalize()}**__ {cog.description if len(cog.description) < 57 else f'{cog.description[0:57]}...'}\n\n"
+        description = f"{cog.emoji if cog.emoji != '' else ''} __**{cog.qualified_name.capitalize()}**__ {notice}\n{cog.description if len(cog.description) < 57 else f'{cog.description[0:57]}...'}\n\n"
         description += (
             '\n'.join(to_join)
         )
@@ -774,8 +779,15 @@ class MetroHelp(commands.HelpCommand):
                     return to_return
             except AttributeError:
                 return [cog.qualified_name]
-            
-        filtered = await self.filter_commands(self.context.bot.commands, sort=True, key=get_category)
+        
+        cogs = []
+        for name in list(self.context.bot.cogs):
+            cog = self.context.bot.get_cog(name)
+            if not cog.qualified_name == 'nsfw':
+                cogs.extend(cog.get_commands())
+        
+        filtered = await self.filter_commands(cogs, sort=True, key=get_category)
+        filtered.extend(self.context.bot.get_cog('nsfw').get_commands())
         to_iterate = itertools.groupby(filtered, key=get_category)
 
         view = NewHelpView(self.context, to_iterate, self)
@@ -800,7 +812,12 @@ class MetroHelp(commands.HelpCommand):
 
     async def send_cog_help(self, cog: commands.Cog):
         to_join = []
-        cmds = await self.filter_commands(cog.get_commands())
+        if not cog.qualified_name == 'nsfw':
+            cmds = await self.filter_commands(cog.get_commands())
+            notice = ""
+        else:
+            cmds = cog.get_commands()
+            notice = "\n> \U000026a0 **These commands may only be used in a NSFW marked channel.**\n"
         for command in cmds:
             short_doc = command.short_doc or "No help provided..."
             if len(command.name) < 20:
@@ -820,7 +837,7 @@ class MetroHelp(commands.HelpCommand):
             icon_url=self.context.author.display_avatar.url,
         )
 
-        description = f" __**{cog.qualified_name.capitalize()}**__ \n"
+        description = f" __**{cog.qualified_name.capitalize()}**__ {notice}\n"
         description += (
             '\n'.join(to_join)
         )
