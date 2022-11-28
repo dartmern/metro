@@ -28,15 +28,14 @@ auth = _info['openrobot_api_key']
 spotify_id = _info['spotify']['client_id']
 spotify_secret = _info['spotify']['client_secret']
 
-def format_time(milliseconds: Union[float, int]) -> str:
-    """Convert milliseconds to something readable."""
-    hours, rem = divmod(int(milliseconds // 1000), 3600)
-    minutes, seconds = divmod(rem, 60)
-    
-    hr = f"{hours:02d}:" if hours else ''
-    mi = f"{minutes:02d}:" if minutes else ''
-    se = f"{seconds:02d}" if seconds else ''
-    return hr + mi + se
+def convert(ms: Union[float, int]) -> str:
+    seconds, milliseconds = divmod(ms, 1000)
+    minutes, seconds = divmod(seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+
+    result = [hours, minutes, seconds]
+    format_result = [f"0{i}" if len(str(i)) == 1 else str(i) for i in result]
+    return ":".join(format_result).removeprefix("00:").removesuffix(":")
 
 def in_voice():
     async def predicate(ctx: MyContext):
@@ -463,3 +462,4 @@ class music(commands.Cog, description='Play high quality music in a voice channe
 
         await ctx.paginate(to_paginate, compact=True)
             
+    @commands.hybrid_command()
