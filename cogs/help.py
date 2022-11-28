@@ -77,12 +77,9 @@ class SupportView(discord.ui.View):
     async def start(self, interaction: Optional[discord.Interaction] = None):
         self.add_item(discord.ui.Button(label='Support Server', url='https://discord.gg/2ceTMZ9qJh'))
 
-        embed = Embed()
-        embed.colour = discord.Colour.orange()
-        embed.description = '__**Are you sure you want to join my support server?**__'\
-            f'\n Joining is completely at your own will. \nThis message is here to protect people from accidentally joining.'\
-            f'\n You can kindly dismiss this message if you clicked by accident.'\
-            f'\n\n If you have an issue with joining you can always send the bot owner an email. (`metrobot.receiving@gmail.com`)'
+        embed = Embed(color=discord.Color.orange())
+        embed.set_author(name='Support Server', icon_url=self.ctx.me.display_avatar.url)
+        embed.description = 'You can join for help regarding the bot, help with development, or test commands.'
         if interaction:
             await interaction.response.send_message(embed=embed, ephemeral=True, view=self)
         else:
