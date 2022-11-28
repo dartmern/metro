@@ -138,6 +138,9 @@ class MetroBot(commands.AutoShardedBot):
         self.TEST_BOT_ID = TEST_BOT_ID
         self._check = "<:mCheck:819254444197019669>"
         self.cross = "<:mCross:819254444217860116>"
+
+        # logging
+        self.logger = logging.getLogger()
         
         # typechecking stuff
         self.session: aiohttp.ClientSession
