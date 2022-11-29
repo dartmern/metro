@@ -166,7 +166,6 @@ class core(commands.Cog, description="Core events."):
             await self.bot.error_logger.send(content=f'{channel.guild.get_role(DEVELOPER_ROLE).mention} ID: {message.id} | Traceback string was too long to output.', embed=embed, file=discord.File(io.StringIO(traceback_string), filename='traceback.py'))
         return 
 
-    @commands.Cog.listener()
     async def on_command_error(self, ctx : MyContext, error):
         """Handle message command / traditional command errors."""
 
@@ -179,7 +178,10 @@ class core(commands.Cog, description="Core events."):
         if ctx.command and ctx.command.has_error_handler():
             return
 
-        if ctx.cog.has_error_handler():
+        if not ctx.command:
+            return
+
+        if ctx.command.cog.has_error_handler():
             return
         
         elif ctx.interaction and not ctx.guild:
@@ -385,7 +387,7 @@ class core(commands.Cog, description="Core events."):
                 await self.bot.add_to_blacklist(ctx, ctx.author, f'Spamming Commands (auto-ban)', silent=True)
                 await ctx.send("You have been blacklisted for spamming commands. (auto-ban)")
             else:
-                await ctx.send(embed=em, delete_after=error.retry_after)
+                await ctx.send(embed=em)
 
         elif isinstance(error, commands.MissingRequiredArgument):
 
@@ -482,5 +484,8 @@ class core(commands.Cog, description="Core events."):
                 return 
 
 
-async def setup(bot):
+async def setup(bot: MetroBot):
     await bot.add_cog(core(bot))
+
+    cog: core = bot.get_cog('core')
+    bot.on_command_error = cog.on_command_error
