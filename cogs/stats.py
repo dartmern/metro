@@ -186,7 +186,7 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
         view = None
         if rows:
             next_vote = pytz.utc.localize(rows)
-            if discord.utils.utcnow() < (next_vote - datetime.timedelta(hours=12)):
+            if discord.utils.utcnow() > (next_vote - datetime.timedelta(hours=12)):
                 pass
             else:
                 value = f"Next vote {discord.utils.format_dt(next_vote, 'R')} \n"\
