@@ -180,12 +180,12 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
         embed.set_author(name=str(self.bot.user), icon_url=self.bot.user.display_avatar.url)
 
         query = "SELECT (next_vote) FROM votes WHERE user_id = $1"
-        rows = await self.bot.db.fetchrow(query, ctx.author.id)
+        rows = await self.bot.db.fetchval(query, ctx.author.id)
 
         value = f"[`CLICK HERE TO VOTE`]({self.top_gg})"
         view = None
         if rows:
-            next_vote = pytz.utc.localize(rows['row'][1])
+            next_vote = pytz.utc.localize(rows)
             if discord.utils.utcnow() < (next_vote - datetime.timedelta(hours=12)):
                 pass
             else:
