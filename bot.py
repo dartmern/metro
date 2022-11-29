@@ -19,6 +19,7 @@ import asyncpg
 import mystbin
 import aiohttp
 import logging
+import pytz
 import topgg
 import waifuim
 
@@ -228,14 +229,17 @@ class MetroBot(commands.AutoShardedBot):
             for record in records:
                 self.premium_guilds[record['server']] = True
 
-        # premium users cache
+        # premium users / voters cache
         query = """
-                SELECT user_id FROM votes WHERE has_voted = True
+                SELECT (user_id, next_vote) FROM votes
                 """
         records = await self.db.fetch(query)
         if records:
             for record in records:
-                self.premium_guilds[record['user_id']] = True
+                print(record)
+                next_vote = pytz.utc.localize(record['row'][1])
+                if discord.utils.utcnow() > (next_vote - datetime.timedelta(hours=12)):
+                    self.premium_guilds[record['row'][0]] = True
 
         # guild blacklist cache
         query = """

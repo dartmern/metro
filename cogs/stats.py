@@ -106,21 +106,21 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
     @commands.Cog.listener()
     async def on_dbl_vote(self, data: topgg.types.BotVoteData):
 
-        next_vote = (discord.utils.utcnow() + datetime.timedelta(hours=12)).replace(tzinfo=None)
+        next_vote = (discord.utils.utcnow() + datetime.timedelta(days=1)).replace(tzinfo=None)
         votes = await self.bot.db.fetchval("SELECT votes FROM votes WHERE user_id = $1", int(data.user))
         if votes:
             query = """
                     UPDATE votes
-                    SET votes = $1, has_voted = True, next_vote = $2
+                    SET votes = $1, next_vote = $2
                     WHERE user_id = $3
                     """
             await self.bot.db.execute(query, votes + 1, next_vote, int(data.user))
         else:
             query = """
-                    INSERT INTO votes (user_id, votes, has_voted, next_vote)
-                    VALUES ($1, $2, $3, $4)
+                    INSERT INTO votes (user_id, votes, next_vote)
+                    VALUES ($1, $2, $3)
                     """
-            await self.bot.db.execute(query, int(data.user), 1, True, next_vote)
+            await self.bot.db.execute(query, int(data.user), 1, next_vote)
 
         channel = self.bot.get_channel(VOTE_LOGS_CHANNEL)
         if not channel:
@@ -138,7 +138,7 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
         if not user:
             return 
 
-        next_vote = pytz.utc.localize(next_vote)
+        next_vote = pytz.utc.localize(next_vote) - datetime.timedelta(hours=12)
         embed = discord.Embed(title='Thank you for voting!', color=discord.Color.purple())
         embed.description = f'Enjoy your premium perks. They will expire {discord.utils.format_dt(next_vote, "R")} unless you vote again. \n'\
                             f'Voting helps {self.bot.user.name} grow and be able to reach more users.'\
@@ -157,7 +157,7 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
 
         reminder_cog: utility = self.bot.get_cog('utility')
         await reminder_cog.create_timer(
-            next_vote,
+            next_vote + datetime.timedelta(hours=12),
             'vote_completion',
             user.id
         )
@@ -166,9 +166,6 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
     @commands.Cog.listener()
     async def on_vote_completion_timer_complete(self, timer):
         user_id = timer.args[0]
-
-        query = 'UPDATE votes SET has_voted = False WHERE user_id = $1'
-        await self.bot.db.execute(query, user_id)
 
         try:
             self.bot.premium_users.pop(int(user_id))
@@ -182,17 +179,19 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
         embed = discord.Embed(color=ctx.color)
         embed.set_author(name=str(self.bot.user), icon_url=self.bot.user.display_avatar.url)
 
-        query = "SELECT (has_voted, next_vote) FROM votes WHERE user_id = $1"
+        query = "SELECT (next_vote) FROM votes WHERE user_id = $1"
         rows = await self.bot.db.fetchrow(query, ctx.author.id)
 
-        if rows and rows['row'][0] is True:
+        value = f"[`CLICK HERE TO VOTE`]({self.top_gg})"
+        view = None
+        if rows:
             next_vote = pytz.utc.localize(rows['row'][1])
-            value = f"Next vote {discord.utils.format_dt(next_vote, 'R')} \n"\
-                "> Click the button below to set a reminder."
-            view = VoteView(next_vote, ctx=ctx)
-        else:
-            value = f"[`CLICK HERE TO VOTE`]({self.top_gg})"
-            view = None
+            if discord.utils.utcnow() < (next_vote - datetime.timedelta(hours=12)):
+                pass
+            else:
+                value = f"Next vote {discord.utils.format_dt(next_vote, 'R')} \n"\
+                    "> Click the button below to set a reminder."
+                view = VoteView(next_vote, ctx=ctx)
 
         desc = "Voting on top.gg will grant you premium features for 12 hours. \n"\
                 f"**top.gg**: \n{value}\n\n"\
