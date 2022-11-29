@@ -1,3 +1,4 @@
+import datetime
 import discord
 from discord.ext import commands, menus
 from discord import app_commands
@@ -12,6 +13,7 @@ import pomice
 import asyncio
 import math
 import random
+import pytz
 import yarl
 from pomice.exceptions import TrackLoadError
 
@@ -28,7 +30,7 @@ auth = _info['openrobot_api_key']
 spotify_id = _info['spotify']['client_id']
 spotify_secret = _info['spotify']['client_secret']
 
-def convert(ms: Union[float, int]) -> str:
+def format_time(ms: Union[float, int]) -> str:
     seconds, milliseconds = divmod(ms, 1000)
     minutes, seconds = divmod(seconds, 60)
     hours, minutes = divmod(minutes, 60)
@@ -43,6 +45,23 @@ def in_voice():
             raise commands.BadArgument('You are not connected to a voice channel.')
         if not ctx.voice_client or ctx.author.voice.channel != ctx.voice_client.channel:
             raise commands.BadArgument("You must have the bot in a channel in order to use this command.")
+        return True
+    return commands.check(predicate)
+
+class NotVoted(commands.BadArgument):
+    pass
+
+def has_voted_24hr():
+    async def predicate(ctx: MyContext):
+        """Check if a user_id has voted or not."""
+
+        query = "SELECT next_vote FROM votes WHERE user_id = $1"
+        returned = await ctx.bot.db.fetchval(query, ctx.author.id)
+        if not returned:
+            raise NotVoted
+        next_vote = pytz.utc.localize(returned) + datetime.timedelta(hours=12)
+        if discord.utils.utcnow() > next_vote:
+            raise NotVoted
         return True
     return commands.check(predicate)
 
@@ -462,4 +481,19 @@ class music(commands.Cog, description='Play high quality music in a voice channe
 
         await ctx.paginate(to_paginate, compact=True)
             
-    @commands.hybrid_command()
+    @commands.hybrid_command(name='bass')
+    @has_voted_24hr()
+    @in_voice()
+    async def _bass_command(self, ctx: MyContext):
+        """Increase the bass of music being played."""
+        
+        player: Player = ctx.voice_client
+        _filter = pomice.filters.Equalizer.boost()  
+        if player.filters.get_filters():
+            await player.reset_filters(fast_apply=True)
+            toggle = 'off'
+        else:
+            await player.add_filter(_filter, fast_apply=True)
+            toggle = 'on'
+
+        await ctx.send(f'Toggled {toggle} baseboost.')

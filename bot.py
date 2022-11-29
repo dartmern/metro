@@ -1,3 +1,5 @@
+import sys
+import traceback
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -7,7 +9,7 @@ from discord.abc import Snowflake
 import asyncio
 import datetime
 import re
-from typing import List, Optional, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 import asyncpixel
 from pathlib import Path
 import os
@@ -464,52 +466,31 @@ bot = MetroBot()
 async def mention_prefix(message: discord.Message):
     if re.fullmatch(rf"<@!?{bot.user.id}>", message.content):
         return await message.channel.send(f"\U0001f44b My prefixes here are: {', '.join(await bot.get_pre(bot, message, raw_prefix=True))}")
+
+@bot.event
+async def on_error(event: str, *args: Any, **kwargs: Any) -> None:
+    (exc_type, exc, tb) = sys.exc_info()
+    # Silence command errors that somehow get bubbled up far enough here
+    if isinstance(exc, commands.CommandInvokeError):
+        return
+
+    e = discord.Embed(title='Event Error', colour=0xA32952)
+    e.add_field(name='Event', value=event)
+    trace = "".join(traceback.format_exception(exc_type, exc, tb))
+    e.description = f'```py\n{trace}\n```'
+    e.timestamp = discord.utils.utcnow()
+
+    args_str = ['```py']
+    for index, arg in enumerate(args):
+        args_str.append(f'[{index}]: {arg!r}')
+    args_str.append('```')
+    e.add_field(name='Args', value='\n'.join(args_str), inline=False)
     
-@bot.event
-async def on_guild_join(guild: discord.Guild):
-    if bot.guildblacklist.get(guild.id) is True:
-        embed = discord.Embed(color=discord.Color.red())
-        embed.description = f"I have automatically left this server due to it being blacklisted.\nPlease consider joining my [suppport server]({bot.support}) for more details."
-
-        if guild.system_channel and guild.system_channel.permissions_for(guild.me).send_messages:
-               
-            await guild.system_channel.send(embed=embed)
-            return await guild.leave()
-        else:
-            for channel in guild.text_channels:
-                if channel.permissions_for(guild.me).send_messages:
-                    await channel.send(embed=embed)
-                    break
-            return await guild.leave()
-    else:
-        humans = [hum for hum in guild.members if not hum.bot]
-        bots = [bot for bot in guild.members if bot.bot]
-
-        channel = bot.get_channel(BOT_LOGGER_CHANNEL)
-
-        embed = discord.Embed(color=discord.Colour.green())
-        embed.title = "New Guild"
-        embed.description = f"\n__**Name:**__ {guild.name} (ID: {guild.id})"\
-                            f"\n__**Human/Bots:**__ {len(humans)}/{len(bots)}"\
-                            f"\n__**Owner:**__ {guild.owner} (ID: {guild.owner_id})"\
-                            f"\n__**Added:**__ {ts_now('F')} ({ts_now('R')})"
-        count = discord.Embed(color=discord.Colour.purple(), description="Guilds count: **%s**" % len(bot.guilds))
-        await channel.send(embeds=[embed, count])
-
-@bot.event
-async def on_guild_remove(guild: discord.Guild):
-    humans = [hum for hum in guild.members if not hum.bot]
-    bots = [bot for bot in guild.members if bot.bot]
-
-    channel = bot.get_channel(BOT_LOGGER_CHANNEL)
-
-    embed = discord.Embed(color=discord.Colour.red())
-    embed.title = "Left Guild"
-    embed.description = f"\n__**Name:**__ {guild.name} (ID: {guild.id})"\
-                            f"\n__**Human/Bots:**__ {len(humans)}/{len(bots)}"\
-                            f"\n__**Owner:**__ {guild.owner} (ID: {guild.owner_id})"
-    count = discord.Embed(color=discord.Colour.purple(), description="Guilds count: **%s**" % len(bot.guilds))
-    await channel.send(embeds=[embed, count])
+    hook = bot.error_logger
+    try:
+        await hook.send(embed=e)
+    except:
+        pass
 
 async def main():
     async with aiohttp.ClientSession() as session:
