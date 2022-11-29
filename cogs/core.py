@@ -1,3 +1,5 @@
+import sys
+from typing import Any, TYPE_CHECKING
 import discord
 from discord import errors
 from discord.ext import commands
@@ -11,11 +13,15 @@ import pomice
 import datetime as dt
 
 from bot import MetroBot
+from cogs.music import NotVoted
 from utils import errors
 from utils.constants import DEVELOPER_ROLE, ERROR_CHANNEL_ID
 from utils.useful import Embed
 from utils.checks import check_dev
 from utils.custom_context import MyContext
+
+if TYPE_CHECKING:
+    from cogs.stats import stats
 
 # thanks to leo for the missingrequiredargument handling
 # https://github.com/LeoCx1000/discord-bots/blob/master/DuckBot/cogs/events.py#L201-L208
@@ -163,6 +169,9 @@ class core(commands.Cog, description="Core events."):
     @commands.Cog.listener()
     async def on_command_error(self, ctx : MyContext, error):
         """Handle message command / traditional command errors."""
+
+        cog: stats = self.bot.get_cog('stats')
+        await cog.register_command(ctx)
 
         embed = Embed()
         embed.color = discord.Color.red()
@@ -386,7 +395,14 @@ class core(commands.Cog, description="Core events."):
             if isinstance(ctx.command, commands.Group):
                 await ctx.get_help(ctx.command, content=message)
             else:
-                await ctx.send(embed=await ctx.get_help(ctx.command, content=message))        
+                await ctx.send(embed=await ctx.get_help(ctx.command, content=message))  
+
+        elif isinstance(error, NotVoted):
+            return await ctx.send(
+                'This command requires you to vote for the bot to use.\n'\
+                'You can support the bot and unlock great features.\n'\
+                '> <https://top.gg/bot/788543184082698252/vote>'
+            )
 
         elif isinstance(error, commands.TooManyArguments):
             return await ctx.send("Too many arguments were passed to this command!")
@@ -461,6 +477,7 @@ class core(commands.Cog, description="Core events."):
                 except (discord.Forbidden, discord.HTTPException):
                     await self.bot.error_logger.send(content=f'{channel.guild.get_role(DEVELOPER_ROLE).mention} ID: {message.id} | Traceback string was too long to output.', embed=embed, file=discord.File(io.StringIO(traceback_string), filename='traceback.py'))
                 return 
+
 
 async def setup(bot):
     await bot.add_cog(core(bot))

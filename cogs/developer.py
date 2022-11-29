@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, menus
 from discord import app_commands
 
 from typing import Any, Literal, Optional, Union
@@ -24,9 +24,13 @@ from cogs.serverutils import serverutils
 from utils.constants import TESTING_GUILD
 from utils.decos import in_support, is_dev, is_support
 from utils.custom_context import MyContext
+from utils.new_pages import SimplePageSource, SimplePages
 from utils.pages import StopView
 from utils.useful import Embed, fuzzy
 from utils.json_loader import write_json
+
+# moderator commandstats command is from robodanny
+# https://github.com/Rapptz/RoboDanny/blob/rewrite/cogs/stats.py
 
 class Input(discord.ui.Modal):
     def __init__(self, bot: MetroBot, *, title: str) -> None:
@@ -210,6 +214,36 @@ class developer(commands.Cog, description="Developer commands."):
     async def moderator(self, ctx: MyContext):
         """Base command for bot moderator actions."""
         await ctx.help()
+
+    @moderator.command(name='commandstats', aliases=['cs'])
+    @is_support()
+    async def moderator_commandstats(
+        self, ctx: MyContext, limit: int = 12):
+        """View the bot's global command stats.
+        
+        This is for the current session. (Since last restart)"""
+        counter = self.bot.command_stats
+        total = sum(counter.values())
+        slash_cmds = self.bot.command_types_used[True]
+
+        delta = discord.utils.utcnow() - self.bot.uptime
+        minutes = delta.total_seconds() / 60
+        cpm = total / minutes
+
+        if limit > 0:
+            common = counter.most_common(limit)
+            title = f'Top {limit} Commands'
+        else:
+            common = counter.most_common()[limit:]
+            title = f'Bottom {limit} Commands'
+
+        source = SimplePageSource(common, per_page=12)
+    
+        menu = SimplePages(source=source, ctx=ctx, compact=True)
+        menu.embed.title = title
+        menu.embed.description = f'{total} total commands used ({slash_cmds} slash command uses) ({cpm:.2f}/minute)'
+
+        await menu.start()
 
     @moderator.command(name='sync')
     @is_support()

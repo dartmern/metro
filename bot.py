@@ -1,3 +1,4 @@
+from collections import Counter
 import sys
 import traceback
 import discord
@@ -133,7 +134,8 @@ class MetroBot(commands.AutoShardedBot):
         self.premium_guilds: dict[int, bool] = {}
 
         #Tracking
-        self.command_stats = {}
+        self.command_stats = Counter()
+        self.command_types_used = Counter()
         
         #Emojis
         self.emotes = EMOTES

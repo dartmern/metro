@@ -955,7 +955,7 @@ class meta(commands.Cog, description='Get bot stats and information.'):
 
         await ctx.send(f"My privacy policy: <{self.bot.privacy_policy}>")
 
-    @commands.hybrid_command(name='bot-info', aliases=['botinfo', 'bi', 'info', 'stats', 'about'])
+    @commands.hybrid_command(name='bot-info', aliases=['botinfo', 'bi', 'info', 'about'])
     async def _bot_info(self, ctx: MyContext):
         """Get all the information about me."""
         embed = await NewHelpView(ctx, {}, ctx.bot.help_command).bot_info_embed()
