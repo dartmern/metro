@@ -178,6 +178,9 @@ class core(commands.Cog, description="Core events."):
 
         if ctx.command and ctx.command.has_error_handler():
             return
+
+        if ctx.cog.has_error_handler():
+            return
         
         elif ctx.interaction and not ctx.guild:
             embed.description = "This command isn't available in my messages."

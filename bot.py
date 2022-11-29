@@ -238,7 +238,7 @@ class MetroBot(commands.AutoShardedBot):
             for record in records:
                 print(record)
                 next_vote = pytz.utc.localize(record['row'][1])
-                if discord.utils.utcnow() > (next_vote - datetime.timedelta(hours=12)):
+                if discord.utils.utcnow() < (next_vote - datetime.timedelta(hours=12)):
                     self.premium_users[record['row'][0]] = True
 
         # guild blacklist cache
