@@ -186,10 +186,11 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
         view = None
         if rows:
             next_vote = pytz.utc.localize(rows)
-            if discord.utils.utcnow() > (next_vote - datetime.timedelta(hours=12)):
+            real_vote_time = next_vote - datetime.timedelta(hours=12)
+            if discord.utils.utcnow() > real_vote_time:
                 pass
             else:
-                value = f"Next vote {discord.utils.format_dt(next_vote, 'R')} \n"\
+                value = f"Next vote {discord.utils.format_dt(real_vote_time, 'R')} \n"\
                     "> Click the button below to set a reminder."
                 view = VoteView(next_vote, ctx=ctx)
 
