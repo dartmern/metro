@@ -127,12 +127,14 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
             await self.bot.error_logger.send('Vote log channel could not be found.')
             return 
 
-        message = await channel.send(
+        embed = discord.Embed()
+        embed.description = (
             f"<@{data.user}> voted for {self.bot.user.name} on **Top.GG**! Thanks for your support. \n"\
             f"To vote click below: \n"\
             f"<https://top.gg/bot/{self.bot.user.id}/vote> \n"\
             f"<https://discordbotlist.com/bots/{self.bot.user.id}>"
         )
+        message = await channel.send(embed=embed, color=discord.Color.gold())
 
         user = self.bot.get_user(int(data.user))
         if not user:
@@ -167,6 +169,14 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
     async def on_vote_completion_timer_complete(self, timer):
         user_id = timer.args[0]
 
+        query = "SELECT (next_vote) FROM votes WHERE user_id = $1"
+        rows = await self.bot.db.fetchval(query, user_id)
+
+        next_vote = pytz.utc.localize(rows)
+        real_vote_time = next_vote - datetime.timedelta(hours=12)
+        if discord.utils.utcnow() < real_vote_time:
+            return 
+            
         try:
             self.bot.premium_users.pop(int(user_id))
         except KeyError:
