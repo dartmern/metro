@@ -10,6 +10,10 @@ from utils.json_loader import read_json
 
 info_file = read_json('info')
 logger_webhook = info_file['webhooks']['logger_webhook']
+if not logger_webhook:
+    wb = False
+else:
+    wb = True
 
 class Discord_Handler(logging.Handler):
 
@@ -113,7 +117,8 @@ def setup_logging(
     handler.setFormatter(formatter)
     logger.setLevel(level)
     logger.addHandler(handler)
-    logger.addHandler(Discord_Handler(logger_webhook))
+    if wb:
+        logger.addHandler(Discord_Handler(logger_webhook))
 
     handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
     handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
