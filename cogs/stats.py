@@ -127,14 +127,14 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
             await self.bot.error_logger.send('Vote log channel could not be found.')
             return 
 
-        embed = discord.Embed()
+        embed = discord.Embed(color=discord.Color.gold())
         embed.description = (
             f"<@{data.user}> voted for {self.bot.user.name} on **Top.GG**! Thanks for your support. \n"\
             f"To vote click below: \n"\
             f"<https://top.gg/bot/{self.bot.user.id}/vote> \n"\
             f"<https://discordbotlist.com/bots/{self.bot.user.id}>"
         )
-        message = await channel.send(embed=embed, color=discord.Color.gold())
+        message = await channel.send(embed=embed)
 
         user = self.bot.get_user(int(data.user))
         if not user:
