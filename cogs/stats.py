@@ -202,7 +202,7 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
             else:
                 value = f"Next vote {discord.utils.format_dt(real_vote_time, 'R')} \n"\
                     "> Click the button below to set a reminder."
-                view = VoteView(next_vote, ctx=ctx)
+                view = VoteView(real_vote_time, ctx=ctx)
 
         desc = "Voting on top.gg will grant you premium features for 12 hours. \n"\
                 f"**top.gg**: \n{value}\n\n"\
