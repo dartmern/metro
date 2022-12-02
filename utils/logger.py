@@ -114,6 +114,9 @@ def setup_logging(
         library, _, _ = __name__.partition('.')
         logger = logging.getLogger(library)
 
+    if logger.hasHandlers():
+        logger.handlers.clear()
+
     handler.setFormatter(formatter)
     logger.setLevel(level)
     logger.addHandler(handler)
