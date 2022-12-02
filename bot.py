@@ -25,6 +25,7 @@ import waifuim
 
 from utils.checks import check_dev
 from utils.constants import BOT_LOGGER_CHANNEL, BOT_OWNER_ID, DEFAULT_INVITE, DEVELOPER_IDS, DOCUMENTATION, EMOTES, GITHUB_URL, PATREON_URL, PRIVACY_POLICY, SUPPORT_GUILD, SUPPORT_STAFF, SUPPORT_URL, TEST_BOT_ID
+from utils.logger import setup_logging
 from utils.remind_utils import human_timedelta
 from utils.json_loader import read_json
 from utils.errors import UserBlacklisted
@@ -36,7 +37,7 @@ os.environ["JISHAKU_NO_DM_TRACEBACK"] = "True"
 
 info_file = read_json('info')
 
-discord.utils.setup_logging()
+setup_logging()
 
 database_info = info_file['database_info']
 
@@ -236,7 +237,6 @@ class MetroBot(commands.AutoShardedBot):
         records = await self.db.fetch(query)
         if records:
             for record in records:
-                print(record)
                 next_vote = pytz.utc.localize(record['row'][1])
                 if discord.utils.utcnow() < (next_vote - datetime.timedelta(hours=12)):
                     self.premium_users[record['row'][0]] = True
