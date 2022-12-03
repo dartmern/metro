@@ -3,6 +3,7 @@
 # this is licensed under MPL 2.0 which this bot is also licensed under
 
 import asyncio
+import random
 import re
 import asyncpg
 from typing import TYPE_CHECKING, Any, Optional, TypedDict, Union
@@ -99,9 +100,41 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
         self.top_gg = f"https://top.gg/bot/{BOT_ID}/vote"
         self.discordbotlist = f"https://discordbotlist.com/bots/{BOT_ID}"
 
+        self.choices: list[str] = []
+        self.stats_loop.start()
+
     @property
     def emoji(self) -> str:
         return '\U0001f4c8'
+
+    def cog_unload(self) -> None:
+        self.stats_loop.cancel()
+
+    @tasks.loop(seconds=10)
+    async def stats_loop(self):
+        options = random.choice(self.choices)
+        game = discord.Game(options)
+        await self.bot.change_presence(activity=game)
+
+    @stats_loop.before_loop
+    async def before_stats_loop(self):
+        await self.bot.wait_until_ready()
+
+        self.choices = [
+            '/play for music!',
+            'join my support server!',
+            f'with {len(self.bot.guilds)} guilds'
+            ]
+
+    @tasks.loop(minutes=10)
+    async def post_guild_loop(self):
+
+        if self.bot.user.id == BOT_ID:
+            await self.topgg_client.post_guild_count(len(self.bot.guilds))
+
+    @post_guild_loop.before_loop
+    async def before_post_guild_loop(self):
+        await self.bot.wait_until_ready()
 
     @commands.Cog.listener()
     async def on_dbl_vote(self, data: topgg.types.BotVoteData):
@@ -140,7 +173,7 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
         if not user:
             return 
 
-        next_vote = pytz.utc.localize(next_vote) - datetime.timedelta(hours=12)
+        next_vote = pytz.utc.localize(next_vote)
         embed = discord.Embed(title='Thank you for voting!', color=discord.Color.purple())
         embed.description = f'Enjoy your premium perks. They will expire {discord.utils.format_dt(next_vote, "R")} unless you vote again. \n'\
                             f'Voting helps {self.bot.user.name} grow and be able to reach more users.'\
@@ -159,7 +192,7 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
 
         reminder_cog: utility = self.bot.get_cog('utility')
         await reminder_cog.create_timer(
-            next_vote + datetime.timedelta(hours=12),
+            next_vote,
             'vote_completion',
             user.id
         )
@@ -204,7 +237,7 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
                     "> Click the button below to set a reminder."
                 view = VoteView(real_vote_time, ctx=ctx)
 
-        desc = "Voting on top.gg will grant you premium features for 12 hours. \n"\
+        desc = "Voting on top.gg will grant you premium features for 24 hours. \n"\
                 f"**top.gg**: \n{value}\n\n"\
                 f"Want to continue the support? Vote on discordbotlist:\n<{self.discordbotlist}>"
         embed.description = desc            
