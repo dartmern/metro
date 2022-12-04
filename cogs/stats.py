@@ -12,6 +12,7 @@ from discord.ext import commands, tasks
 import pytz
 import topgg
 import datetime
+from itertools import cycle
 
 from bot import MetroBot
 from utils.constants import BOT_LOGGER_CHANNEL, VOTE_LOGS_CHANNEL
@@ -110,21 +111,24 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
     def cog_unload(self) -> None:
         self.stats_loop.cancel()
 
-    @tasks.loop(seconds=10)
+    @tasks.loop(seconds=5)
     async def stats_loop(self):
-        options = random.choice(self.choices)
-        game = discord.Game(options)
-        await self.bot.change_presence(activity=game)
+        activity = next(self.choices)
+        await self.bot.change_presence(activity=activity)
 
     @stats_loop.before_loop
     async def before_stats_loop(self):
         await self.bot.wait_until_ready()
 
-        self.choices = [
-            '/play for music!',
-            'join my support server!',
-            f'with {len(self.bot.guilds)} guilds'
-            ]
+        today = datetime.date.today()
+        christmas = datetime.date(2022, 12, 25)
+        diff = christmas - today
+
+        self.choices = cycle([
+            discord.Activity(type=discord.ActivityType.listening, name='/play for music!'),
+            discord.Activity(type=discord.ActivityType.competing, name=f'{len(self.bot.guilds)} guilds'),
+            discord.Activity(type=discord.ActivityType.watching, name=f'{diff.days} days til christmas')
+            ])
 
     @tasks.loop(minutes=10)
     async def post_guild_loop(self):
