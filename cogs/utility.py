@@ -1368,6 +1368,9 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
             entity = self.bot.get_channel(row['entity_id'])
             if not entity:
                 entity = ctx.guild.get_member(row['entity_id'])
+            if not entity:
+                # still not valid so doesn't exist i guess
+                continue
             to_paginate.append(entity.mention)
 
         await ctx.paginate(to_paginate, compact=True, delete_after=8)
