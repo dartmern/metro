@@ -120,14 +120,16 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
     async def before_stats_loop(self):
         await self.bot.wait_until_ready()
 
-        today = datetime.date.today()
-        christmas = datetime.date(2022, 12, 25)
-        diff = christmas - today
+        def days_til_christmas():
+            today = datetime.date.today()
+            christmas = datetime.date(2022, 12, 25)
+            diff = christmas - today
+            return diff.days
 
         self.choices = cycle([
             discord.Activity(type=discord.ActivityType.listening, name='/play for music!'),
             discord.Activity(type=discord.ActivityType.competing, name=f'{len(self.bot.guilds)} guilds'),
-            discord.Activity(type=discord.ActivityType.watching, name=f'{diff.days} days til christmas')
+            discord.Activity(type=discord.ActivityType.watching, name=f'{days_til_christmas()} days til christmas')
             ])
 
     @tasks.loop(minutes=10)
