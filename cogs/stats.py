@@ -101,8 +101,8 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
         self.top_gg = f"https://top.gg/bot/{BOT_ID}/vote"
         self.discordbotlist = f"https://discordbotlist.com/bots/{BOT_ID}"
 
-        self.choices: list[str] = []
         self.stats_loop.start()
+        self.a: int = 1
 
     @property
     def emoji(self) -> str:
@@ -111,26 +111,26 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
     def cog_unload(self) -> None:
         self.stats_loop.cancel()
 
-    @tasks.loop(seconds=5)
+    @tasks.loop(seconds=15)
     async def stats_loop(self):
-        activity = next(self.choices)
-        await self.bot.change_presence(activity=activity)
+
+        today = datetime.date.today()
+        christmas = datetime.date(2022, 12, 25)
+        diff = christmas - today
+
+        choices = [
+            discord.Activity(type=discord.ActivityType.listening, name=f'/play for music!'),
+            discord.Activity(type=discord.ActivityType.competing, name=f'{len(self.bot.guilds)} guilds'),
+            discord.Activity(type=discord.ActivityType.watching, name=f'{diff.days} days til christmas')
+            ]
+
+        for _ in range(len(choices)):
+            await self.bot.change_presence(activity=choices[_])
+            await asyncio.sleep(5)
 
     @stats_loop.before_loop
     async def before_stats_loop(self):
         await self.bot.wait_until_ready()
-
-        def days_til_christmas():
-            today = datetime.date.today()
-            christmas = datetime.date(2022, 12, 25)
-            diff = christmas - today
-            return diff.days
-
-        self.choices = cycle([
-            discord.Activity(type=discord.ActivityType.listening, name='/play for music!'),
-            discord.Activity(type=discord.ActivityType.competing, name=f'{len(self.bot.guilds)} guilds'),
-            discord.Activity(type=discord.ActivityType.watching, name=f'{days_til_christmas()} days til christmas')
-            ])
 
     @tasks.loop(minutes=10)
     async def post_guild_loop(self):
