@@ -205,10 +205,7 @@ class PlayerView(discord.ui.View):
         for item in self.children:
             item.disabled = True
 
-        embed = self.player.controller.embeds[0]
-        extra = discord.Embed(color=discord.Color.orange())
-        extra.set_author(name='Song was skipped.')
-        await self.controller.edit(embeds=[embed, extra], view=self)
+        await self.player.edit_controller('Song was skipped.', color=discord.Color.yellow())
 
     @discord.ui.button(emoji='<:disconnect:1040449193753464942>', style=discord.ButtonStyle.danger)
     async def stop_player(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
@@ -230,10 +227,7 @@ class PlayerView(discord.ui.View):
         for item in self.children:
             item.disabled = True
         
-        embed = self.player.controller.embeds[0]
-        extra = discord.Embed(color=discord.Color.red())
-        extra.set_author(name='Disconnected.')
-        await self.controller.edit(embeds=[embed, extra], view=self)
+        await self.player.edit_controller(f'Disconnected.')
 
     @discord.ui.button(label='Volume', style=discord.ButtonStyle.green)
     async def volume_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -269,15 +263,30 @@ class Player(pomice.Player):
 
         await self.play(track)
         if self.controller:
-            await self.controller.edit(view=None)
+            await self.edit_controller('Song Ended')
             
         view = PlayerView(self.context, track=track, player=self)
         self.controller = await view.start()
+
+    async def edit_controller(self, label: str, color: Optional[discord.Color] = discord.Color.red()):
+        """Edit to controller."""
+
+        button = discord.ui.Button(label=label, disabled=True)
+        view = discord.ui.View()
+        view.add_item(button)
+
+        message = await self.controller.fetch()
+
+        embed = message.embeds[0]
+        embed.color = color
+
+        await message.edit(view=view, embed=embed)
 
     async def teardown(self):
         """Clear internal states, remove player controller and disconnect."""
         with contextlib.suppress((discord.HTTPException), (KeyError)):
             await self.destroy()
+            await self.edit_controller('Nothing left in queue.')
 
     async def set_context(self, ctx: commands.Context):
         """Set context for the player"""
