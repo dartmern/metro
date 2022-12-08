@@ -102,7 +102,7 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
         self.discordbotlist = f"https://discordbotlist.com/bots/{BOT_ID}"
 
         self.stats_loop.start()
-        self.a: int = 1
+        self.post_guild_loop.start()
 
     @property
     def emoji(self) -> str:
