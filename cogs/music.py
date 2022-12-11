@@ -262,14 +262,15 @@ class Player(pomice.Player):
             return await self.teardown()
 
         await self.play(track)
-        if self.controller:
-            await self.edit_controller('Song Ended')
+        await self.edit_controller('Song Ended')
             
         view = PlayerView(self.context, track=track, player=self)
         self.controller = await view.start()
 
     async def edit_controller(self, label: str, color: Optional[discord.Color] = discord.Color.red()):
         """Edit to controller."""
+        if not self.controller:
+            return
 
         button = discord.ui.Button(label=label, disabled=True)
         view = discord.ui.View()
