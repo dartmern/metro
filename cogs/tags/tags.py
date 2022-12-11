@@ -463,28 +463,29 @@ class tags(commands.Cog, description='Manage and create tags'):
         content: Annotated[Optional[str], TagName] = None):
         """Edit a tag's content."""
 
+        query = "SELECT (name, content) FROM tag_lookup WHERE LOWER(name) = $1 AND guild_id = $2 AND owner_id = $3 AND is_alias = False"
+        row = await self.bot.db.fetchrow(query, name, ctx.guild.id, ctx.author.id)
+        if not row:
+            raise commands.BadArgument('Could not find tag. Are you sure it exists and you own it?')
+
         if content is None:
             if not ctx.interaction:
                 await ctx.help()
                 return
 
             else:
-                query = "SELECT content FROM tag_lookup WHERE LOWER(name) = $1 AND guild_id = $2 AND owner_id = $3 AND is_alias = $4"
-                row = await self.bot.db.fetchrow(query, name, ctx.guild.id, ctx.author.id, False)
-                if not row:
-                    raise commands.BadArgument('Could not find tag. Are you sure it exists and you own it?')
-
                 modal = TagEditModal(row[0])
                 await ctx.interaction.response.send_modal(modal)
                 await modal.wait()
                 ctx.interaction = modal.interaction
                 content = modal.text
+        
+        query = "UPDATE tag_lookup SET content = $1 WHERE LOWER(name) = $2 AND guild_id = $3 AND owner_id = $4 AND is_alias = False"
+        await self.bot.db.execute(query, content, name, ctx.guild.id, ctx.author.id)
 
-        query = "UPDATE tag_lookup SET content = $1 WHERE LOWER(name) = $2 AND guild_id = $3 AND owner_id = $4 AND is_alias = $5"
-        returned = await self.bot.db.execute(query, content, name, ctx.guild.id, ctx.author.id, False)
-
-        if returned[-1] == '0':
-            raise commands.BadArgument('Could not edit tag. Are yousure it exists and you own it?')
+        edit_aliases = "UPDATE tag_lookup SET content = $1 WHERE LOWER(original) = $2 AND guild_id = $3"
+        await self.bot.db.execute(edit_aliases, content, name, ctx.guild.id)
+        
         await ctx.send('Successfully edited tag.', hide=True)
 
     @_tag.command(name='remove', aliases=['delete'])
