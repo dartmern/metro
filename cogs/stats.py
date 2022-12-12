@@ -104,6 +104,7 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
         self.stats_loop.start()
         self.post_guild_loop.start()
         
+        
     @property
     def emoji(self) -> str:
         return '\U0001f4c8'
