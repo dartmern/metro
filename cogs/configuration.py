@@ -11,7 +11,7 @@ from utils.checks import check_dev
 from utils.converters import ChannelOrRoleOrMember, DiscordCommand
 from utils.useful import Embed
 from utils.custom_context import MyContext
-from utils.decos import is_dev
+from utils.checks import is_dev
 
 def mod_check():
     def predicate(ctx: MyContext):

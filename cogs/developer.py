@@ -22,12 +22,14 @@ from jishaku.codeblocks import codeblock_converter
 from bot import MetroBot
 from cogs.serverutils import serverutils
 from utils.constants import TESTING_GUILD
-from utils.decos import in_support, is_dev, is_support
+from utils.checks import in_support, is_dev, is_support
 from utils.custom_context import MyContext
-from utils.new_pages import SimplePageSource, SimplePages
+from utils.pages import SimplePageSource, SimplePages
 from utils.pages import StopView
-from utils.useful import Embed, fuzzy
+from utils.useful import Embed
 from utils.json_loader import write_json
+from utils.formats import plural
+import utils.fuzzy as fuzzy_
 
 # moderator commandstats command is from robodanny
 # https://github.com/Rapptz/RoboDanny/blob/rewrite/cogs/stats.py
@@ -137,18 +139,6 @@ class TabularData:
 # Moved this up because of some testing
 async def setup(bot: MetroBot):
     await bot.add_cog(developer(bot))
-
-class plural:
-    def __init__(self, value: int):
-        self.value = value
-    def __format__(self, format_spec: str):
-        v = self.value
-        singular, sep, plural = format_spec.partition('|')
-        plural = plural or f'{singular}s'
-        if abs(v) != 1:
-            return f'{v} {plural}'
-        return f'{v} {singular}'
-
 
 class developer(commands.Cog, description="Developer commands."):
     def __init__(self, bot: MetroBot):
@@ -337,7 +327,7 @@ class developer(commands.Cog, description="Developer commands."):
             await ctx.paginate(to_paginate, per_page=4, compact=True)
         else:
             collection = {guild.name: guild.id for guild in self.bot.guilds}
-            found = fuzzy.finder(search, collection, lazy=False)[:5]
+            found = fuzzy_.finder(search, collection, lazy=False)[:5]
 
             if len(found) == 1:
                 guild = self.bot.get_guild(collection[found[0]])

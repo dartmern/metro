@@ -9,7 +9,7 @@ from waifuim.types import Image
 
 from bot import MetroBot
 from utils.custom_context import MyContext
-from utils.new_pages import SimplePages
+from utils.pages import SimplePages
 
 async def setup(bot: MetroBot):
     await bot.add_cog(NSFW(bot))

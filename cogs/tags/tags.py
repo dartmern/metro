@@ -9,7 +9,7 @@ from discord.ext import commands, menus
 
 from bot import MetroBot
 from utils.custom_context import MyContext
-from utils.new_pages import SimplePages
+from utils.pages import SimplePages
 from utils.useful import Embed
 
 from thefuzz import process

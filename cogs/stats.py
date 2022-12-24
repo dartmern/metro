@@ -17,10 +17,9 @@ from itertools import cycle
 from bot import MetroBot
 from utils.constants import BOT_LOGGER_CHANNEL, VOTE_LOGS_CHANNEL
 from utils.custom_context import MyContext
-from utils.decos import is_support
+from utils.checks import is_support
 from utils.json_loader import read_json
 from utils.remind_utils import UserFriendlyTime, human_timedelta
-from utils.useful import ts_now
 
 if TYPE_CHECKING:
     from cogs.utility import utility, Timer
@@ -40,6 +39,10 @@ _INVITE_REGEX = re.compile(r'(?:https?:\/\/)?discord(?:\.gg|\.com|app\.com\/invi
 def censor_invite(obj: Any, *, _regex=_INVITE_REGEX) -> str:
     return _regex.sub('[censored-invite]', str(obj))
 
+def ts_now(type: Optional[str] = 'f'):
+    time =  discord.utils.format_dt(discord.utils.utcnow(), type)
+    return time
+    
 class VoteView(discord.ui.View):
     def __init__(self, duration: Union[datetime.datetime, str], *, ctx: MyContext):
         super().__init__(timeout=300)

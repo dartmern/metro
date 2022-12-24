@@ -14,7 +14,6 @@ from utils.custom_context import MyContext
 from utils.embeds import create_embed
 from utils.remind_utils import FutureTime
 from utils.constants import EMOTES
-from utils.useful import MessageID
 
 from .views import GiveawayEntryView, UnenterGiveawayView
 
@@ -34,6 +33,12 @@ from .settings.add_setting import add_setting
 from .checks.manager_check import giveaway_manager_check
 
 from .modals.giveaway_create import GiveawayCreate
+
+def MessageID(argument: str) -> int:
+    try:
+        return int(argument, base=10)
+    except ValueError:
+        raise commands.BadArgument(f'"{argument}" is not a valid message ID. Use Developer Mode to get the Copy ID option.')
 
 class giveaways(commands.Cog, description='The giveaways rewrite including buttons.'):
     def __init__(self, bot: MetroBot):

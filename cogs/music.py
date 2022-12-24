@@ -20,7 +20,7 @@ from pomice.exceptions import TrackLoadError
 from bot import MetroBot
 from utils.custom_context import MyContext
 from utils.json_loader import read_json
-from utils.new_pages import RoboPages, SimplePages
+from utils.pages import RoboPages, SimplePages
 
 _info = read_json('info')
 

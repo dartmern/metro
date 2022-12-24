@@ -13,7 +13,7 @@ import yarl
 import lxml.etree as etree
 
 from bot import MetroBot
-from utils.useful import Embed, dynamic_cooldown, fuzzy
+from utils.useful import Embed, dynamic_cooldown
 from utils.custom_context import MyContext
 from utils.json_loader import read_json
 from utils.embeds import create_embed
@@ -248,7 +248,7 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         def transform(tup):
             return tup[0]
 
-        matches = fuzzy.finder(obj, cache, key=lambda t: t[0], lazy=False)[:8]
+        matches = fuzzy_.finder(obj, cache, key=lambda t: t[0], lazy=False)[:8]
 
         if search:
             return [key for key, url in matches]
@@ -292,7 +292,7 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         def transform(tup):
             return tup[0]
 
-        matches = fuzzy.finder(obj, cache, key=lambda t: t[0], lazy=False)[:8]
+        matches = fuzzy_.finder(obj, cache, key=lambda t: t[0], lazy=False)[:8]
 
         e = Embed()
         if len(matches) == 0:

@@ -19,10 +19,9 @@ from utils.checks import can_bot_execute_role_action, can_execute_action, can_ex
 from utils.constants import DISBOARD_ID, EMOTES
 from utils.converters import ActionReason, RoleConverter
 from utils.custom_context import MyContext
-from utils.new_pages import SimplePageSource, SimplePages
+from utils.pages import SimplePageSource, SimplePages
 from utils.remind_utils import FutureTime, UserFriendlyTime, human_timedelta
 from utils.useful import Embed, dynamic_cooldown
-from utils.parsing import RoleParser
 from cogs.utility import Timer, utility
 
 EMOJI_RE = re.compile(r"(<(a)?:[a-zA-Z0-9_]+:([0-9]+)>)") 

@@ -6,23 +6,14 @@ import parsedatetime as pdt
 import datetime
 from dateutil.relativedelta import relativedelta
 
+
+from .custom_context import MyContext
+from .formats import plural
+
 # this utils file is mainly helper functions from R. Danny
 # https://github.com/Rapptz/RoboDanny/blob/1fb95d76d1b7685e2e2ff950e11cddfc96efbfec/cogs/utils/time.py
 # mainly anything to do with time converting including the UserFriendlyTime class found in lots of my commands
 # all credit goes to danny for making it
-
-class plural:
-    def __init__(self, value):
-        self.value = value
-
-    def __format__(self, format_spec):
-        v = self.value
-        singular, sep, plural = format_spec.partition("|")
-        plural = plural or f"{singular}s"
-        if abs(v) != 1:
-            return f"{v} {plural}"
-        return f"{v} {singular}"
-
 
 def human_join(seq, delim=", ", final="or"):
     size = len(seq)
@@ -36,7 +27,6 @@ def human_join(seq, delim=", ", final="or"):
         return f"{seq[0]} {final} {seq[1]}"
 
     return delim.join(seq[:-1]) + f" {final} {seq[-1]}"
-
 
 def human_timedelta(dt, *, source=None, accuracy=3, brief=False, suffix=True):
 
@@ -100,8 +90,6 @@ def human_timedelta(dt, *, source=None, accuracy=3, brief=False, suffix=True):
         else:
             return "".join(output) + suffix
 
-
-
 class PastShortTime:
     compiled = re.compile(
         """(?:(?P<years>[0-9])(?:years?|y))?             # e.g. 2y
@@ -129,7 +117,6 @@ class PastShortTime:
     @classmethod
     async def convert(cls, ctx, argument):
         return cls(argument, now=ctx.message.created_at)
-
 
 class HumanTime:
     calendar = pdt.Calendar(version=pdt.VERSION_CONTEXT_STYLE)
@@ -161,7 +148,6 @@ class HumanTime:
     async def convert(cls, ctx, argument):
         return cls(argument, now=ctx.message.created_at)
 
-
 class PastHumanTime:
     calendar = pdt.Calendar(version=pdt.VERSION_CONTEXT_STYLE)
 
@@ -192,7 +178,6 @@ class PastHumanTime:
     @classmethod
     async def convert(cls, ctx, argument):
         return cls(argument, now=ctx.message.created_at)
-
 
 class ShortTime:
     compiled = re.compile("""(?:(?P<years>[0-9])(?:years?|y))?             # e.g. 2y
@@ -227,7 +212,6 @@ class Time(HumanTime):
             self.dt = o.dt
             self._past = False
 
-
 class NegativeTime(PastHumanTime):
     def __init__(self, argument, *, now=None):
         try:
@@ -239,7 +223,6 @@ class NegativeTime(PastHumanTime):
             self.dt = o.dt
             self._past = False
 
-
 class FutureTime(Time):
     def __init__(self, argument, *, now=None):
         super().__init__(argument, now=now)
@@ -248,12 +231,9 @@ class FutureTime(Time):
         if self._past:
             raise commands.BadArgument("this time is in the past")
 
-
 class PastTime(NegativeTime):
     def __init__(self, argument, *, now=None):
         super().__init__(argument, now=now)
-
-
 
 class UserFriendlyTime(commands.Converter):
     """That way quotes aren't absolutely necessary."""
@@ -294,7 +274,7 @@ class UserFriendlyTime(commands.Converter):
         obj.default = self.default
         return obj
 
-    async def convert(self, ctx, argument):
+    async def convert(self, ctx: MyContext, argument: str):
         # Create a copy of ourselves to prevent race conditions from two
         # events modifying the same instance of a converter
         #argument = argument.replace('for')  # people sometimes use "for" in the time string
@@ -388,14 +368,3 @@ class UserFriendlyTime(commands.Converter):
             return await result.check_constraints(ctx, now, remaining)
         except Exception as e:
             print(f"Error in UserFriendlyTime: {e}")
-
-def format_dt(dt, style=None):
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=datetime.timezone.utc)
-
-    if style is None:
-        return f'<t:{int(dt.timestamp())}>'
-    return f'<t:{int(dt.timestamp())}:{style}>'
-
-def format_relative(dt):
-    return format_dt(dt, 'R')

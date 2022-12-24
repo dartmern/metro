@@ -328,6 +328,7 @@ def finder(
     *,
     key: Optional[Callable[[T], str]] = None,
     raw: bool = False,
+    lazy: bool = False
 ) -> list[tuple[int, int, T]] | list[T]:
     suggestions: list[tuple[int, int, T]] = []
     text = str(text)

@@ -1,5 +1,7 @@
 from typing import Union
 import discord
+from discord.ext import commands
+from .constants import SUPPORT_GUILD
 
 from utils.custom_context import MyContext
 
@@ -66,3 +68,20 @@ def check_dev(bot, user : Union[discord.Member, discord.User]):
         user.id in bot.owner_ids
     )
     
+def in_support():
+    def predicate(ctx: MyContext):
+        try:
+            return ctx.guild.id == SUPPORT_GUILD
+        except:
+            return False
+    return commands.check(predicate)
+
+def is_dev():
+    def predicate(ctx: MyContext):
+        return ctx.author.id in ctx.bot.owner_ids or ctx.author == ctx.bot.owner_id
+    return commands.check(predicate)
+
+def is_support():
+    def predicate(ctx: MyContext):
+        return ctx.author.id in ctx.bot.owner_ids or ctx.author.id in ctx.bot.support_staff
+    return commands.check(predicate)

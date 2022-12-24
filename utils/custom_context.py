@@ -5,7 +5,7 @@ from discord.ext.commands.errors import CommandError
 
 from typing import Any, List, Optional, Union
 
-from utils.new_pages import SimplePageSource, SimplePages
+from utils.pages import SimplePageSource, SimplePages
 
 class ConfirmationView(discord.ui.View):
     def __init__(self, *, timeout: float, author_id: int, ctx, delete_after: bool) -> None:

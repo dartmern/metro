@@ -26,7 +26,7 @@ from utils.custom_context import MyContext
 from utils.remind_utils import human_timedelta
 from utils.useful import Embed, dynamic_cooldown
 from utils.useful import Embed
-from utils.new_pages import SimplePages
+from utils.pages import SimplePages
 from utils.remind_utils import UserFriendlyTime
 
 class UserSelect(discord.ui.UserSelect):

@@ -8,16 +8,18 @@ from discord.ext import commands, menus
 import itertools
 from typing import Any, Dict, List, Mapping, Optional
 import pathlib
-import asyncio
 import psutil
 import time
 
 from bot import MetroBot
-from utils.new_pages import SimplePages
+from utils.pages import SimplePages
 from utils.custom_context import MyContext
-from utils.remind_utils import UserFriendlyTime
-from utils.useful import Embed, OldRoboPages, dynamic_cooldown, get_bot_uptime
+from utils.useful import Embed, dynamic_cooldown
 from utils.converters import BotUserObject
+from utils.remind_utils import human_timedelta
+
+def get_bot_uptime(bot: MetroBot, brief: bool =False):
+    return human_timedelta(bot.uptime, accuracy=None, brief=brief, suffix=False)
 
 class BotInfoExtended(discord.ui.View):
     def __init__(self):
@@ -517,50 +519,6 @@ class HelpSource(menus.ListPageSource):
         embed.set_footer(text=f'Type "{self.prefix}help [Command | Category]" for more information | [{menu.current_page + 1}/{maximum}]')
 
         return embed
-
-class HelpMenu(OldRoboPages):
-    def __init__(self, source):
-        super().__init__(source)
-        self.bot: MetroBot
-
-    @menus.button("\N{WHITE QUESTION MARK ORNAMENT}", position=menus.Last(5))
-    async def show_bot_help(self, payload):
-        """Shows how to use the bot"""
-
-        embed = Embed(title="Argument Help Menu")
-
-        entries = (
-            ("<argument>", "This means the argument is __**required**__."),
-            ("[argument]", "This means the argument is __**optional**__."),
-            ("[A|B]", "This means that it can be __**either A or B**__."),
-            (
-                "[argument...]",
-                "This means you can have multiple arguments.\n"
-                "Now that you know the basics, it should be noted that...\n"
-                "__**You do not type in the brackets!**__",
-            ),
-        )
-
-        embed.add_field(
-            name="How do I use this bot?",
-            value="Reading the bot signature is pretty simple.",
-        )
-
-        for name, value in entries:
-            embed.add_field(name=name, value=value, inline=False)
-
-        embed.set_footer(
-            text=f"We were on page {self.current_page + 1} before this message."
-        )
-
-        await self.message.edit(embed=embed)
-
-        async def go_back_to_current_page():
-            await asyncio.sleep(30.0)
-            await self.show_page(self.current_page)
-
-        self.bot.loop.create_task(go_back_to_current_page())
-
 
 class ButtonMenuSrc(menus.ListPageSource):
     def __init__(

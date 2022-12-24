@@ -6,7 +6,7 @@ from utils.constants import SUPPORT_GUILD, BOTS_ROLE, BOT_REQUESTS_CHANNEL
 from utils.custom_context import MyContext
 from utils.converters import BotUser
 from utils.useful import Embed, dynamic_cooldown
-from utils.decos import in_support
+from utils.checks import in_support
 
 class support(commands.Cog, description='Support only commands.'):
     def __init__(self, bot : MetroBot):
