@@ -123,17 +123,6 @@ def pages(per_page=1, show_page=True):
         return type(coro.__name__, (menus.ListPageSource,), kwargs)
     return page_source
 
-
-
-def clean_code(content):
-    if content.startswith("```") and content.endswith("```"):
-        return "\n".join(content.split("\n")[1:])[:-3]
-    if content.startswith("```py") and content.endswith("```"):
-        return "\n".join(content.split("\n")[1:])[:-3]
-    else:
-        return content
-
-
 class Embed(discord.Embed):
     def __init__(self, color=0x1ABC9C, fields=(), field_inline=False, **kwargs):
         super().__init__(color=color, **kwargs)

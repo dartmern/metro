@@ -90,7 +90,9 @@ async def calculator_context_menu(interaction: discord.Interaction, message: dis
 
     await interaction.response.defer(ephemeral=True)
 
-    formula = formula.replace('*','x')
+    formula = formula.replace('*','x').replace(',', '')
+
+    formula = formula.lower().replace('k', '000').replace('m','000000')
     try:
         answer = NumericStringParser().eval(formula)
     except Exception as e:
@@ -112,7 +114,7 @@ class extras(commands.Cog, description='Extra commands for your use.'):
         return '<:mplus:904450883633426553>'
 
     @commands.command(aliases=['calc'])
-    async def calculate(self, ctx, *, formula : str):
+    async def calculate(self, ctx: MyContext, *, formula : str):
         """
         Calculate an equation.
 
@@ -130,7 +132,7 @@ class extras(commands.Cog, description='Extra commands for your use.'):
             arctanh, abs, trunc, round, sgn
         """
 
-        formula = formula.replace('*','x')
+        formula = formula.replace('*','x').replace(',', '')
 
         formula = formula.lower().replace('k', '000').replace('m','000000')
         try:
@@ -150,7 +152,6 @@ class extras(commands.Cog, description='Extra commands for your use.'):
         embed.description = f'Input: `{formula}`\nOutput: `{answer:,}`'
         embed.set_footer(text=f'Calculated in {round(ping, 1)}ms')
         await ctx.send(embed=embed)
-
 
     @commands.command()
     @commands.bot_has_permissions(send_messages=True)

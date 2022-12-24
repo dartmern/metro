@@ -1,8 +1,10 @@
+import inspect
+import sys
 import discord
 from discord.ext import commands
 from discord import app_commands
 
-from typing import Dict, List, Literal, Optional
+from typing import Callable, Dict, List, Literal, Optional
 import io
 import re
 import os
@@ -16,6 +18,7 @@ from utils.custom_context import MyContext
 from utils.json_loader import read_json
 from utils.embeds import create_embed
 import utils.fuzzy as fuzzy_
+from utils.formats import to_codeblock
 
 data = read_json('info')
 id_token = data['id_token']
@@ -26,6 +29,46 @@ id_token = data['id_token']
 # Most of rtfm code is from R. Danny
 # https://github.com/Rapptz/RoboDanny/blob/rewrite/cogs/api.py#L308-L316
 
+# credit:
+# https://github.com/AbstractUmbra/Kukiko-archive/blob/main/cogs/rtfx.py
+
+RTFS = (
+    "discord",
+    "discord.ext.commands",
+    "discord.ext.tasks",
+    "discord.ext.menus",
+    "cogs",
+    "utils"
+)
+
+class SourceConverter(commands.Converter):
+    async def convert(self, ctx: MyContext, argument: str) -> Optional[str]:
+        args = argument.split(".")
+        top_level = args[0]
+        if top_level in ("commands", "menus", "tasks"):
+            top_level = f"discord.ext.{top_level}"
+
+        if top_level not in RTFS:
+            raise commands.BadArgument(f"`{top_level}` is not an allowed sourceable module.")
+
+        recur = sys.modules[top_level]
+
+        if len(args) == 1:
+            return inspect.getsource(recur)
+
+        for item in args[1:]:
+            if item == "":
+                raise commands.BadArgument("Don't even try.")
+
+            recur = inspect.getattr_static(recur, item, None)
+
+            if recur is None:
+                raise commands.BadArgument(f"{argument} is not a valid module path.")
+
+        if isinstance(recur, property):
+            recur: Callable[..., None] = recur.fget
+
+        return inspect.getsource(recur)
 
 class LibraryConverter(commands.Converter):
     async def convert(self, _, param):
@@ -421,7 +464,7 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
         self, interaction: discord.Interaction,
         query: str, library: Optional[Literal['discord.py', 'twitchio', 'wavelink', 'aiohttp']] = 'discord.py',
         ):
-        """Get source code from a library for items matching the query."""
+        """Get source code from a library for items matching the query. (With API)"""
 
         await interaction.response.defer()
 
@@ -430,6 +473,24 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
 
         resp = await self.do_rtfs(library, query)
         await interaction.followup.send(embed=resp)
+
+    @commands.command(name='rtfs-source')
+    @commands.is_owner()
+    async def _rtfs(self, ctx: MyContext, *, target: Optional[SourceConverter] = None):
+        if not target:
+            joined = "\n".join(RTFS)
+            await ctx.send(f'Here\'s a list of valid libraries for this command:\n{joined}')
+            return
+        
+        from textwrap import dedent
+        target = dedent(target)
+
+        if len(target) < 4000:
+            fmt = to_codeblock(target, language='py', escape_md=False)
+            await ctx.send(fmt)
+        else:
+            file = discord.File(io.StringIO(target), filename='source.py')
+            await ctx.send(file=file)
 
     async def refresh_faq_cache(self):
         self.faq_entries = {}
