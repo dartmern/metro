@@ -49,7 +49,10 @@ def in_voice():
     return commands.check(predicate)
 
 class NotVoted(commands.BadArgument):
-    pass
+    """Raised when a user has not voted for the bot."""
+
+    def __init__(self) -> None:
+        super().__init__('You need to vote to use this command.\n<https://top.gg/bot/788543184082698252/vote>')
 
 def has_voted_24hr():
     async def predicate(ctx: MyContext):
@@ -58,10 +61,10 @@ def has_voted_24hr():
         query = "SELECT next_vote FROM votes WHERE user_id = $1"
         returned = await ctx.bot.db.fetchval(query, ctx.author.id)
         if not returned:
-            raise NotVoted
+            raise NotVoted()
         next_vote = pytz.utc.localize(returned) + datetime.timedelta(hours=12)
         if discord.utils.utcnow() > next_vote:
-            raise NotVoted
+            raise NotVoted()
         return True
     return commands.check(predicate)
 
