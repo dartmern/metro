@@ -96,7 +96,7 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
         self.topgg_client = topgg.DBLClient(bot=bot, token=topgg_token, session=bot.session)
 
         self.topgg_webhook = topgg.WebhookManager(bot).dbl_webhook('/dbl', 'auth')
-        self.topgg_webhook.run(20000)
+        self.topgg_webhook.run(25565)
 
         self.vote_webhook = discord.Webhook.from_url(vote_webhook_url, session=bot.session)
         self.guild_webhook = discord.Webhook.from_url(guild_webhook_url, session=bot.session)
