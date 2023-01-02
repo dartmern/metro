@@ -119,13 +119,13 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
     async def stats_loop(self):
 
         today = datetime.date.today()
-        christmas = datetime.date(2022, 12, 25)
-        diff = christmas - today
+        day = datetime.date(2023, 4, 9)
+        diff = day - today
 
         choices = [
             discord.Activity(type=discord.ActivityType.listening, name=f'/play for music!'),
             discord.Activity(type=discord.ActivityType.competing, name=f'{len(self.bot.guilds)} guilds'),
-            discord.Activity(type=discord.ActivityType.watching, name=f'{diff.days} days til christmas')
+            discord.Activity(type=discord.ActivityType.watching, name=f'{diff.days} days til easter')
             ]
 
         for _ in range(len(choices)):
