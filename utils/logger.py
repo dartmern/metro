@@ -41,6 +41,9 @@ class Discord_Handler(logging.Handler):
               	    async with aiohttp.request("POST", url, data={'content':f"```{i}```"}, headers=headers):
                         pass
             else:
+                if 'aiohttp.http_exceptions.BadStatusLine' in msg or 'UNKNOWN / HTTP/1.0' in msg:
+                    pass
+
                 async with aiohttp.request("POST", url, data={'content':f"```{msg}```"}, headers=headers):
                     pass
         except Exception:
