@@ -1,19 +1,13 @@
-import datetime
 import discord
 from discord.ext import commands, menus
 from discord import app_commands
 
 import contextlib
 import logging
-import traceback
 from typing import Any, Optional, Union
 from urllib.parse import quote_plus
-from aiohttp import ClientConnectorError
 import pomice
-import asyncio
 import math
-import random
-import pytz
 import yarl
 from pomice.exceptions import TrackLoadError
 
@@ -21,6 +15,7 @@ from bot import MetroBot
 from utils.custom_context import MyContext
 from utils.json_loader import read_json
 from utils.pages import RoboPages, SimplePages
+from utils.checks import has_voted_24hr
 
 _info = read_json('info')
 
@@ -45,26 +40,6 @@ def in_voice():
             raise commands.BadArgument('You are not connected to a voice channel.')
         if not ctx.voice_client or ctx.author.voice.channel != ctx.voice_client.channel:
             raise commands.BadArgument("You must have the bot in a channel in order to use this command.")
-        return True
-    return commands.check(predicate)
-
-class NotVoted(commands.BadArgument):
-    """Raised when a user has not voted for the bot."""
-
-    def __init__(self) -> None:
-        super().__init__('You need to vote to use this command.\n<https://top.gg/bot/788543184082698252/vote>')
-
-def has_voted_24hr():
-    async def predicate(ctx: MyContext):
-        """Check if a user_id has voted or not."""
-
-        query = "SELECT next_vote FROM votes WHERE user_id = $1"
-        returned = await ctx.bot.db.fetchval(query, ctx.author.id)
-        if not returned:
-            raise NotVoted()
-        next_vote = pytz.utc.localize(returned) + datetime.timedelta(hours=12)
-        if discord.utils.utcnow() > next_vote:
-            raise NotVoted()
         return True
     return commands.check(predicate)
 

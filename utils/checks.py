@@ -1,9 +1,12 @@
+import datetime
 from typing import Union
 import discord
 from discord.ext import commands
+import pytz
 from .constants import SUPPORT_GUILD
 
 from utils.custom_context import MyContext
+from utils.errors import NotVoted
 
 def check_support(ctx: MyContext):
     return (
@@ -84,4 +87,18 @@ def is_dev():
 def is_support():
     def predicate(ctx: MyContext):
         return ctx.author.id in ctx.bot.owner_ids or ctx.author.id in ctx.bot.support_staff
+    return commands.check(predicate)
+
+def has_voted_24hr():
+    async def predicate(ctx: MyContext):
+        """Check if a user_id has voted or not."""
+
+        query = "SELECT next_vote FROM votes WHERE user_id = $1"
+        returned = await ctx.bot.db.fetchval(query, ctx.author.id)
+        if not returned:
+            raise NotVoted()
+        next_vote = pytz.utc.localize(returned) + datetime.timedelta(hours=12)
+        if discord.utils.utcnow() > next_vote:
+            raise NotVoted()
+        return True
     return commands.check(predicate)
