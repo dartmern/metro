@@ -958,30 +958,6 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         # remove `foo`
         return content.strip('` \n')
 
-    async def show_roleinfo(self, ctx: MyContext, role: discord.Role):
-        if role.guild.chunked is False:
-            await role.guild.chunk()
-
-        desc = [
-            role.mention,
-            f"• __**Members:**__ {len(role.members)}",
-            f"• __**Position:**__ {role.position}"
-            f"• __**Color:**__ {role.colour}",
-            f"• __**Hoisted:**__ {await ctx.emojify(role.hoist)}",
-            f"• __**Mentionable:**__ {await ctx.emojify(role.mentionable)}"
-            f"• __**Created:**__ {discord.utils.format_dt(role.created_at, 'R')}"
-        ]
-        if role.managed:
-            desc.append(f"• __**Managed:**__ {role.managed}")
-        
-        embed = Embed()
-        embed.colour = role.colour
-        embed.title = role.name
-        embed.description = "\n".join(desc)
-        embed.set_footer(text=f"ID: {role.id}")
-
-        return embed
-
     async def role_toggle(self, ctx: MyContext, member: discord.Member, role: discord.Role):
         
         if not (await can_execute_role_action(ctx, ctx.author, member, role)):
@@ -1542,11 +1518,6 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
         """Shows all the information about the specified user/member."""
         member = member or ctx.author
         await ctx.send(embed=await self.userinfo_embed(ctx, member))
-
-    @commands.command(name='role-info', aliases=['roleinfo', 'ri'])
-    async def role_info(self, ctx: MyContext, *, role: RoleConverter):
-        """Show all the information about a role."""
-        await ctx.send(embed=await self.show_roleinfo(ctx, role))
 
     @commands.command(name='server-info', aliases=['serverinfo', 'guildinfo', 'si'])
     async def server_info(self, ctx: MyContext):
