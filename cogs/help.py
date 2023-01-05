@@ -32,14 +32,14 @@ class BotInfoExtended(discord.ui.View):
         if self.embed:
             return await interaction.response.send_message(embed=self.embed, ephemeral=True)
 
-        await interaction.response.defer()
+        await interaction.response.send_message('Gathering line count please wait...', ephemeral=True)
 
         embed = discord.Embed(color=discord.Color.yellow())
 
-        p = pathlib.Path('./')
+        p = pathlib.Path('/home/pi/Documents/metro')
         cm = cr = fn = cl = ls = fc = 0
         for f in p.rglob('*.py'):
-            if str(f) in ('venv', 'bin', 'etc', 'include', 'lib', '__pycache__', 'share'):
+            if str(f) in ('venv', 'bin', 'etc', 'include', 'lib', '__pycache__', 'share', 'docs'):
                 continue
             fc += 1
             with f.open(encoding='utf8',errors='ignore') as of:
@@ -63,7 +63,7 @@ class BotInfoExtended(discord.ui.View):
 
         self.embed = embed        
 
-        await interaction.followup.send(embed=embed, ephemeral=True)
+        await interaction.edit_original_response(content=None, embed=embed)
 
 class SupportView(discord.ui.View):
     def __init__(self, ctx : MyContext):

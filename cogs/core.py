@@ -13,7 +13,6 @@ import pomice
 import datetime as dt
 
 from bot import MetroBot
-from cogs.music import NotVoted
 from utils import errors
 from utils.constants import DEVELOPER_ROLE, ERROR_CHANNEL_ID
 from utils.useful import Embed
