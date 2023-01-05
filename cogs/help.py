@@ -36,10 +36,10 @@ class BotInfoExtended(discord.ui.View):
 
         embed = discord.Embed(color=discord.Color.yellow())
 
-        p = pathlib.Path('/home/pi/Documents/metro')
+        p = pathlib.Path(',/')
         cm = cr = fn = cl = ls = fc = 0
         for f in p.rglob('*.py'):
-            if str(f) in ('venv', 'bin', 'etc', 'include', 'lib', '__pycache__', 'share', 'docs'):
+            if str(f).startswith('lib'):
                 continue
             fc += 1
             with f.open(encoding='utf8',errors='ignore') as of:
