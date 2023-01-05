@@ -401,7 +401,7 @@ class core(commands.Cog, description="Core events."):
             else:
                 await ctx.send(embed=await ctx.get_help(ctx.command, content=message))  
 
-        elif isinstance(error, NotVoted):
+        elif isinstance(error, errors.NotVoted):
             return await ctx.send(
                 'This command requires you to vote for the bot to use.\n'\
                 'You can support the bot and unlock great features.\n'\
