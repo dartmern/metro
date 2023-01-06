@@ -36,7 +36,7 @@ class BotInfoExtended(discord.ui.View):
 
         embed = discord.Embed(color=discord.Color.yellow())
 
-        p = pathlib.Path(',/')
+        p = pathlib.Path('./')
         cm = cr = fn = cl = ls = fc = 0
         for f in p.rglob('*.py'):
             if str(f).startswith('lib'):
