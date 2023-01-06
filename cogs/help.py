@@ -1,3 +1,4 @@
+import datetime
 import discord
 from discord import app_commands
 from discord.ext.commands.help import HelpCommand
@@ -10,6 +11,7 @@ from typing import Any, Dict, List, Mapping, Optional
 import pathlib
 import psutil
 import time
+import pygit2
 
 from bot import MetroBot
 from utils.pages import SimplePages
@@ -21,20 +23,30 @@ from utils.remind_utils import human_timedelta
 def get_bot_uptime(bot: MetroBot, brief: bool =False):
     return human_timedelta(bot.uptime, accuracy=None, brief=brief, suffix=False)
 
-class BotInfoExtended(discord.ui.View):
-    def __init__(self):
+class DeveloperStats(discord.ui.View):
+    def __init__(self, ctx: MyContext):
         super().__init__(timeout=300)
-        self.embed = None
-
-    @discord.ui.button(label='Linecount')
-    async def linecount_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.ctx: MyContext = ctx
         
-        if self.embed:
-            return await interaction.response.send_message(embed=self.embed, ephemeral=True)
+    def format_commit(self, commit: pygit2.Commit) -> str:
+        short, _, _ = commit.message.partition('\n')
+        short_sha2 = commit.hex[0:6]
+        commit_tz = datetime.timezone(datetime.timedelta(minutes=commit.commit_time_offset))
+        commit_time = datetime.datetime.fromtimestamp(commit.commit_time).astimezone(commit_tz)
 
-        await interaction.response.send_message('Gathering line count please wait...', ephemeral=True)
+        # [`hash`](url) message (offset)
+        offset = discord.utils.format_dt(commit_time.astimezone(datetime.timezone.utc), 'R')
+        return f'[`{short_sha2}`](https://github.com/dartmern/metro/commit/{commit.hex}) {short} ({offset})'
 
-        embed = discord.Embed(color=discord.Color.yellow())
+    def get_commits(self, count: int = 3, total: bool = False) -> str:
+        # thanks danny for this function
+        repo = pygit2.Repository('.git')
+        commits = list(itertools.islice(repo.walk(repo.head.target, pygit2.GIT_SORT_TOPOLOGICAL), count))
+        if total:
+            return len([c for c in commits])
+        return '\n'.join(self.format_commit(c) for c in commits)
+
+    def get_linecount(self) -> str:
 
         p = pathlib.Path('./')
         cm = cr = fn = cl = ls = fc = 0
@@ -54,16 +66,25 @@ class BotInfoExtended(discord.ui.View):
                     if '#' in l:
                         cm += 1
                     ls += 1
-        embed.description = f"\nFiles: {fc:,}"\
+        fmt = f"\nFiles: {fc:,}"\
             f"\nLines: {ls:,}"\
             f"\nClasses: {cl:,}"\
             f"\nFunctions: {fn:,}"\
             f"\nCoroutines: {cr:,}"\
             f"\nComments: {cm:,}"
 
-        self.embed = embed        
+        return fmt
 
-        await interaction.edit_original_response(content=None, embed=embed)
+    @discord.ui.button(label='Developer Stats')
+    async def linecount_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+        total = self.get_commits(count=10000, total=True)
+
+        embed = discord.Embed(color=self.ctx.color, title='Developer Stats')
+        embed.description = f'Latest Commits [{total}]:\n' + self.get_commits()
+        embed.add_field(name='Linecount', value=self.get_linecount())
+
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 class SupportView(discord.ui.View):
     def __init__(self, ctx : MyContext):
@@ -917,8 +938,9 @@ class meta(commands.Cog, description='Get bot stats and information.'):
     async def _bot_info(self, ctx: MyContext):
         """Get all the information about me."""
         embed = await NewHelpView(ctx, {}, ctx.bot.help_command).bot_info_embed()
+        # should make it a classmethod but :shrug:
 
-        await ctx.reply(embed=embed, view=BotInfoExtended())
+        await ctx.send(embed=embed, view=DeveloperStats(ctx))
 
     @app_commands.command(name='help')
     @app_commands.describe(command='The command/group/category\'s help you wish to see.')
