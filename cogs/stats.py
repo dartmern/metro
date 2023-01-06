@@ -525,7 +525,7 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
         await ctx.send(embed=embed)
 
     def censor_object(self, obj: str | discord.abc.Snowflake) -> str:
-        if not isinstance(obj, str) and obj.id in self.bot.blacklist:
+        if not isinstance(obj, str) and self.bot.blacklist.get(obj.id):
             return '[censored]'
         return censor_invite(obj)
 
