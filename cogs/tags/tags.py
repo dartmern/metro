@@ -356,6 +356,8 @@ class tags(commands.Cog, description='Manage and create tags'):
         old = content['original'] if content['original'] else old_name
         try:
             await self.bot.db.execute(query, new_name, content['content'], ctx.guild.id, ctx.author.id, True, old, discord.utils.utcnow().replace(tzinfo=None))
+        except asyncpg.exceptions.UniqueViolationError:
+            return await ctx.send('That alias already exists.')
         except Exception as e:
             return await ctx.send(f'Error adding alias: {e}')
 
