@@ -96,18 +96,13 @@ class support(commands.Cog, description='Support only commands.'):
             '\nYour bot cannot have an avatar that might be considered NSFW, ping users when they join, post NSFW messages in not NSFW marked channels.'
             '\nRules that may apply to users should also be applied to bots.'
             '\n**This is not a exextensive list and you can see all the rules listed in <#814281422780235817>**'
-            '\n\nHit the **Confirm** button below to submit your request and agree to these terms.', timeout=60, delete_after=False
+            '\n\nHit the **Confirm** button below to submit your request and agree to these terms.', timeout=60
             )
 
         if not confirm.value:
-            await confirm.message.edit(content='Canceled/Timed out.', view=None)
             return
 
         else:
-            try:
-                await confirm.message.delete()
-            except discord.HTTPException:
-                pass
             
             url = f'https://discord.com/oauth2/authorize?client_id={user.id}&scope=bot&guild_id={ctx.guild.id}'
             description = f"{reason}\n\n[Invite URL]({url})"

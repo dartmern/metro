@@ -24,14 +24,14 @@ class ConfirmationView(discord.ui.View):
             return False
 
     async def on_timeout(self) -> None:
-        self.confirm.disabled = True
-        self.cancel.disabled = True
+
         self.value = None
         if self.message:
             try:
-                await self.message.edit(view=self)
+                await self.message.edit(view=None, content='Timed out.', embeds=None)
             except:
                 pass
+        self.stop()
 
     @discord.ui.button(label='Confirm', style=discord.ButtonStyle.green)
     async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):

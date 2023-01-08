@@ -299,13 +299,8 @@ class PrefixView(discord.ui.View):
 
         confirm = await self.ctx.confirm(
             'Are you sure you want to clear the prefixes?', 
-            interaction=interaction,
-            delete_after=False)
-        if confirm.value is False:
-            await confirm.message.edit(content='Canceled.', view=None)
-            return
-        if confirm.value is None:
-            await confirm.message.edit(content='Timed out.', view=None)
+            interaction=interaction)
+        if not confirm.value:
             return
 
         await self.bot.db.execute('DELETE FROM prefixes WHERE guild_id = $1', self.ctx.guild.id)
@@ -786,15 +781,11 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
         confirm = await ctx.confirm(
             'Are you sure you want to clear your entire todo list?', 
-            delete_after=False, 
             timeout=30,
             interaction=ctx.interaction if ctx.interaction else None)
 
-        if confirm.value is None:
-            return await confirm.message.edit(content='Timed out.', view=None)
-
-        if confirm.value is False:
-            return await confirm.message.edit(content='Canceled.', view=None)
+        if not confirm.value:
+            return
 
         count = await self.bot.db.fetchval(
             "WITH deleted AS (DELETE FROM todo WHERE user_id = $1 RETURNING *) SELECT count(*) FROM deleted;", ctx.author.id
@@ -1140,11 +1131,9 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
 
         confirm = await ctx.confirm(f'Are you sure you want to clear **{total}** reminder(s)', timeout=30, delete_after=False)
 
-        if confirm.value is None:
-            return await confirm.message.edit(content='Timed out.', view=None)
-
-        if confirm.value is False:
-            return await confirm.message.edit(content='Canceled.', view=None)
+        if not confirm.value:
+            await confirm.message.delete()
+            return
 
         query = """DELETE FROM reminders WHERE event = 'reminder' AND extra #>> '{args,0}' = $1;"""
 
