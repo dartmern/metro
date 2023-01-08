@@ -72,7 +72,8 @@ class TagMakeModal(discord.ui.Modal, title='Create a new tag.'):
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         assert interaction.guild_id is not None
-        name = str(self.name)
+        name = str(self.name).lower()
+
         if self.cog.being_made(interaction.guild_id, name):
             await interaction.response.send_message('This tag is currently being made by someone else.', ephemeral=True)
             return 
@@ -285,7 +286,7 @@ class tags(commands.Cog, description='Manage and create tags'):
             return await ctx.send('You took too long. Redo the command to try again.')
 
         try:
-            name = await TagName().convert(ctx, message.content)
+            name = await TagName(lower=True).convert(ctx, message.content)
         except commands.BadArgument as e:
             return await ctx.send(f'{e}. Redo the command to try again.')
 
@@ -340,8 +341,8 @@ class tags(commands.Cog, description='Manage and create tags'):
     @app_commands.autocomplete(old_name=non_aliased_tag_autocomplete)
     async def _tag_alias(
         self, ctx: MyContext, 
-        new_name: Annotated[str, TagName], *,
-        old_name: Annotated[str, TagName]):
+        new_name: Annotated[str, TagName(lower=True)], *,
+        old_name: Annotated[str, TagName(lower=True)]):
         """Create an alias for an existing tag."""
 
         try:
