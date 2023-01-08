@@ -476,7 +476,7 @@ class tags(commands.Cog, description='Manage and create tags'):
                 return
 
             else:
-                modal = TagEditModal(row[0])
+                modal = TagEditModal(row[0][1])
                 await ctx.interaction.response.send_modal(modal)
                 await modal.wait()
                 ctx.interaction = modal.interaction
