@@ -11,7 +11,7 @@ from utils.pages import SimplePageSource, SimplePages
 
 if TYPE_CHECKING:
     from bot import MetroBot
-
+    
 class ConfirmationView(discord.ui.View):
     def __init__(self, *, timeout: float, author_id: int, ctx, delete_after: bool) -> None:
         super().__init__(timeout=timeout)
@@ -56,7 +56,9 @@ class ConfirmationView(discord.ui.View):
 
 
 
-class MyContext(commands.Context[MetroBot]):
+class MyContext(commands.Context):
+
+    bot: MetroBot
 
     async def check(self):
         emoji = self.bot.get_emoji(819254444197019669)
