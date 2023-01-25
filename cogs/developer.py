@@ -158,12 +158,6 @@ class developer(commands.Cog, description="Developer commands."):
         # remove `foo`
         return content.strip('` \n')
 
-    @commands.Cog.listener()
-    async def on_message_edit(self, before: discord.Message, after: discord.Message):
-        if before.author.id != 525843819850104842:
-            return
-        await self.bot.process_commands(after)
-
     @commands.hybrid_command(name='fix')
     @app_commands.guilds(TESTING_GUILD)
     @is_support()

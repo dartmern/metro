@@ -1,18 +1,23 @@
+from __future__ import annotations
+
 import discord
 from discord.ext import commands
 from discord.ext.commands.core import Command, Group
 from discord.ext.commands.errors import CommandError
 
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Union, TYPE_CHECKING
 
 from utils.pages import SimplePageSource, SimplePages
+
+if TYPE_CHECKING:
+    from bot import MetroBot
 
 class ConfirmationView(discord.ui.View):
     def __init__(self, *, timeout: float, author_id: int, ctx, delete_after: bool) -> None:
         super().__init__(timeout=timeout)
         self.value: Optional[bool] = None
         self.delete_after: bool = delete_after
-        self.author_id: int = author_id
+        self.author_id: int = author_id or ctx.author.id
         self.ctx = ctx
         self.message: Optional[discord.Message] = None
 
@@ -51,7 +56,7 @@ class ConfirmationView(discord.ui.View):
 
 
 
-class MyContext(commands.Context):
+class MyContext(commands.Context[MetroBot]):
 
     async def check(self):
         emoji = self.bot.get_emoji(819254444197019669)
