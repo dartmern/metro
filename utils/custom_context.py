@@ -56,10 +56,9 @@ class ConfirmationView(discord.ui.View):
 
 
 
-class MyContext(commands.Context):
-
+class MyContext(commands.Context["MetroBot"]):
     bot: MetroBot
-
+    
     async def check(self):
         emoji = self.bot.get_emoji(819254444197019669)
 
