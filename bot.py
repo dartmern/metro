@@ -22,6 +22,7 @@ import logging
 import pytz
 import topgg
 import waifuim
+from cogs.tickets.views import CreateTicketView, CloseTicketView, SupportControlsView
 
 from utils.checks import check_dev
 from utils.constants import BOT_OWNER_ID, DEFAULT_INVITE, DEVELOPER_IDS, DOCUMENTATION, EMOTES, GITHUB_URL, PATREON_URL, PRIVACY_POLICY, SUPPORT_GUILD, SUPPORT_STAFF, SUPPORT_URL, TEST_BOT_ID
@@ -185,6 +186,11 @@ class MetroBot(commands.AutoShardedBot):
     @property
     def privacy_policy(self) -> str:
         return PRIVACY_POLICY
+
+    async def setup_hook(self) -> None:
+        self.add_view(CreateTicketView())
+        self.add_view(CloseTicketView())
+        self.add_view(SupportControlsView())
 
     def get_app_command(
         self, value: Union[str, int]) -> Optional[Tuple[str, int]]:
@@ -387,9 +393,8 @@ class MetroBot(commands.AutoShardedBot):
 
     async def get_context(self, message: Union[discord.Message, discord.Interaction], *, cls=MyContext):
         """Making our custom context"""
-
+        
         return await super().get_context(message, cls=cls)
-
 
     async def process_commands(self, message: discord.Message) -> None:
         """Override process_commands to check, and call typing every invoke."""
@@ -508,7 +513,7 @@ async def main():
 
             bot.error_logger = discord.Webhook.from_url(webhooks['error_handler'], session=bot.session)
 
-            folders = ['giveaway_rewrite', 'tags', 'nsfw']
+            folders = ['giveaway_rewrite', 'tags', 'nsfw', 'tickets']
 
             bot.owner = bot.get_user(BOT_OWNER_ID)
 

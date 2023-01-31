@@ -1,6 +1,6 @@
 import asyncio
 import io
-from typing import NamedTuple
+from typing import NamedTuple, Optional
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -11,7 +11,7 @@ import re
 from collections import Counter, defaultdict
 
 from bot import MetroBot
-from utils.constants import DPY_GUILD_ID, SUPPORT_GUILD
+from utils.constants import BOT_REQUESTS_CHANNEL, DPY_GUILD_ID, SUPPORT_GUILD
 from utils.custom_context import MyContext
 from utils.useful import Embed, dynamic_cooldown
 from utils.calc_tils import NumericStringParser
@@ -100,6 +100,24 @@ async def calculator_context_menu(interaction: discord.Interaction, message: dis
 
     content = f"Calculated [{formula}]({message.jump_url}) = {answer}"
     await interaction.followup.send(content=content, ephemeral=False)
+
+class FeedBackModal(discord.ui.Modal, title='Give Feedback'):
+    summary = discord.ui.TextInput(label='Summary', placeholder='A summary of what you want...')
+    details = discord.ui.TextInput(label='Details', style=discord.TextStyle.long, required=False)
+
+    def __init__(self, cog) -> None:
+        super().__init__()
+        self.cog: extras = cog
+
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+        channel = self.cog.feedback_channel
+        if channel is None:
+            await interaction.response.send_message('Could not submit your feedback, sorry about this', ephemeral=True)
+            return
+
+        embed = self.cog.get_feedback_embed(interaction, summary=str(self.summary), details=self.details.value)
+        await channel.send(embed=embed)
+        await interaction.response.send_message('Successfully submitted feedback', ephemeral=True)
 
 async def setup(bot: MetroBot):
     bot.tree.add_command(calculator_context_menu)
@@ -304,3 +322,66 @@ class extras(commands.Cog, description='Extra commands for your use.'):
                 embed.add_field(name=result.title, value=f'{result.url}\n{result.description}', inline=False)
             embed.set_footer(text=f'Queried in {round(ping, 2)} milliseconds. | Safe Search: Disabled')
             return await ctx.send(embed=embed)
+
+    def get_feedback_embed(
+        self,
+        obj: MyContext | discord.Interaction,
+        *,
+        summary: str,
+        details: Optional[str] = None,
+    ) -> discord.Embed:
+        e = discord.Embed(title='Feedback', colour=discord.Color.yellow())
+
+        if details is not None:
+            e.description = details
+            e.title = summary[:256]
+        else:
+            e.description = summary
+
+        if obj.guild is not None:
+            e.add_field(name='Server', value=f'{obj.guild.name} (ID: {obj.guild.id})', inline=False)
+
+        if obj.channel is not None:
+            e.add_field(name='Channel', value=f'{obj.channel} (ID: {obj.channel.id})', inline=False)
+
+        if isinstance(obj, discord.Interaction):
+            e.timestamp = obj.created_at
+            user = obj.user
+        else:
+            e.timestamp = obj.message.created_at
+            user = obj.author
+
+        e.set_author(name=str(user), icon_url=user.display_avatar.url)
+        e.set_footer(text=f'Author ID: {user.id}')
+        return e
+
+    @property
+    def feedback_channel(self) -> Optional[discord.TextChannel]:
+        return self.bot.get_channel(BOT_REQUESTS_CHANNEL)
+
+    # FEEDBACK COMMANDS ARE FROM R.DANNY
+    # https://github.com/Rapptz/RoboDanny/blob/rewrite/cogs/buttons.py#L344-L364
+
+    @commands.command()
+    async def feedback(self, ctx: MyContext, *, message: str):
+        """Give the bot owner direct feedback.
+        
+        You can use this for anything like suggestions,
+        general feedback, errors, etc.
+        
+        It is recomended to join my support server for help.
+        """
+
+        channel = self.feedback_channel
+        if not channel:
+            raise commands.BadArgument('Channel was not found somehow...')
+
+        embed = self.get_feedback_embed(ctx, summary=message)
+        await channel.send(embed=embed)
+        await ctx.send('I got your feedback. Thanks!')
+
+    @app_commands.command(name='feedback')
+    async def feedback_slash(self, interaction: discord.Interaction):
+        """Give the bot owner direct feedback."""
+
+        await interaction.response.send_modal(FeedBackModal(self))

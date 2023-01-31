@@ -115,7 +115,7 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
     def cog_unload(self) -> None:
         self.stats_loop.cancel()
 
-    @tasks.loop(seconds=15)
+    @tasks.loop(seconds=3*10)
     async def stats_loop(self):
 
         today = datetime.date.today()
@@ -130,7 +130,7 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
 
         for _ in range(len(choices)):
             await self.bot.change_presence(activity=choices[_])
-            await asyncio.sleep(5)
+            await asyncio.sleep(10)
 
     @stats_loop.before_loop
     async def before_stats_loop(self):
