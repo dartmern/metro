@@ -762,9 +762,12 @@ class MetroHelp(commands.HelpCommand):
             if not cog.qualified_name == 'nsfw':
                 cogs.extend(cog.get_commands())
         
-        filtered = await self.filter_commands(cogs, sort=True, key=get_category)
-        filtered.extend(self.context.bot.get_cog('nsfw').get_commands())
-        to_iterate = itertools.groupby(filtered, key=get_category)
+        if self.context.guild:
+            filtered = await self.filter_commands(cogs, sort=True, key=get_category)
+            filtered.extend(self.context.bot.get_cog('nsfw').get_commands())
+            to_iterate = itertools.groupby(filtered, key=get_category)
+        else:
+            to_iterate = itertools.groupby(cogs, key=get_category)
 
         view = NewHelpView(self.context, to_iterate, self)
         await view.start()
@@ -935,6 +938,7 @@ class meta(commands.Cog, description='Get bot stats and information.'):
         await ctx.send(f"My privacy policy: <{self.bot.privacy_policy}>")
 
     @commands.hybrid_command(name='bot-info', aliases=['botinfo', 'bi', 'info', 'about'])
+    @commands.guild_only()
     async def _bot_info(self, ctx: MyContext):
         """Get all the information about me."""
         embed = await NewHelpView(ctx, {}, ctx.bot.help_command).bot_info_embed()
