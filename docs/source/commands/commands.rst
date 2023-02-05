@@ -1,5 +1,0 @@
-.. currentmodule:: cogs
-
-Commands 
-============
-
