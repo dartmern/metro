@@ -590,6 +590,8 @@ class utility(commands.Cog, description="Get utilities like prefixes, serverinfo
     async def prefix(self, ctx: MyContext):
         """Manage custom prefixes."""
 
+        if self.bot.prefixes.get(ctx.guild.id) is None:
+            self.bot.prefixes[ctx.guild.id] = self.bot.PRE
         prefixes = ['`%s`' % prefix for prefix in self.bot.prefixes[ctx.guild.id]] if not None else self.bot.PRE
         embed = create_embed(f'Your current prefixes: {", ".join(prefixes)}', title='Prefix Configuration')
         
