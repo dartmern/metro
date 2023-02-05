@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import discord
 from discord.ext import commands, menus
 from discord import app_commands
 
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal, Optional, Union, TYPE_CHECKING
 import asyncio
 import traceback
 import time
@@ -30,6 +32,9 @@ from utils.useful import Embed
 from utils.json_loader import write_json
 from utils.formats import plural
 import utils.fuzzy as fuzzy_
+
+if TYPE_CHECKING:
+    from cogs.utility import utility
 
 # moderator commandstats command is from robodanny
 # https://github.com/Rapptz/RoboDanny/blob/rewrite/cogs/stats.py
@@ -186,18 +191,39 @@ class developer(commands.Cog, description="Developer commands."):
 
         await ctx.send('\U0001f44d', ephemeral=True)
 
-    @commands.command(name='issue')
-    @in_support()
-    async def issue(self, ctx: MyContext, issue: int):
-        """Sends the github issue link."""
-
-        await ctx.send(f'https://github.com/dartmern/metro/issues/{issue}')
-
     @commands.group(name='moderator', aliases=['mod'], invoke_without_command=True, case_insensitive=True)
     @is_support()
     async def moderator(self, ctx: MyContext):
         """Base command for bot moderator actions."""
         await ctx.help()
+
+    @moderator.command(name='debug', alises=['debugperms'])
+    @is_support()
+    async def moderator_debug(
+        self, ctx: MyContext, guild_id: int, channel_id: int, author_id: int = None):
+        """Debug permissions for a guild's channel with an optional author."""
+
+        cog: utility = self.bot.get_cog('utility')
+        if cog is None:
+            return await ctx.send('Utility cog not loaded try again later.')
+
+        guild = self.bot.get_guild(guild_id)
+        if guild is None:
+            return await ctx.send('Guild not found.')
+        
+        channel = guild.get_channel(channel_id)
+        if channel is None:
+            return await ctx.send('Channel not found.')
+
+        if author_id is None:
+            member = guild.me
+        else:
+            member = await self.bot.get_or_fetch_member(guild, author_id)
+        
+        if member is None:
+            return await ctx.send('Author not found.')
+
+        await cog.say_permissions(ctx, member, channel)
 
     @moderator.command(name='commandstats', aliases=['cs'])
     @is_support()
