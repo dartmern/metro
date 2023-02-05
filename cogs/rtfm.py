@@ -408,7 +408,6 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
 
         async with ctx.typing():
             await self.build_rtfm_lookup_table()
-            await self.refresh_faq_cache()
 
         await ctx.check()
 
@@ -492,57 +491,5 @@ class docs(commands.Cog, description="Fuzzy search through documentations."):
             file = discord.File(io.StringIO(target), filename='source.py')
             await ctx.send(file=file)
 
-    async def refresh_faq_cache(self):
-        self.faq_entries = {}
-        base_url = 'https://metrodiscordbot.readthedocs.io/en/latest/faq.html'
-        async with self.bot.session.get(base_url) as resp:
-            text = await resp.text(encoding='utf-8')
-
-            root = etree.fromstring(text, etree.HTMLParser())
-            nodes = root.findall(".//div[@id='questions']/ul[@class='simple']/li/ul//a")
-            for node in nodes:
-                self.faq_entries[''.join(node.itertext()).strip()] = base_url + node.get('href').strip()
-        
-    @commands.hybrid_command(name='faq')
-    @app_commands.describe(query='The FAQ entry your looking for.')
-    async def faq_command(self, ctx: MyContext, *, query: Optional[str] = None):
-        """Shows an FAQ entry for Metro's documentation."""
-
-        if not hasattr(self, 'faq_entries'):
-            await self.refresh_faq_cache()
-
-        if query is None:
-            return await ctx.send('https://metrodiscordbot.readthedocs.io/en/latest/faq.html')
-
-        matches = fuzzy_.extract_matches(query, self.faq_entries, scorer=fuzzy_.partial_ratio, score_cutoff=40)
-        if len(matches) == 0:
-            return await ctx.send('Nothing found...')
-
-        paginator = commands.Paginator(suffix='', prefix='')
-        for key, _, value in matches:
-            paginator.add_line(f'**{key}**\n{value}')
-        page = paginator.pages[0]
-        await ctx.send(page, reference=ctx.replied_reference)
-
-    @faq_command.autocomplete('query')
-    async def faq_command_query_autocomplete(
-        self,
-        interaction: discord.Interaction,
-        current: str
-    ) -> List[app_commands.Choice[str]]:
-
-        if not hasattr(self, 'faq_entries'):
-            await interaction.response.autocomplete([])
-            await self.refresh_faq_cache()
-            return []
-
-        if not current:
-            choices = [app_commands.Choice(name=key, value=key) for key in self.faq_entries][:10]
-            return choices
-
-        matches = fuzzy_.extract_matches(current, self.faq_entries, scorer=fuzzy_.partial_ratio, score_cutoff=40)[:10]
-        return [app_commands.Choice(name=key, value=key) for key, _, _, in matches][:10]
-    
-
-async def setup(bot):
+async def setup(bot: MetroBot):
     await bot.add_cog(docs(bot))
