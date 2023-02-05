@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List, TypedDict, TYPE_CHECKING
+from typing import List, Optional, TypedDict, TYPE_CHECKING
 
 import discord
 from discord import ui
@@ -122,6 +122,7 @@ class CloseTicketView(ui.View):
             return 
         
         embed = discord.Embed(color=discord.Color.red(), description='Ticket has been closed.')
+        embed.set_footer(text=f'Ticket closed by: {interaction.user}')
         await channel.send(embed=embed, view=SupportControlsView())
 
 class CreateTicketView(ui.View):
@@ -144,8 +145,8 @@ class CreateTicketView(ui.View):
         bot = interaction.client
         guild = interaction.guild
 
-        query = 'SELECT number, roles, ticket_embed, ticket_message, panel_embed, panel_message FROM tickets WHERE guild_id = $1'
-        data: TicketObject = await bot.db.fetchrow(query, guild.id)
+        query = 'SELECT number, roles, ticket_embed, ticket_message, panel_embed, panel_message FROM tickets WHERE message_id = $1'
+        data: TicketObject = await bot.db.fetchrow(query, interaction.message.id)
         if not data:
             await interaction.followup.send('Somehow setup for this guild failed. Report to my support server. `/support`', ephemeral=True)
             return
@@ -163,12 +164,11 @@ class CreateTicketView(ui.View):
                     read_messages=True,
                     send_messages=True,
                 )
-        overwrites[guild.default_role] = discord.PermissionOverwrite(
-                read_messages=False
-            )
-        overwrites[interaction.user] = discord.PermissionOverwrite(
-            read_messages=True
-        )
+
+        overwrites[guild.default_role] = discord.PermissionOverwrite(read_messages=False) # deny @everyone's read perms
+        overwrites[interaction.user] = discord.PermissionOverwrite(read_messages=True) # allow user read perms
+        overwrites[interaction.guild.me] = discord.PermissionOverwrite(manage_channels=True, send_messages=True) # give the bot managechannel + send perms
+        
 
         try:
             channel = await guild.create_text_channel(
@@ -189,16 +189,22 @@ class CreateTicketView(ui.View):
             await interaction.followup.send(f'Fetching data failed somehow. Report to support. /support\n{e}', ephemeral=True)
             return
 
+        user_embed = discord.Embed(
+            color=interaction.guild.me.color, 
+            description=f'Ticket created by: {interaction.user.mention} (ID: {interaction.user.id})')
+
         query = 'UPDATE tickets SET number = $2 WHERE message_id = $1'
         await bot.db.execute(query, interaction.message.id, int(data["number"]) + 1)
 
         await interaction.followup.send(f'Created a ticket. {channel.mention}', ephemeral=True)
 
+        content = ticket_message.replace("{user}", interaction.user.mention) if ticket_message else None
         message = await channel.send(
-            content=ticket_message, 
-            embed=embed, 
+            content=content, 
+            embeds=[embed, user_embed], 
             view=CloseTicketView(),
             allowed_mentions=discord.AllowedMentions.all()) # type: discord.Message
+
         try:
             await message.pin()
         except discord.HTTPException:
@@ -211,7 +217,8 @@ class EditMessageModal(ui.Modal, title='Input Message'):
         self.message = ui.TextInput(
             label='Input your message.', 
             style=discord.TextStyle.long,
-            default=default          
+            default=default,
+            required=False       
             )
 
         self.add_item(self.message)
@@ -340,7 +347,7 @@ class EditEmbedView(ui.View):
         await interaction.response.edit_message(content='Saved your changes.', view=None, embeds=[])
 
     @ui.button(label='Custom JSON', style=discord.ButtonStyle.blurple)
-    async def custom_json_callback(self, interaction: Interaction, button: ui.Button):
+    async def custom_json_callback(self, interaction: Interaction[MetroBot], button: ui.Button):
         
         modal = JsonModal()
         await interaction.response.send_modal(modal)
@@ -458,20 +465,35 @@ class RolesView(ui.View):
         )
     
 class TicketConfigView(ui.View):
-    def __init__(self, ctx: MyContext):
+    def __init__(
+        self, ctx: MyContext, *, 
+        channel: Optional[int] = None, 
+        roles: Optional[List[int]] = [],
+        panel_embed: Optional[discord.Embed] = None,
+        panel_message: Optional[str] = None,
+        ticket_embed: Optional[discord.Embed] = None,
+        ticket_message: Optional[str] = None):
+    
         super().__init__(timeout=60 * 10)
 
         self.ctx: MyContext = ctx
         self.message: discord.Message
 
-        self.channel: int = None
-        self.agent_roles: list[int] = []
+        self.channel: int = channel
+        self.agent_roles: List[int] = roles
 
-        self.panel_embed: discord.Embed = self.generate_panel_embed()
-        self.panel_message: str = None
+        self.panel_embed: discord.Embed = panel_embed or self.generate_panel_embed()
+        self.panel_message: str = panel_message
 
-        self.ticket_message: str = None
-        self.ticket_embed: discord.Embed = self.generate_ticket_embed()
+        self.ticket_embed: discord.Embed = ticket_embed or self.generate_ticket_embed()
+        self.ticket_message: str = ticket_message
+
+    @classmethod
+    def from_data(cls, *args, **kwargs):
+        """Create from data. Used when a user wants to edit config data."""
+
+        # for now this isn't used but in the future when you can edit existing configs
+        return cls(*args, **kwargs)
 
     async def on_timeout(self):
 
@@ -566,8 +588,6 @@ class TicketConfigView(ui.View):
         resp: discord.Message = await interaction.followup.send('Please wait...', ephemeral=True)
 
         channel: discord.TextChannel = self.ctx.bot.get_channel(self.channel)
-        # REMINDER:
-        # ADD CHECKS FOR ALL VALUES OF CLASS ex. self.channel
 
         if not self.channel:
             await resp.edit(content='Channel not found. Try inputing a channel by clicking the **Channel** button.')
