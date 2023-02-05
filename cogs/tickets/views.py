@@ -13,6 +13,9 @@ import json
 import secrets
 import datetime
 
+import chat_exporter
+import io
+
 if TYPE_CHECKING:
     from bot import MetroBot
 
@@ -61,40 +64,18 @@ class SupportControlsView(ui.View):
     async def transcript_callback(self, interaction: Interaction[MetroBot], button: ui.Button):
 
         await interaction.response.send_message('Gathering data to generate transcript... This may take a while.', ephemeral=True)
+        transcript = await chat_exporter.export(interaction.channel)
+        if not transcript:
+            await interaction.followup.send('Nothing to transcript. Try again later.', ephemeral=True)
+            return 
 
-        button.disabled = True
-        await interaction.message.edit(view=self)
+        transcript_file = discord.File(io.BytesIO(transcript.encode()), filename=f"transcript-{interaction.channel.name}.html")
+        message: discord.Message = await interaction.channel.send(file=transcript_file)
 
-        messages_formatted = []
-        async with interaction.channel.typing():      
-            async for message in interaction.channel.history(limit=None, oldest_first=True):
-                created_at = message.created_at.strftime("%m/%d/%Y, %H:%M:%S")
-                if not message.content:
-                    content = "No Content (could be an embed/attachment)"
-                else:
-                    content = message.content
-                fmt = f"{message.author} {message.author.id}- {created_at}: {content}"
-                messages_formatted.append(fmt)
-        
-        bot = interaction.client
-
-        title = f"Transcript of {interaction.channel.name}, requested by {interaction.user} (ID: {interaction.user.id})\n"\
-            f"Please note that embeds and attachments are not included in this transcript.\n\n\n"
-        body = "\n".join(messages_formatted)
-
-        content = title + body
-        password = secrets.token_urlsafe(8)
-        expires = discord.utils.utcnow() + datetime.timedelta(days=7)
-        
-        paste = await bot.mystbin_client.create_paste(
-            content=content,
-            filename='transcript.txt',
-            password=password,
-            expires=expires)
-
-        embed = discord.Embed(color=discord.Color.yellow(), description=f'Transcript saved. https://mystb.in/{paste.id}'\
-            f'\nThe password is `{password}`\nThe transcript will expire on {discord.utils.format_dt(expires)} ({discord.utils.format_dt(expires, "R")})')
-        await interaction.channel.send(embed=embed)
+        embed = discord.Embed(description=f'Transcript Saved.\n[Transcript]({await chat_exporter.link(message)})',
+                            color=discord.Color.green())
+        embed.set_footer(text=f'Requested by: {interaction.user} (ID: {interaction.user.id})')
+        await message.edit(embed=embed, attachments=[transcript_file])
             
     @ui.button(label='Delete', emoji='\U0001f5d1', custom_id='delete_ticket_button')
     async def delete_callback(self, interaction: Interaction, button: ui.Button):
@@ -131,8 +112,6 @@ class CloseTicketView(ui.View):
         
         channel = interaction.channel
         await interaction.response.send_message('Closing ticket. You can open another one if you need more help!', ephemeral=True)
-
-        await asyncio.sleep(3)
 
         over = channel.overwrites_for(interaction.user)
         over.read_messages = False
@@ -184,9 +163,12 @@ class CreateTicketView(ui.View):
                     read_messages=True,
                     send_messages=True,
                 )
-            overwrites[guild.default_role] = discord.PermissionOverwrite(
+        overwrites[guild.default_role] = discord.PermissionOverwrite(
                 read_messages=False
             )
+        overwrites[interaction.user] = discord.PermissionOverwrite(
+            read_messages=True
+        )
 
         try:
             channel = await guild.create_text_channel(
