@@ -341,7 +341,7 @@ class developer(commands.Cog, description="Developer commands."):
             for guild in sorted(self.bot.guilds, key=lambda guild: len(guild.members), reverse=True):
                 humans = [hum for hum in guild.members if not hum.bot]
                 bots = [bot for bot in guild.members if bot.bot]
-                summary = f"__**Guild:**__ {guild.name} [{guild.id}]\n__**Owner:**__ {guild.owner} [{guild.owner_id}]\n__**Members:**__ {len(guild.members)} <:members:908483589157576714> total | {len(humans)} \U0001f465 humans | {len(bots)} <:bot:925107948789837844> bots\n"
+                summary = f"__**Guild:**__ {guild.name} [{guild.id}]\n__**Owner:**__ {guild.owner} [{guild.owner_id}]\n__**Members:**__ {len(guild.members)} <:members:908483589157576714> total | {len(humans)} \U0001f465 humans | {len(bots)} {self.bot.emotes['bot']} bots\n"
                 to_paginate.append(summary)
 
             await ctx.paginate(to_paginate, per_page=4, compact=True)
