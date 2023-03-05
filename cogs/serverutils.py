@@ -1751,7 +1751,7 @@ class serverutils(commands.Cog, description='Server utilities like role, lockdow
 
         if "Bump done!" in message.embeds[0].description: # really need daddy regex but just need to push an update out asap
             thankyou = await self.bot.db.fetchval('SELECT (channel, thankyou, message) FROM bumpreminder WHERE guild_id = $1', message.guild.id)
-            if not thankyou[0]:
+            if not thankyou or not thankyou[0]:
                 return
             if thankyou[0] != message.channel.id:
                 return 
