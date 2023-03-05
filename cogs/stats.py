@@ -149,21 +149,13 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
     @commands.Cog.listener()
     async def on_dbl_vote(self, data: topgg.types.BotVoteData):
 
-        next_vote = (discord.utils.utcnow() + datetime.timedelta(days=1)).replace(tzinfo=None)
-        votes = await self.bot.db.fetchval("SELECT votes FROM votes WHERE user_id = $1", int(data.user))
-        if votes:
-            query = """
-                    UPDATE votes
-                    SET votes = $1, next_vote = $2
-                    WHERE user_id = $3
-                    """
-            await self.bot.db.execute(query, votes + 1, next_vote, int(data.user))
-        else:
-            query = """
-                    INSERT INTO votes (user_id, votes, next_vote)
-                    VALUES ($1, $2, $3)
-                    """
-            await self.bot.db.execute(query, int(data.user), 1, next_vote)
+        next_vote = (discord.utils.utcnow() + datetime.timedelta(hours=12)).replace(tzinfo=None)
+        query = """
+                INSERT INTO votes (user_id, votes, next_vote)
+                VALUES ($1, $2, $3)
+                ON CONFLICT (user_id) DO UPDATE SET value = votes.votes + 1
+                """
+        await self.bot.db.execute(query, int(data.user), 1, next_vote)
 
         channel = self.bot.get_channel(VOTE_LOGS_CHANNEL)
         if not channel:
@@ -200,30 +192,7 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
         except discord.HTTPException:
             pass
 
-        reminder_cog: utility = self.bot.get_cog('utility')
-        await reminder_cog.create_timer(
-            next_vote,
-            'vote_completion',
-            user.id
-        )
         self.bot.premium_users[int(data.user)] = True
-
-    @commands.Cog.listener()
-    async def on_vote_completion_timer_complete(self, timer):
-        user_id = timer.args[0]
-
-        query = "SELECT (next_vote) FROM votes WHERE user_id = $1"
-        rows = await self.bot.db.fetchval(query, user_id)
-
-        next_vote = pytz.utc.localize(rows)
-        real_vote_time = next_vote - datetime.timedelta(hours=12)
-        if discord.utils.utcnow() < real_vote_time:
-            return 
-            
-        try:
-            self.bot.premium_users.pop(int(user_id))
-        except KeyError:
-            pass
 
     @commands.hybrid_command(name='vote')
     async def _vote(self, ctx: MyContext):
@@ -239,15 +208,14 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
         view = None
         if rows:
             next_vote = pytz.utc.localize(rows)
-            real_vote_time = next_vote - datetime.timedelta(hours=12)
-            if discord.utils.utcnow() > real_vote_time:
+            if discord.utils.utcnow() > next_vote:
                 pass
             else:
-                value = f"Next vote {discord.utils.format_dt(real_vote_time, 'R')} \n"\
+                value = f"Next vote {discord.utils.format_dt(next_vote, 'R')} \n"\
                     "> Click the button below to set a reminder."
-                view = VoteView(real_vote_time, ctx=ctx)
+                view = VoteView(next_vote, ctx=ctx)
 
-        desc = "Voting on top.gg will grant you premium features for 24 hours. \n"\
+        desc = "Voting on top.gg will grant you premium features for 12 hours. \n"\
                 f"**top.gg**: \n{value}\n\n"\
                 f"Want to continue the support? Vote on discordbotlist:\n<{self.discordbotlist}>"
         embed.description = desc            

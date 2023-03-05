@@ -57,8 +57,8 @@ class core(commands.Cog, description="Core events."):
         self.bot.tree.on_error = self.on_app_command_error
 
         # cooldowns
-        self.normal_cd = commands.CooldownMapping.from_cooldown(3, 8, commands.BucketType.user)
-        self.premium_cd = commands.CooldownMapping.from_cooldown(3, 6, commands.BucketType.user)
+        self.normal_cd = commands.CooldownMapping.from_cooldown(8, 15, commands.BucketType.user)
+        self.premium_cd = commands.CooldownMapping.from_cooldown(10, 15, commands.BucketType.user)
 
     @property
     def emoji(self) -> str:

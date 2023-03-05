@@ -15,7 +15,7 @@ from bot import MetroBot
 from utils.custom_context import MyContext
 from utils.json_loader import read_json
 from utils.pages import RoboPages, SimplePages
-from utils.checks import has_voted_24hr
+from utils.checks import has_voted
 
 _info = read_json('info')
 
@@ -470,7 +470,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
         await ctx.paginate(to_paginate, compact=True)
             
     @commands.hybrid_command(name='bass')
-    @has_voted_24hr()
+    @has_voted()
     @in_voice()
     async def _bass_command(self, ctx: MyContext):
         """Increase the bass of music being played."""

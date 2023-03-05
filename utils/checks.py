@@ -89,7 +89,7 @@ def is_support():
         return ctx.author.id in ctx.bot.owner_ids or ctx.author.id in ctx.bot.support_staff
     return commands.check(predicate)
 
-def has_voted_24hr():
+def has_voted():
     async def predicate(ctx: MyContext):
         """Check if a user_id has voted or not."""
 
