@@ -4,7 +4,7 @@ from discord import app_commands
 
 import contextlib
 import logging
-from typing import Any, Optional, Union
+from typing import Any, Literal, Optional, Union
 from urllib.parse import quote_plus
 import pomice
 import math
@@ -469,6 +469,25 @@ class music(commands.Cog, description='Play high quality music in a voice channe
 
         await ctx.paginate(to_paginate, compact=True)
             
+    @commands.hybrid_command(name='loop')
+    @in_voice()
+    @app_commands.describe(option='What thing you want looped.')
+    async def _loop(self, ctx: MyContext, *, option: Literal['Track', 'Queue'] = 'Queue'):
+        """Loop the queue or the current playing track.
+        
+        Defaults to looping the queue."""
+
+        player: Player = ctx.voice_client
+
+        if player.queue.is_empty:
+            return await ctx.send('There\'s nothing in the queue.', hide=True)
+        
+        enum = {'queue': pomice.LoopMode.QUEUE, 'track': pomice.LoopMode.TRACK} 
+        mode = pomice.enums.LoopMode(enum[option])
+        await player.queue.set_loop_mode(mode)
+
+        await ctx.send(f'Looping the {option}.')
+    
     @commands.hybrid_command(name='bass')
     @has_voted()
     @in_voice()
