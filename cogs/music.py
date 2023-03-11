@@ -479,9 +479,6 @@ class music(commands.Cog, description='Play high quality music in a voice channe
 
         player: Player = ctx.voice_client
 
-        if player.queue.is_empty:
-            return await ctx.send('There\'s nothing in the queue.', hide=True)
-        
         enum = {'queue': pomice.LoopMode.QUEUE, 'track': pomice.LoopMode.TRACK} 
         mode = pomice.enums.LoopMode(enum[option])
         await player.queue.set_loop_mode(mode)
