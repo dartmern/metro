@@ -99,6 +99,9 @@ class PlayerView(discord.ui.View):
                         f"Requested by: {self.track.requester.mention}",
             color=self.ctx.color if self.ctx else discord.Colour.yellow()
         )
+        loop_mode = self.player.queue.loop_mode
+        if loop_mode:
+            embed.set_footer(text=f'Currently looping the {loop_mode}.')
         self.controller = await self.ctx.send(embed=embed, view=self)
         return self.controller
 
@@ -213,7 +216,7 @@ class PlayerView(discord.ui.View):
         modal = VolumeModal(self.player.volume, view=self, player=self.player)
         await interaction.response.send_modal(modal)
 
-class Player(pomice.Player):
+class   Player(pomice.Player):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -481,7 +484,7 @@ class music(commands.Cog, description='Play high quality music in a voice channe
 
         enum = {'Queue': pomice.LoopMode.QUEUE, 'Track': pomice.LoopMode.TRACK} 
         mode = pomice.enums.LoopMode(enum[option])
-        await player.queue.set_loop_mode(mode)
+        player.queue.set_loop_mode(mode)
 
         await ctx.send(f'Looping the {option}.')
     
