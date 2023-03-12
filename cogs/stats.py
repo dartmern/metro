@@ -155,7 +155,7 @@ class stats(commands.Cog, description='Bot statistics tracking related.'):
                 VALUES ($1, $2, $3)
                 ON CONFLICT (user_id) 
                 DO UPDATE SET 
-                    votes = votes.votes + 1
+                    votes = votes.votes + 1,
                     next_vote = $3
                 """
         await self.bot.db.execute(query, int(data.user), 1, next_vote)
